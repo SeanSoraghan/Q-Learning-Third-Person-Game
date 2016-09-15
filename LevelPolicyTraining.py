@@ -30,7 +30,7 @@ components from PyBrain:
 from scipy import * #@UnusedWildImport
 import numpy as np
 import pylab
-
+import os
 from pybrain.rl.environments.mazes import Maze, MDPMazeTask
 from pybrain.rl.learners.valuebased import ActionValueTable
 from pybrain.rl.agents import LearningAgent
@@ -59,6 +59,9 @@ goal point. An agent can move over the free fields and needs to find the
 goal point. Let's define the maze structure, a simple 2D numpy array, where
 1 is a wall and 0 is a free field:
 """
+
+levelName = 'LevelName'
+
 structure = array([[1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
                    [1, 0, 1, 1, 0, 0, 0, 0, 0, 1],
                    [1, 0, 0, 1, 0, 0, 1, 0, 0, 1],
@@ -71,7 +74,12 @@ structure = array([[1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
                    [1, 1, 1, 1, 1, 1, 1, 1, 1, 1]])
 
 print (structure)
-np.savetxt('level.txt', structure, fmt='%1.1d', delimiter= ' ')
+np.savetxt("TPGameDemo/Content/Levels/" + levelName + ".txt", structure, fmt='%1.1d', delimiter= ' ')
+
+enemyPolicyDirectory = "TPGameDemo/Content/Characters/Enemies/LevelPolicies/" + levelName + "/"
+if not os.path.exists(enemyPolicyDirectory):
+    os.makedirs(enemyPolicyDirectory)
+
 """
 Then we create the environment with the structure as first parameter
 and the goal field tuple as second parameter:
@@ -163,7 +171,7 @@ def train_for_goal_position(x, y):
         task = MDPMazeTask(environment)
         experiment = Experiment(task, agent)
         print ("beginning trainging ...")
-        for i in range(5000):
+        for i in range(500):
             if i % 100 == 0:
                 print (i)
             experiment.doInteractions(200)
@@ -173,7 +181,7 @@ def train_for_goal_position(x, y):
             pylab.pcolor(controller.params.reshape(100, 4).max(1).reshape(10,10))
             pylab.draw()
             """
-        np.savetxt(str(x) + '_' + str(y) + '.txt',
+        np.savetxt(enemyPolicyDirectory + str(x) + '_' + str(y) + ".txt",
                    controller.params.reshape(100, 4).argmax(axis=1).reshape(10, 10), fmt='%1.1d', delimiter=' ')
 
 
