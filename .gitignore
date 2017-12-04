@@ -11,3 +11,6 @@ TPGameDemo 4.18/Saved
 TPGameDemo 4.18/TPGameDemo.VC.db
 TPGameDemo 4.18/Build
 TPGameDemo 4.18/Plugins/UnrealEnginePython
+
+*.VC.db
+*.VC.opendb
