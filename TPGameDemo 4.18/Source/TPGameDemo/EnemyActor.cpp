@@ -3,7 +3,7 @@
 #include "TextParserComponent.cpp"
 #include "TPGameDemoGameMode.h"
 #include "EnemyActor.h"
-
+#include "Kismet/KismetMathLibrary.h"
 
 //======================================================================================================
 // Initialisation
@@ -25,9 +25,9 @@ void AEnemyActor::BeginPlay()
 	    GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red, FString::Printf (TEXT("Couldn't find level policies directory at %s"), *LevelPolciesDir));
   #endif
 
-    UWorld* world = GetWorld();
-    if (world != nullptr)
-        world->GetTimerManager().SetTimer (MoveTimerHandle, [this](){ UpdateMovement(); }, 0.5f, true);
+    //UWorld* world = GetWorld();
+    //if (world != nullptr)
+    //    world->GetTimerManager().SetTimer (MoveTimerHandle, [this](){ UpdateMovement(); }, 0.5f, true);
 }
 
 void AEnemyActor::EndPlay (const EEndPlayReason::Type EndPlayReason)
@@ -46,6 +46,14 @@ void AEnemyActor::EndPlay (const EEndPlayReason::Type EndPlayReason)
 void AEnemyActor::Tick( float DeltaTime )
 {
 	Super::Tick( DeltaTime );
+    UpdateMovement();
+    FVector MovementVector = MovementTarget - GetActorLocation();
+    MovementVector.Normalize();
+    FRotator CurrentRotation = GetActorForwardVector().Rotation();
+    FRotator ToTarget = UKismetMathLibrary::NormalizedDeltaRotator(CurrentRotation, MovementVector.Rotation());
+    SetActorRotation (UKismetMathLibrary::RLerp(CurrentRotation, MovementVector.Rotation(), RotationSpeed/*Linear*/, true));
+    AddMovementInput(MovementVector * MovementSpeed);
+     //GetActorForwardVector().Rotation()
 }
 
 //======================================================================================================
@@ -59,22 +67,26 @@ void AEnemyActor::UpdateMovement()
     {
         case EActionType::North: 
         {
-            SetActorLocation (FVector (currentLocation.X + CurrentLevelGridUnitLengthXCM, currentLocation.Y, currentLocation.Z));
+            //SetActorLocation (FVector (currentLocation.X + CurrentLevelGridUnitLengthXCM, currentLocation.Y, currentLocation.Z));
+            MovementTarget = FVector (currentLocation.X + CurrentLevelGridUnitLengthXCM, currentLocation.Y, currentLocation.Z);
             break;
         }
         case EActionType::East: 
         {
-            SetActorLocation (FVector (currentLocation.X, currentLocation.Y + CurrentLevelGridUnitLengthYCM, currentLocation.Z));
+            //SetActorLocation (FVector (currentLocation.X, currentLocation.Y + CurrentLevelGridUnitLengthYCM, currentLocation.Z));
+            MovementTarget = FVector (currentLocation.X, currentLocation.Y + CurrentLevelGridUnitLengthYCM, currentLocation.Z);
             break;
         }
         case EActionType::South: 
         {
-            SetActorLocation (FVector (currentLocation.X - CurrentLevelGridUnitLengthXCM, currentLocation.Y, currentLocation.Z));
+            //SetActorLocation (FVector (currentLocation.X - CurrentLevelGridUnitLengthXCM, currentLocation.Y, currentLocation.Z));
+            MovementTarget = FVector (currentLocation.X - CurrentLevelGridUnitLengthXCM, currentLocation.Y, currentLocation.Z);
             break;
         }
         case EActionType::West: 
         {
-            SetActorLocation (FVector (currentLocation.X, currentLocation.Y - CurrentLevelGridUnitLengthYCM, currentLocation.Z));
+            //SetActorLocation (FVector (currentLocation.X, currentLocation.Y - CurrentLevelGridUnitLengthYCM, currentLocation.Z));
+            MovementTarget = FVector (currentLocation.X, currentLocation.Y - CurrentLevelGridUnitLengthYCM, currentLocation.Z);
             break;
         }
         default: break;

@@ -22,6 +22,10 @@ void AMazeActor::BeginPlay()
     ATPGameDemoGameMode* gameMode = (ATPGameDemoGameMode*) GetWorld()->GetAuthGameMode();
     if (gameMode != nullptr)
     {
+        gameMode->OnMazeDimensionsChanged.AddLambda([this]()
+        {
+            UpdateMazeDimensions();
+        });
         CurrentLevelNumGridUnitsX   = gameMode->NumGridUnitsX;
         CurrentLevelNumGridUnitsY   = gameMode->NumGridUnitsY;
         CurrentLevelGridUnitLengthXCM = gameMode->GridUnitLengthXCM;
@@ -55,13 +59,25 @@ void AMazeActor::CheckDeath()
     }
 }
 
+void AMazeActor::UpdateMazeDimensions()
+{
+    ATPGameDemoGameMode* gameMode = (ATPGameDemoGameMode*) GetWorld()->GetAuthGameMode();
+    if (gameMode != nullptr)
+    {
+        CurrentLevelNumGridUnitsX   = gameMode->NumGridUnitsX;
+        CurrentLevelNumGridUnitsY   = gameMode->NumGridUnitsY;
+        CurrentLevelGridUnitLengthXCM = gameMode->GridUnitLengthXCM;
+        CurrentLevelGridUnitLengthYCM = gameMode->GridUnitLengthYCM;
+    }
+}
+
 void AMazeActor::UpdatePosition (bool broadcastChange)
 {
     FVector worldPosition = GetActorLocation();
     const int totalGridLengthCMX = CurrentLevelGridUnitLengthXCM * CurrentLevelNumGridUnitsX;
     const int totalGridLengthCMY = CurrentLevelGridUnitLengthYCM * CurrentLevelNumGridUnitsY;
-    GridXPosition = (int) (worldPosition.X + totalGridLengthCMX / 2) / (CurrentLevelGridUnitLengthXCM);
-    GridYPosition = (int) (worldPosition.Y + totalGridLengthCMY / 2) / (CurrentLevelGridUnitLengthYCM);
+    GridXPosition = (int) (worldPosition.X + totalGridLengthCMX / 2 - CurrentLevelGridUnitLengthXCM * 0.5f) / (CurrentLevelGridUnitLengthXCM);
+    GridYPosition = (int) (worldPosition.Y + totalGridLengthCMY / 2 - CurrentLevelGridUnitLengthYCM * 0.5f) / (CurrentLevelGridUnitLengthYCM);
 
     if (broadcastChange && (GridYPosition != PreviousGridYPosition || GridXPosition != PreviousGridXPosition))
         GridPositionChangedEvent.Broadcast();

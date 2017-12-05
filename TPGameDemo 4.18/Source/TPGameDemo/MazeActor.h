@@ -8,6 +8,16 @@
 DECLARE_DYNAMIC_MULTICAST_DELEGATE (FGridPositionChanged);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE (FActorDied);
 
+UENUM(BlueprintType)
+enum class EActionType : uint8
+{
+    North UMETA (DisplayName = "North"),
+    East  UMETA (DisplayName = "East"),
+    South UMETA (DisplayName = "South"),
+    West  UMETA (DisplayName = "West"),
+    NumActionTypes
+};
+
 /*
 The base class for an actor that can exist and navigate within a maze level. Maze actors maintain grid x and grid y position values.
 The UpdatePosition (bool broadcastChange) function is used to update their grid position based on their current world position. The
@@ -73,6 +83,8 @@ public:
     UPROPERTY (BlueprintAssignable, Category = "Maze Actor Health")
         FActorDied OnActorDied;
 
+    UFUNCTION (BlueprintCallable, Category = "Maze Actor Maze Model")
+        void UpdateMazeDimensions();
 private:
     void UpdatePosition (bool broadcastChange = true);
 };

@@ -5,15 +5,7 @@
 #include "TextParserComponent.h"
 #include "EnemyActor.generated.h"
 
-UENUM(BlueprintType)
-enum class EActionType : uint8
-{
-    North UMETA (DisplayName = "North"),
-    East  UMETA (DisplayName = "East"),
-    South UMETA (DisplayName = "South"),
-    West  UMETA (DisplayName = "West"),
-    NumActionTypes
-};
+
 
 /*
 The base class for an enemy actor. Enemies behave according to `level policies' which are action-value tables that have been trained using Q-Learning.
@@ -65,6 +57,15 @@ public:
     UFUNCTION (BlueprintCallable, Category = "Enemy Policy")
         void LoadLevelPolicy (FString levelName);
 
+    //======================================================================================================
+    // Movement
+    //====================================================================================================== 
+    UPROPERTY(BlueprintReadOnly, VisibleAnywhere, Category = "Enemy Movement")
+        FVector MovementTarget = FVector::ZeroVector;
+    UPROPERTY(BlueprintReadWrite, EditAnywhere, Category = "Enemy Movement")
+        float MovementSpeed = 1.0f;
+    UPROPERTY(BlueprintReadWrite, EditAnywhere, Category = "Enemy Movement")
+        float RotationSpeed = 0.1f;
 private:
     FString               LevelPolciesDir;
     FString               CurrentLevelPolicyDir;

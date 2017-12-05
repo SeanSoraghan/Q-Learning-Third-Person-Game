@@ -36,16 +36,17 @@ from pybrain.rl.learners.valuebased import ActionValueTable
 from pybrain.rl.agents import LearningAgent
 from pybrain.rl.learners import Q, SARSA #@UnusedImport
 from pybrain.rl.experiments import Experiment
-
+from numpy.random import random_integers as rand
+import matplotlib.pyplot as pyplot
 
 """
 For later visualization purposes, we also need to initialize the
 plotting engine.
 """
 
-pylab.gray()
-pylab.ion()
-pylab.show()
+# pylab.gray()
+# pylab.ion()
+# pylab.show()
 
 """
 The Environment is the world, in which the agent acts. It receives input
@@ -60,23 +61,70 @@ goal point. Let's define the maze structure, a simple 2D numpy array, where
 1 is a wall and 0 is a free field:
 """
 
-levelName = 'LevelName'
+#levelName = 'LevelExample1'
 
-structure = array([[1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
-                   [1, 0, 1, 1, 0, 0, 0, 0, 0, 1],
-                   [1, 0, 0, 1, 0, 0, 1, 0, 0, 1],
-                   [1, 0, 0, 1, 0, 0, 1, 0, 0, 1],
-                   [1, 0, 0, 1, 0, 1, 1, 0, 0, 1],
-                   [1, 0, 0, 0, 0, 0, 1, 0, 1, 1],
-                   [1, 0, 1, 1, 1, 0, 1, 0, 0, 1],
-                   [1, 0, 0, 0, 0, 0, 0, 0, 0, 1],
-                   [1, 0, 0, 0, 1, 0, 0, 1, 0, 1],
-                   [1, 1, 1, 1, 1, 1, 1, 1, 1, 1]])
+# structure = array([[1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
+#                   [1, 0, 1, 1, 0, 0, 0, 0, 1, 1],
+#                   [1, 0, 0, 1, 0, 0, 0, 0, 0, 1],
+#                   [1, 1, 0, 1, 0, 0, 1, 0, 0, 1],
+#                   [1, 1, 0, 1, 0, 1, 1, 0, 0, 1],
+#                   [1, 1, 0, 0, 0, 0, 1, 0, 1, 1],
+#                   [1, 0, 1, 1, 1, 0, 1, 0, 0, 1],
+#                   [1, 0, 0, 0, 0, 0, 0, 0, 0, 1],
+#                   [1, 0, 1, 0, 0, 0, 1, 1, 0, 1],
+#                   [1, 1, 1, 1, 1, 1, 1, 1, 1, 1]])
 
-print (structure)
-np.savetxt("TPGameDemo/Content/Levels/" + levelName + ".txt", structure, fmt='%1.1d', delimiter= ' ')
+#print (structure)
+#np.savetxt("TPGameDemo 4.18/Content/Levels/" + levelName + ".txt", structure, fmt='%1.1d', delimiter= ' ')
 
-enemyPolicyDirectory = "TPGameDemo/Content/Characters/Enemies/LevelPolicies/" + levelName + "/"
+
+def maze(width=51, height=51, complexity=.75, density=.75):
+    # Only odd shapes
+    shape = ((height // 2) * 2 + 1, (width // 2) * 2 + 1)
+    # Adjust complexity and density relative to maze size
+    complexity = int(complexity * (5 * (shape[0] + shape[1])))
+    density    = int(density * ((shape[0] // 2) * (shape[1] // 2)))
+    # Build actual maze
+    Z = np.zeros(shape, dtype=bool)
+    # Fill borders
+    Z[0, :] = Z[-1, :] = 1
+    Z[:, 0] = Z[:, -1] = 1
+    print(Z)
+    # Make aisles
+    for i in range(density):
+        x, y = rand(0, shape[1] // 2) * 2, rand(0, shape[0] // 2) * 2
+        #Z[y, x] = 1
+        Z[x, y] = 1 
+        print("Y: " + str(y) + " | X: " + str(x))
+        print(Z)
+        for j in range(complexity):
+            neighbours = []
+            if x > 1:             neighbours.append((y, x - 2))
+            if x < shape[1] - 2:  neighbours.append((y, x + 2))
+            if y > 1:             neighbours.append((y - 2, x))
+            if y < shape[0] - 2:  neighbours.append((y + 2, x))
+            if len(neighbours):
+                y_,x_ = neighbours[rand(0, len(neighbours) - 1)]
+                #if Z[y_, x_] == 0:
+                if Z[x_, y_] == 0: 
+                    #Z[y_, x_] = 1
+                    Z[x_, y_] = 1 
+                    #Z[y_ + (y - y_) // 2, x_ + (x - x_) // 2] = 1
+                    Z[x_ + (x - x_) // 2, y_ + (y - y_) // 2] = 1 
+                    print(neighbours)
+                    print("Y_n: " + str(y_) + " | X_n: " + str(x_))
+                    print("Y_n + ...: " + str(y_ + (y - y_) // 2) + " | X_n + ...: " + str(x_ + (x - x_) // 2))
+                    print(Z)
+                    x, y = x_, y_
+    return Z
+
+w = 15
+h = 15
+structure = maze(w, h, 0.9, 0.9)
+levelName = 'WikipediaExample'
+np.savetxt("TPGameDemo 4.18/Content/Levels/" + levelName + ".txt", structure, fmt='%1.1d', delimiter= ' ')
+
+enemyPolicyDirectory = "TPGameDemo 4.18/Content/Characters/Enemies/LevelPolicies/" + levelName + "/"
 if not os.path.exists(enemyPolicyDirectory):
     os.makedirs(enemyPolicyDirectory)
 
@@ -164,42 +212,44 @@ experiment = Experiment(task, agent)
 def train_for_goal_position(x, y):
     if structure[x, y] == 0:
         environment = Maze(structure, (x, y))
-        controller = ActionValueTable(100, 4)
+        controller = ActionValueTable(w*h, 4)
         controller.initialize(1.)
         learner = Q()
         agent = LearningAgent(controller, learner)
         task = MDPMazeTask(environment)
         experiment = Experiment(task, agent)
-        print ("beginning trainging ...")
-        for i in range(500):
-            if i % 100 == 0:
-                print (i)
-            experiment.doInteractions(200)
+        print ("beginning trainging iteration...")
+        print(" Row: " + str(x) + " | Col: " + str(y))
+        for i in range(700):
+            # if i % 100 == 0:
+            #     print (i)
+            experiment.doInteractions(500)
             agent.learn()
             agent.reset()
             """
-            pylab.pcolor(controller.params.reshape(100, 4).max(1).reshape(10,10))
+            if i % 100 == 0:
+              print(controller.params.reshape(w*h,4).argmax(axis=1).reshape(w,h))
+            """
+            """
+            pylab.pcolor(controller.params.reshape(w*h, 4).max(1).reshape(w,h))
             pylab.draw()
             """
         np.savetxt(enemyPolicyDirectory + str(x) + '_' + str(y) + ".txt",
-                   controller.params.reshape(100, 4).argmax(axis=1).reshape(10, 10), fmt='%1.1d', delimiter=' ')
+                   controller.params.reshape(w*h, 4).argmax(axis=1).reshape(w, h), fmt='%1.1d', delimiter=' ')
 
 
 def train():
     xindex = 1
     yindex = 1
-    for x in range(8):
+    for x in range(w - 2):
         xindex = x+1
         print(xindex)
-        for y in range(8):
+        for y in range(h - 2):
             yindex = y + 1
             train_for_goal_position(xindex, yindex)
 
 train()
-"""
-    pylab.pcolor(controller.params.reshape(81,4).max(1).reshape(9,9))
-    pylab.draw()
-"""
+
 
 """
 print(controller.params.reshape(100,4).argmax(axis=1).reshape(10,10))
@@ -234,3 +284,8 @@ to the true state values, having higher scores (brigher fields) the
 closer they are to the goal.
 """
 
+
+pyplot.figure(figsize=(10, 5))
+pyplot.imshow(structure, cmap=pyplot.cm.binary, interpolation='nearest')
+pyplot.xticks([]), pyplot.yticks([])
+pyplot.show()

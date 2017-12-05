@@ -146,7 +146,7 @@ public:
     UPROPERTY (BlueprintAssignable, Category = "Base Character Movement")
         FPlayerControlRotationChanged OnPlayerControlRotationUpdated;
 
-    UPROPERTY(BlueprintReadOnly, Category="Base Character Movement")
+    UPROPERTY(BlueprintReadOnly, VisibleAnywhere, Category="Base Character Movement")
         EControlState ControlState = EControlState::Explore;
 
     //=========================================================================================

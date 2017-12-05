@@ -52,7 +52,51 @@ bool ULevelBuilderComponent::IsGridPositionBlocked (int x, int y)
     return LevelStructure[x][y] == 1;
 }
 
-FVector2D ULevelBuilderComponent::GetGridCentrePosition (int x, int y)
+FVector2D ULevelBuilderComponent::GetClosestEmptyCell (int x, int y)
+{
+    int xPos = x;
+    int yPos = y;
+    const int totalCells = GetNumGridUnitsX() * GetNumGridUnitsY();
+    int numCellsVisited = 0;
+    EActionType actionType = EActionType::North;
+    int numActionsToTake = 1;
+    int numActionsTaken = 0;
+    while(numCellsVisited < totalCells)
+    {
+        if (xPos < GetNumGridUnitsX() && yPos < GetNumGridUnitsY() && !IsGridPositionBlocked(xPos, yPos))
+            return FVector2D(xPos, yPos);
+        switch (actionType)
+        {
+            case EActionType::North: 
+                ++yPos;
+                break;
+            case EActionType::East: 
+                ++xPos;
+                break;
+            case EActionType::South: 
+                --yPos;
+                break;
+            case EActionType::West: 
+                --xPos;
+                break;
+            default: break;
+        }
+        ++numActionsTaken;
+        if (numActionsTaken == numActionsToTake)
+        {
+            // change action to the next clockwise action (north goes to east, east to south etc.)
+            actionType = (EActionType)(((int)actionType + 1) % (int)EActionType::NumActionTypes);
+            if (actionType == EActionType::North || actionType == EActionType::South)
+                ++numActionsToTake;
+            numActionsTaken = 0;
+        }
+        ++numCellsVisited;
+    }
+    UE_LOG(LogTemp, Warning, TEXT("No closest empty grid cell found for %i | %i"), x, y);
+    return FVector2D::ZeroVector;
+}
+
+FVector2D ULevelBuilderComponent::GetCellCentreWorldPosition (int x, int y)
 {
     ATPGameDemoGameMode* gameMode = (ATPGameDemoGameMode*) GetWorld()->GetAuthGameMode();
 
@@ -60,8 +104,14 @@ FVector2D ULevelBuilderComponent::GetGridCentrePosition (int x, int y)
         return FVector2D (0.0f, 0.0f);
 
     float positionX = ((x - gameMode->NumGridUnitsX / 2) + 0.5f) * gameMode->GridUnitLengthXCM;
-    float positionY = ((y - gameMode->NumGridUnitsY / 2) + 0.5f) * gameMode->GridUnitLengthYCM;
+    float positionY = ((y - gameMode->NumGridUnitsY / 2) + 0.5f) * gameMode->GridUnitLengthYCM;;
     return FVector2D (positionX, positionY);
+}
+
+FVector2D ULevelBuilderComponent::FindMostCentralSpawnPosition()
+{
+    FVector2D cellPosition = GetClosestEmptyCell(GetNumGridUnitsX() / 2, GetNumGridUnitsY() / 2);
+    return GetCellCentreWorldPosition ((int) cellPosition.X, (int) cellPosition.Y);
 }
 
 void ULevelBuilderComponent::BeginPlay()

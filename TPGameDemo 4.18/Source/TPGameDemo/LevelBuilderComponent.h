@@ -3,6 +3,7 @@
 #pragma once
 
 #include "Components/ActorComponent.h"
+#include "MazeActor.h"
 #include "LevelBuilderComponent.generated.h"
 
 /*
@@ -42,7 +43,15 @@ public:
         virtual bool IsGridPositionBlocked (int x, int y);
 
     UFUNCTION (BlueprintCallable, Category = "Level Building")
-        virtual FVector2D GetGridCentrePosition (int x, int y);
+        FVector2D GetClosestEmptyCell (int x, int y);
+
+    /** Returns the world position of cell x|y mapped from positive indexing (0,0 -> n,n) to world positions centered at 0,0 (-n/2 * gridUnitX, -n/2 * gridUnitY -> n/2 * gridUnitX, n/2 * gridUnityY). */
+    UFUNCTION (BlueprintCallable, Category = "Level Building")
+        FVector2D GetCellCentreWorldPosition (int x, int y);
+
+    /** Starts in centre of grid and winds out clockise looking for empty grid cells. */
+    UFUNCTION (BlueprintCallable, Category = "Level Building")
+        FVector2D FindMostCentralSpawnPosition();
 
 private:
     FString             LevelsDir;

@@ -4,6 +4,8 @@
 #include "GameFramework/GameMode.h"
 #include "TPGameDemoGameMode.generated.h"
 
+DECLARE_MULTICAST_DELEGATE (FMazeDimensionsChanged);
+
 /**
  * 
  */
@@ -28,18 +30,32 @@ public:
 	UPROPERTY (BlueprintReadWrite, EditAnywhere, Category = "Game Mode Player Control")
         float Camera_Animation_Speed = 1.0f;
     
-    UPROPERTY (BlueprintReadWrite, EditAnywhere, Category = "Game Mode Grid Size")
+    UPROPERTY (BlueprintReadOnly, VisibleAnywhere, Category = "Game Mode Grid Size")
         int GridUnitLengthXCM = 200;
 
-    UPROPERTY (BlueprintReadWrite, EditAnywhere, Category = "Game Mode Grid Size")
+    UPROPERTY (BlueprintReadOnly, VisibleAnywhere, Category = "Game Mode Grid Size")
         int GridUnitLengthYCM = 200;
 
-    UPROPERTY (BlueprintReadWrite, EditAnywhere, Category = "Game Mode Grid Size")
+    UPROPERTY (BlueprintReadOnly, VisibleAnywhere, Category = "Game Mode Grid Size")
         int NumGridUnitsX = 10;
 
-    UPROPERTY (BlueprintReadWrite, EditAnywhere, Category = "Game Mode Grid Size")
+    UPROPERTY (BlueprintReadOnly, VisibleAnywhere, Category = "Game Mode Grid Size")
         int NumGridUnitsY = 10;
+
+    FMazeDimensionsChanged OnMazeDimensionsChanged;
 
     UPROPERTY (BlueprintReadWrite, EditAnywhere, Category = "Maze Actor Properties")
         float DefaultMaxHealth = 100.0f;
+
+    UFUNCTION (BlueprintCallable, Category = "Game Mode Grid Size")
+        void SetGridUnitLengthXCM (int x);
+
+    UFUNCTION (BlueprintCallable, Category = "Game Mode Grid Size")
+        void SetGridUnitLengthYCM (int y);
+
+    UFUNCTION (BlueprintCallable, Category = "Game Mode Grid Size")
+        void SetNumGridUnitsX (int numUnitsX);
+
+    UFUNCTION (BlueprintCallable, Category = "Game Mode Grid Size")
+        void SetNumGridUnitsY (int numUnitsY);
 };
