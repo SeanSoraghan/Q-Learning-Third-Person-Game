@@ -116,7 +116,7 @@ void AEnemyActor::CheckPositionLimits()
 EActionType AEnemyActor::SelectNextAction()
 {
     if (CurrentLevelPolicy.Num() > GridXPosition)
-        if (CurrentLevelPolicy[GridXPosition].Num() > GridYPosition)
+        if (CurrentLevelPolicy.Num() > 0 && CurrentLevelPolicy[GridXPosition].Num() > GridYPosition)
             return (EActionType)CurrentLevelPolicy[GridXPosition][GridYPosition];
 
     return EActionType::NumActionTypes;

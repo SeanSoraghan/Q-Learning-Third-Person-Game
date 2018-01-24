@@ -45,13 +45,15 @@ public:
     UFUNCTION (BlueprintCallable, Category = "Level Building")
         FVector2D GetClosestEmptyCell (int x, int y);
 
-    /** Returns the world position of cell x|y mapped from positive indexing (0,0 -> n,n) to world positions centered at 0,0 (-n/2 * gridUnitX, -n/2 * gridUnitY -> n/2 * gridUnitX, n/2 * gridUnityY). */
+    /** Returns the world position of cell x|y mapped from positive indexing (0,0 -> n,n) to world positions centered at 0,0 (-n/2 * gridUnitX, -n/2 * gridUnitY -> n/2 * gridUnitX, n/2 * gridUnityY). 
+        The x position is offset by RoomOffsetX * grid (room) width. Similar for the y position.
+    */
     UFUNCTION (BlueprintCallable, Category = "Level Building")
-        FVector2D GetCellCentreWorldPosition (int x, int y);
+        FVector2D GetCellCentreWorldPosition (int x, int y, int RoomOffsetX, int RoomOffsetY);
 
     /** Starts in centre of grid and winds out clockise looking for empty grid cells. */
     UFUNCTION (BlueprintCallable, Category = "Level Building")
-        FVector2D FindMostCentralSpawnPosition();
+        FVector2D FindMostCentralSpawnPosition(int RoomOffsetX, int RoomOffsetY);
 
 private:
     FString             LevelsDir;

@@ -96,7 +96,7 @@ FVector2D ULevelBuilderComponent::GetClosestEmptyCell (int x, int y)
     return FVector2D::ZeroVector;
 }
 
-FVector2D ULevelBuilderComponent::GetCellCentreWorldPosition (int x, int y)
+FVector2D ULevelBuilderComponent::GetCellCentreWorldPosition (int x, int y, int RoomOffsetX, int RoomOffsetY)
 {
     ATPGameDemoGameMode* gameMode = (ATPGameDemoGameMode*) GetWorld()->GetAuthGameMode();
 
@@ -104,14 +104,18 @@ FVector2D ULevelBuilderComponent::GetCellCentreWorldPosition (int x, int y)
         return FVector2D (0.0f, 0.0f);
 
     float positionX = ((x - gameMode->NumGridUnitsX / 2) + 0.5f) * gameMode->GridUnitLengthXCM;
-    float positionY = ((y - gameMode->NumGridUnitsY / 2) + 0.5f) * gameMode->GridUnitLengthYCM;;
+    float positionY = ((y - gameMode->NumGridUnitsY / 2) + 0.5f) * gameMode->GridUnitLengthYCM;
+    positionX += RoomOffsetX * GetNumGridUnitsX() * gameMode->GridUnitLengthXCM;
+    positionX += RoomOffsetY * GetNumGridUnitsY() * gameMode->GridUnitLengthYCM;
     return FVector2D (positionX, positionY);
 }
 
-FVector2D ULevelBuilderComponent::FindMostCentralSpawnPosition()
+FVector2D ULevelBuilderComponent::FindMostCentralSpawnPosition(int RoomOffsetX, int RoomOffsetY)
 {
-    FVector2D cellPosition = GetClosestEmptyCell(GetNumGridUnitsX() / 2, GetNumGridUnitsY() / 2);
-    return GetCellCentreWorldPosition ((int) cellPosition.X, (int) cellPosition.Y);
+    const int xOffset = RoomOffsetX * GetNumGridUnitsX();
+    const int yOffset = RoomOffsetY * GetNumGridUnitsY();
+    FVector2D cellPosition = GetClosestEmptyCell(GetNumGridUnitsX() / 2 + xOffset, GetNumGridUnitsY() / 2 + yOffset);
+    return GetCellCentreWorldPosition ((int) cellPosition.X, (int) cellPosition.Y, RoomOffsetX, RoomOffsetY);
 }
 
 void ULevelBuilderComponent::BeginPlay()
