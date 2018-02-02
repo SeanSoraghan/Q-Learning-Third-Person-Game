@@ -16,9 +16,16 @@ import matplotlib.pyplot as pyplot
 
 ue.log('Hello i am a Python module')
 
+
+full_path = os.path.realpath(__file__)
+print(os.path.dirname(full_path) + "/../Levels/GeneratedRooms")
+
+np.savetxt(os.path.dirname(full_path) + "/../Levels/GeneratedRooms" + "/1.txt", [1], fmt='%1.1d', delimiter= ' ')
+
 class Hero:
     def begin_play(self):
         self.isPendingKill = False
+        self.structure = []
 
     def tick(self, delta_time):
         if (not self.isPendingKill):
@@ -40,14 +47,14 @@ class Hero:
         # Fill borders
         Z[0, :] = Z[-1, :] = 1
         Z[:, 0] = Z[:, -1] = 1
-        print(Z)
+        #print(Z)
         # Make aisles
         for i in range(density):
             x, y = rand(0, shape[1] // 2) * 2, rand(0, shape[0] // 2) * 2
             #Z[y, x] = 1
             Z[x, y] = 1 
-            print("Y: " + str(y) + " | X: " + str(x))
-            print(Z)
+            #print("Y: " + str(y) + " | X: " + str(x))
+            #print(Z)
             for j in range(complexity):
                 neighbours = []
                 if x > 1:             neighbours.append((y, x - 2))
@@ -62,18 +69,19 @@ class Hero:
                         Z[x_, y_] = 1 
                         #Z[y_ + (y - y_) // 2, x_ + (x - x_) // 2] = 1
                         Z[x_ + (x - x_) // 2, y_ + (y - y_) // 2] = 1 
-                        print(neighbours)
-                        print("Y_n: " + str(y_) + " | X_n: " + str(x_))
-                        print("Y_n + ...: " + str(y_ + (y - y_) // 2) + " | X_n + ...: " + str(x_ + (x - x_) // 2))
-                        print(Z)
+                        #print(neighbours)
+                        #print("Y_n: " + str(y_) + " | X_n: " + str(x_))
+                        #print("Y_n + ...: " + str(y_ + (y - y_) // 2) + " | X_n + ...: " + str(x_ + (x - x_) // 2))
+                        #print(Z)
                         x, y = x_, y_
         return Z
 
     def generate(self):
         w = 15
         h = 15
-        structure = self.maze(w, h, 0.9, 0.9)
-        levelName = 'GeneratedRoom' + str(self.uobject.get_property('RoomCoordinates').x) + str(self.uobject.get_property('RoomCoordinates').y)
-        np.savetxt(levelName + ".txt", structure, fmt='%1.1d', delimiter= ' ')
-        ue.log('Generated Room NAME::: --- ' + levelName + ".txt")
+        self.structure = self.maze(w, h, 0.9, 0.9)
+        roomsDir = os.path.dirname(full_path) + "/../Levels/GeneratedRooms/"
+        levelName = str(self.uobject.get_property('GeneratedRoomCoordinates').x) + '_' + str(self.uobject.get_property('GeneratedRoomCoordinates').y)
+        np.savetxt(roomsDir + levelName + ".txt", self.structure, fmt='%1.1d', delimiter= ' ')
+        ue.log('Generated Room NAME::: --- ' + roomsDir + levelName + ".txt")
         self.uobject.set_property('RoomGenerated', True)
