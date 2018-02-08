@@ -67,7 +67,7 @@ public:
     UPROPERTY(BlueprintReadWrite, EditAnywhere, Category = "Enemy Movement")
         float RotationSpeed = 0.1f;
 private:
-    FString               LevelPolciesDir;
+    FString               LevelPoliciesDir;
     FString               CurrentLevelPolicyDir;
     TArray<TArray<int>>   CurrentLevelPolicy;
     bool                  LevelPoliciesDirFound = false;

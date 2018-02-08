@@ -9,16 +9,14 @@
 ULevelBuilderComponent::ULevelBuilderComponent()
 {
 	PrimaryComponentTick.bCanEverTick = true;
-    LevelsDir      = FPaths::/*GameDir*/ProjectDir();
-    LevelsDir     += "Content/Levels/";
-    LevelsDirFound = FPlatformFileManager::Get().GetPlatformFile().DirectoryExists (*LevelsDir);
+    LevelsDirFound = FPlatformFileManager::Get().GetPlatformFile().DirectoryExists (*LevelBuilderConstants::LevelsDir);
 }
 
 void ULevelBuilderComponent::LoadLevel (FString levelName)
 {
     if (LevelsDirFound)
     {
-        CurrentLevelPath = LevelsDir + levelName + ".txt";
+        CurrentLevelPath = LevelBuilderConstants::LevelsDir + levelName + ".txt";
 
       #if ON_SCREEN_DEBUGGING
         if ( ! FPlatformFileManager::Get().GetPlatformFile().FileExists (*CurrentLevelPath))

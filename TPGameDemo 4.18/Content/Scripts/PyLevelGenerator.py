@@ -1,6 +1,9 @@
 import unreal_engine as ue
 
 from scipy import * #@UnusedWildImport
+import _thread
+from threading import Thread
+import time
 import numpy as np
 import pylab
 import os
@@ -18,13 +21,11 @@ ue.log('Hello i am a Python module')
 
 
 full_path = os.path.realpath(__file__)
-print(os.path.dirname(full_path) + "/../Levels/GeneratedRooms")
-
-np.savetxt(os.path.dirname(full_path) + "/../Levels/GeneratedRooms" + "/1.txt", [1], fmt='%1.1d', delimiter= ' ')
 
 class Hero:
     def begin_play(self):
         self.isPendingKill = False
+        self.isTrained = false;
         self.structure = []
 
     def tick(self, delta_time):
@@ -32,7 +33,7 @@ class Hero:
             if (self.uobject.get_property('MazeGenerationRequired')):
                 self.generate()
                 self.uobject.set_property('MazeGenerationRequired', False)
-            if (self.uobject.get_property('LevelBuilt')):
+            if (self.uobject.get_property('LevelBuilt') and self.isTrained):
                 self.isPendingKill = True;
                 self.uobject.actor_destroy()
 
@@ -77,11 +78,55 @@ class Hero:
         return Z
 
     def generate(self):
-        w = 15
-        h = 15
-        self.structure = self.maze(w, h, 0.9, 0.9)
+        self.w = 15
+        self.h = 15
+        self.structure = self.maze(self.w, self.h, 0.9, 0.9)
         roomsDir = os.path.dirname(full_path) + "/../Levels/GeneratedRooms/"
         levelName = str(self.uobject.get_property('GeneratedRoomCoordinates').x) + '_' + str(self.uobject.get_property('GeneratedRoomCoordinates').y)
         np.savetxt(roomsDir + levelName + ".txt", self.structure, fmt='%1.1d', delimiter= ' ')
         ue.log('Generated Room NAME::: --- ' + roomsDir + levelName + ".txt")
         self.uobject.set_property('RoomGenerated', True)
+        self.generateLevelPolicy()
+
+    def generateLevelPolicy(self):
+        self.updateEnemyPolicyDirectory();
+        #self.train();
+        #_thread.start_new_thread(self.train(), "trainer_thread", 1)
+        Thread(target=self.train(), args=('trainer_thread',1)).start()
+
+    def updateEnemyPolicyDirectory(self):
+        roomsDir = os.path.dirname(full_path) + "/../Levels/GeneratedRooms/"
+        levelName = str(self.uobject.get_property('GeneratedRoomCoordinates').x) + '_' + str(self.uobject.get_property('GeneratedRoomCoordinates').y)
+        self.enemyPolicyDirectory = roomsDir + levelName + "/"
+        if not os.path.exists(self.enemyPolicyDirectory):
+            os.makedirs(self.enemyPolicyDirectory)
+
+    def train_for_goal_position(self, x, y):
+        if self.structure[x, y] == 0:
+            environment = Maze(self.structure, (x, y))
+            controller = ActionValueTable(self.w*self.h, 4)
+            controller.initialize(1.)
+            learner = Q()
+            agent = LearningAgent(controller, learner)
+            task = MDPMazeTask(environment)
+            experiment = Experiment(task, agent)
+            print ("beginning trainging iteration...")
+            print(" Row: " + str(x) + " | Col: " + str(y))
+            for i in range(700):#700
+                experiment.doInteractions(500)#500
+                agent.learn()
+                agent.reset()
+            np.savetxt(self.enemyPolicyDirectory + str(x) + '_' + str(y) + ".txt",
+                       controller.params.reshape(self.w*self.h, 4).argmax(axis=1).reshape(self.w, self.h), fmt='%1.1d', delimiter=' ')
+
+
+    def train(self):
+        xindex = 1
+        yindex = 1
+        for x in range(self.w - 2):
+            xindex = x+1
+            print(xindex)
+            for y in range(self.h - 2):
+                yindex = y + 1
+                self.train_for_goal_position(xindex, yindex)
+        self.isTrained = true

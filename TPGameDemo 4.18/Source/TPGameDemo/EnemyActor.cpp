@@ -11,9 +11,9 @@
 AEnemyActor::AEnemyActor (const FObjectInitializer& ObjectInitializer) : Super (ObjectInitializer)
 {
 	PrimaryActorTick.bCanEverTick = true;
-    LevelPolciesDir = FPaths::GameDir();
-    LevelPolciesDir += "Content/Characters/Enemies/LevelPolicies/";
-    LevelPoliciesDirFound = FPlatformFileManager::Get().GetPlatformFile().DirectoryExists (*LevelPolciesDir);
+    LevelPoliciesDir = FPaths::GameDir();
+    LevelPoliciesDir += "Content/Levels/GeneratedRooms/";
+    LevelPoliciesDirFound = FPlatformFileManager::Get().GetPlatformFile().DirectoryExists (*LevelPoliciesDir);
 }
 
 void AEnemyActor::BeginPlay()
@@ -22,12 +22,12 @@ void AEnemyActor::BeginPlay()
 
   #if ON_SCREEN_DEBUGGING
     if ( ! LevelPoliciesDirFound)
-	    GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red, FString::Printf (TEXT("Couldn't find level policies directory at %s"), *LevelPolciesDir));
+	    GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red, FString::Printf (TEXT("Couldn't find level policies directory at %s"), *LevelPoliciesDir));
   #endif
 
-    //UWorld* world = GetWorld();
-    //if (world != nullptr)
-    //    world->GetTimerManager().SetTimer (MoveTimerHandle, [this](){ UpdateMovement(); }, 0.5f, true);
+    UWorld* world = GetWorld();
+    if (world != nullptr)
+        world->GetTimerManager().SetTimer (MoveTimerHandle, [this](){ UpdateMovement(); }, 0.5f, true);
 }
 
 void AEnemyActor::EndPlay (const EEndPlayReason::Type EndPlayReason)
@@ -152,7 +152,7 @@ void AEnemyActor::SetMovementTimerPaused (bool movementTimerShouldBePaused)
 void AEnemyActor::LoadLevelPolicy (FString levelName)
 {
     if (LevelPoliciesDirFound)
-        CurrentLevelPolicyDir = LevelPolciesDir + levelName + "/";
+        CurrentLevelPolicyDir = LevelPoliciesDir + levelName + "/";
 }
 
 void AEnemyActor::UpdatePolicyForPlayerPosition (int targetX, int targetY)

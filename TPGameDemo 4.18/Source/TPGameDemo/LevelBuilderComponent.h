@@ -15,6 +15,11 @@ In the ue4 editor, an actor blueprint is implemented which takes an instance of 
 the maze geometry from the level blueprint.
 */
 
+namespace LevelBuilderConstants
+{
+    static const FString LevelsDir = FPaths::/*GameDir*/ProjectDir() + "Content/Levels/";
+};
+
 UCLASS( ClassGroup=(Custom), meta=(BlueprintSpawnableComponent) )
 class TPGAMEDEMO_API ULevelBuilderComponent : public UActorComponent
 {
@@ -56,7 +61,6 @@ public:
         FVector2D FindMostCentralSpawnPosition(int RoomOffsetX, int RoomOffsetY);
 
 private:
-    FString             LevelsDir;
     FString             CurrentLevelPath;
     bool                LevelsDirFound = false;
     TArray<TArray<int>> LevelStructure;
