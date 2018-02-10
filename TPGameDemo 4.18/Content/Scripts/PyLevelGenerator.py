@@ -25,7 +25,7 @@ full_path = os.path.realpath(__file__)
 class Hero:
     def begin_play(self):
         self.isPendingKill = False
-        self.isTrained = false;
+        self.isTrained = False;
         self.structure = []
 
     def tick(self, delta_time):

@@ -112,7 +112,7 @@ public:
     void PauseTraining();
 
 private:
-    FThreadSafeBool LevelTrained = 0;
+    FThreadSafeBool LevelTrained = false;
     FString CurrentLevelName = FString("");
     /** A non-0 value indicates that UE is exiting. */
     FThreadSafeCounter AppExitingCounter = 0;

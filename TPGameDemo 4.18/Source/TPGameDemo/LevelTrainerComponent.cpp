@@ -40,7 +40,7 @@ uint32 LevelTrainerRunnable::Run()
     {
         if (ShouldTrain)
         {
-            TrainerComponent.TrainNextGoalPosition(300, 100);
+            TrainerComponent.TrainNextGoalPosition(10, 10);
             if (TrainerComponent.LevelTrained)
                 ThreadShouldExit = true;
         }
@@ -163,7 +163,7 @@ ULevelTrainerComponent::ULevelTrainerComponent()
     TrainerRunnable = MakeShareable(new LevelTrainerRunnable(*this));
     FString ThreadName(FString::Printf(TEXT("LevelTrainerThread%i"), ThreadCounter.Increment()));
     TrainerThread = MakeShareable(FRunnableThread::Create(TrainerRunnable.Get(), *ThreadName, 0,
-                                  EThreadPriority::TPri_Normal));
+                                  EThreadPriority::TPri_BelowNormal));
 }
 
 void ULevelTrainerComponent::BeginDestroy()
@@ -334,6 +334,8 @@ void ULevelTrainerComponent::IncrementGoalPosition()
 
 GridState& ULevelTrainerComponent::GetState(FIntPoint statePosition)
 {
+    ensure(Environment.Num() > statePosition.X && statePosition.X >= 0 &&
+           Environment[1].Num() > statePosition.Y && statePosition.Y >= 0);
     return Environment[statePosition.X][statePosition.Y];
 }
 
