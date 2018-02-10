@@ -33,9 +33,9 @@ class Hero:
             if (self.uobject.get_property('MazeGenerationRequired')):
                 self.generate()
                 self.uobject.set_property('MazeGenerationRequired', False)
-            if (self.uobject.get_property('LevelBuilt') and self.isTrained):
-                self.isPendingKill = True;
-                self.uobject.actor_destroy()
+            #if (self.uobject.get_property('LevelBuilt') and self.isTrained):
+            #    self.isPendingKill = True;
+            #    self.uobject.actor_destroy()
 
     def maze(self, width=51, height=51, complexity=.75, density=.75):
         # Only odd shapes
@@ -86,7 +86,7 @@ class Hero:
         np.savetxt(roomsDir + levelName + ".txt", self.structure, fmt='%1.1d', delimiter= ' ')
         ue.log('Generated Room NAME::: --- ' + roomsDir + levelName + ".txt")
         self.uobject.set_property('RoomGenerated', True)
-        self.generateLevelPolicy()
+        #self.generateLevelPolicy()
 
     def generateLevelPolicy(self):
         self.updateEnemyPolicyDirectory();
