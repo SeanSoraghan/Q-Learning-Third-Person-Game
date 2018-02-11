@@ -1,8 +1,7 @@
 // Fill out your copyright notice in the Description page of Project Settings.
 
 #include "TPGameDemo.h"
-#include "TextParserComponent.cpp"
-#include "LevelBuilderComponent.h"
+#include "TextParserComponent.h"
 #include "LevelTrainerComponent.h"
 
 //====================================================================================================
@@ -159,11 +158,6 @@ static FThreadSafeCounter ThreadCounter;
 ULevelTrainerComponent::ULevelTrainerComponent()
 {
 	PrimaryComponentTick.bCanEverTick = true;
-
-    TrainerRunnable = MakeShareable(new LevelTrainerRunnable(*this));
-    FString ThreadName(FString::Printf(TEXT("LevelTrainerThread%i"), ThreadCounter.Increment()));
-    TrainerThread = MakeShareable(FRunnableThread::Create(TrainerRunnable.Get(), *ThreadName, 0,
-                                  EThreadPriority::TPri_BelowNormal));
 }
 
 void ULevelTrainerComponent::BeginDestroy()
@@ -198,6 +192,10 @@ void ULevelTrainerComponent::TickComponent( float DeltaTime, ELevelTick TickType
 
 void ULevelTrainerComponent::StartTraining()
 {
+    if (!TrainerRunnable.IsValid() || !TrainerThread.IsValid())
+    {
+        InitTrainerThread();
+    }
     if (TrainerRunnable.IsValid())
         TrainerRunnable->StartTraining();
 }
@@ -206,6 +204,14 @@ void ULevelTrainerComponent::PauseTraining()
 {
     if (TrainerRunnable.IsValid())
         TrainerRunnable->PauseTraining();
+}
+
+void ULevelTrainerComponent::InitTrainerThread()
+{
+    TrainerRunnable = MakeShareable(new LevelTrainerRunnable(*this));
+    FString ThreadName(FString::Printf(TEXT("LevelTrainerThread%i"), ThreadCounter.Increment()));
+    TrainerThread = MakeShareable(FRunnableThread::Create(TrainerRunnable.Get(), *ThreadName, 0,
+                                  EThreadPriority::TPri_BelowNormal));
 }
 
 void ULevelTrainerComponent::RegisterLevelTrainedCallback(const FOnLevelTrained& Callback)
@@ -219,9 +225,9 @@ void ULevelTrainerComponent::RegisterLevelTrainedCallback(const FOnLevelTrained&
 void ULevelTrainerComponent::UpdateEnvironmentForLevel(FString levelName)
 {
     CurrentLevelName = levelName;
-    FString CurrentLevelPath = LevelBuilderConstants::LevelsDir + CurrentLevelName + ".txt";
+    FString CurrentLevelPath = LevelBuilderHelpers::LevelsDir() + CurrentLevelName + ".txt";
     TArray<TArray<int>> LevelStructure;
-    FillArrayFromTextFile (CurrentLevelPath, LevelStructure);
+    LevelBuilderHelpers::FillArrayFromTextFile (CurrentLevelPath, LevelStructure);
     Environment.Empty();
     const int sizeX = LevelStructure.Num();
     const int sizeY = LevelStructure[0].Num();
@@ -233,30 +239,19 @@ void ULevelTrainerComponent::UpdateEnvironmentForLevel(FString levelName)
         {
             row.Add(GridState());
             GridState& state = row[y];
-            state.SetValid(LevelStructure[x][y] != 1);
+            state.SetValid(LevelStructure[x][y] == (int)ECellState::Open);
             if (state.IsStateValid())
             {
-                // What is the correct way to map actions to states here ... what is the correct x, y indexing ...?
+                for (int a = 0; a < (int)EActionType::NumActionTypes; ++a)
+                {
+                    EActionType actionType = EActionType(a);
+                    FIntPoint targetPoint = LevelBuilderHelpers::GetTargetPointForAction(FIntPoint(x,y), actionType);
+                    
+                    const bool targetValid = LevelBuilderHelpers::GridPositionIsValid(targetPoint, sizeX, sizeY) &&
+                                             LevelStructure[targetPoint.X][targetPoint.Y] == (int)ECellState::Open;
 
-                if (x == 0 || LevelStructure[x - 1][y] == 1)
-                    state.SetActionTarget(EActionType::North, FIntPoint(x,y));
-                else
-                    state.SetActionTarget(EActionType::North, FIntPoint(x - 1, y));
-
-                if (y == sizeY - 1 || LevelStructure[x][y + 1] == 1)
-                    state.SetActionTarget(EActionType::East, FIntPoint(x,y));
-                else
-                    state.SetActionTarget(EActionType::East, FIntPoint(x, y + 1));
-
-                if (x == sizeX - 1 || LevelStructure[x + 1][y] == 1)
-                    state.SetActionTarget(EActionType::South, FIntPoint(x,y));
-                else
-                    state.SetActionTarget(EActionType::South, FIntPoint(x + 1, y));
-
-                if (y == 0 || LevelStructure[x][y - 1] == 1)
-                    state.SetActionTarget(EActionType::West, FIntPoint(x,y));
-                else
-                    state.SetActionTarget(EActionType::West, FIntPoint(x, y - 1));
+                    state.SetActionTarget(actionType, targetValid ? targetPoint : FIntPoint(x,y));
+                }
             }
         }
     }
@@ -279,7 +274,7 @@ void ULevelTrainerComponent::TrainNextGoalPosition(int numSimulationsPerStarting
             }
         }
         FString CurrentPositionString = CurrentGoalPosition.X + "_" + CurrentGoalPosition.Y;
-        FString CurrentPositionDir = LevelBuilderConstants::LevelsDir + CurrentLevelName + "/" + CurrentPositionString;
+        FString CurrentPositionDir = LevelBuilderHelpers::LevelsDir() + CurrentLevelName + "/" + CurrentPositionString;
         //Create string and save to text file.
         GetState(CurrentGoalPosition).SetIsGoal(false);
     }
@@ -299,9 +294,7 @@ void ULevelTrainerComponent::SimulateRun(FIntPoint startingStatePosition, int ma
         EActionType actionToTake = optimalActions[0];
         if (optimalActions.Num() > 1)
         {
-            int actionIndex = FMath::FloorToInt((FMath::Rand() / (float)RAND_MAX) * optimalActions.Num());
-            while (actionIndex == optimalActions.Num())
-                actionIndex = FMath::FloorToInt((FMath::Rand() / (float)RAND_MAX) * optimalActions.Num());
+            int actionIndex = FMath::RandRange(0, optimalActions.Num() - 1);
             actionToTake = optimalActions[actionIndex];
         }
         const float maxNextReward = GetState(currentState.GetActionTarget(actionToTake)).GetOptimalQValueAndActions(nullptr);

@@ -1,8 +1,8 @@
 // Fill out your copyright notice in the Description page of Project Settings.
 
 #pragma once
+#include "TPGameDemo.h"
 #include "MazeActor.h"
-#include "TextParserComponent.h"
 #include "EnemyActor.generated.h"
 
 

@@ -1,7 +1,7 @@
 // Fill out your copyright notice in the Description page of Project Settings.
 #include "TPGameDemo.h"
-#include "TextParserComponent.cpp"
 #include "TPGameDemoGameMode.h"
+#include "TextParserComponent.h"
 #include "EnemyActor.h"
 #include "Kismet/KismetMathLibrary.h"
 
@@ -164,7 +164,7 @@ void AEnemyActor::UpdatePolicyForPlayerPosition (int targetX, int targetY)
         {
             ResetPolicy();
             FString policy = CurrentLevelPolicyDir + FString::FromInt (targetX) + "_" + FString::FromInt (targetY) + ".txt";
-            FillArrayFromTextFile (policy, CurrentLevelPolicy);
+            LevelBuilderHelpers::FillArrayFromTextFile (policy, CurrentLevelPolicy);
         }
     }
 }

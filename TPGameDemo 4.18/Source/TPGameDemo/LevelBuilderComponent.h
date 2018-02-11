@@ -3,7 +3,8 @@
 #pragma once
 
 #include "Components/ActorComponent.h"
-#include "MazeActor.h"
+#include "TPGameDemo.h"
+//#include "MazeActor.h"
 #include "LevelBuilderComponent.generated.h"
 
 /*
@@ -14,11 +15,6 @@ This level builder component maintains a 2D binary array -- LevelStructure -- th
 In the ue4 editor, an actor blueprint is implemented which takes an instance of this class as a component. That actor is then used to programatically fill 
 the maze geometry from the level blueprint.
 */
-
-namespace LevelBuilderConstants
-{
-    static const FString LevelsDir = FPaths::/*GameDir*/ProjectDir() + "Content/Levels/";
-};
 
 UCLASS( ClassGroup=(Custom), meta=(BlueprintSpawnableComponent) )
 class TPGAMEDEMO_API ULevelBuilderComponent : public UActorComponent
@@ -36,6 +32,9 @@ public:
 	virtual void TickComponent( float DeltaTime, ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction ) override;
 
     UFUNCTION (BlueprintCallable, Category = "Level Building")
+        virtual void GenerateLevel(int sideLength, float normedDensity, float normedComplexity, FString levelName);
+
+    UFUNCTION (BlueprintCallable, Category = "Level Building")
         virtual void LoadLevel (FString levelName);
 
     UFUNCTION (BlueprintCallable, Category = "Level Building")
@@ -46,6 +45,12 @@ public:
 
     UFUNCTION (BlueprintCallable, Category = "Level Building")
         virtual bool IsGridPositionBlocked (int x, int y);
+
+    UFUNCTION (BlueprintCallable, Category = "Level Building")
+        virtual ECellState GetCellState (int x, int y);
+
+    UFUNCTION (BlueprintCallable, Category = "Level Building")
+        virtual EActionType GetWallTypeForDoorPosition(int x, int y);
 
     UFUNCTION (BlueprintCallable, Category = "Level Building")
         FVector2D GetClosestEmptyCell (int x, int y);
@@ -61,6 +66,8 @@ public:
         FVector2D FindMostCentralSpawnPosition(int RoomOffsetX, int RoomOffsetY);
 
 private:
+    FIntPoint           GetRandomEvenCell();
+    bool                IsCellTouchingDoorCell(FIntPoint cellPosition);
     FString             CurrentLevelPath;
     bool                LevelsDirFound = false;
     TArray<TArray<int>> LevelStructure;

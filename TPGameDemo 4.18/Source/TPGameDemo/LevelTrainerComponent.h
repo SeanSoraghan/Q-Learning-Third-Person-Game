@@ -6,7 +6,7 @@
 //#include "Engine/EngineBaseTypes.h"
 //#include "Engine/EngineTypes.h"
 #include "Runnable.h"
-#include "MazeActor.h"
+//#include "MazeActor.h"
 #include "Components/ActorComponent.h"
 #include "LevelTrainerComponent.generated.h"
 
@@ -126,6 +126,7 @@ private:
     FCriticalSection ClientSection;
 
 	TArray<TArray<GridState>> Environment;
+    void InitTrainerThread();
     void TrainNextGoalPosition(int numSimulationsPerStartingPosition, int maxNumActionsPerSimulation);
     void SimulateRun(FIntPoint startingStatePosition, int maxNumActions);
     void IncrementGoalPosition();

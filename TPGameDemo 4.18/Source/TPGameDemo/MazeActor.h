@@ -2,21 +2,14 @@
 
 #pragma once
 #include "GameFramework/Character.h"
+//#include "TextParserComponent.h"
 #include "MazeActor.generated.h"
 
 
 DECLARE_DYNAMIC_MULTICAST_DELEGATE (FGridPositionChanged);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE (FActorDied);
 
-UENUM(BlueprintType)
-enum class EActionType : uint8
-{
-    North UMETA (DisplayName = "North"),
-    East  UMETA (DisplayName = "East"),
-    South UMETA (DisplayName = "South"),
-    West  UMETA (DisplayName = "West"),
-    NumActionTypes
-};
+
 
 /*
 The base class for an actor that can exist and navigate within a maze level. Maze actors maintain grid x and grid y position values.
