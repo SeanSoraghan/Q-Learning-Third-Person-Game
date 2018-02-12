@@ -210,8 +210,8 @@ FVector2D ULevelBuilderComponent::GetCellCentreWorldPosition (int x, int y, int 
     if (gameMode == nullptr)
         return FVector2D (0.0f, 0.0f);
 
-    float positionX = ((x - gameMode->NumGridUnitsX / 2) + 0.5f) * gameMode->GridUnitLengthXCM;
-    float positionY = ((y - gameMode->NumGridUnitsY / 2) + 0.5f) * gameMode->GridUnitLengthYCM;
+    float positionX = ((x - gameMode->NumGridUnitsX / 2) /*+ 0.5f*/) * gameMode->GridUnitLengthXCM;
+    float positionY = ((y - gameMode->NumGridUnitsY / 2) /*+ 0.5f*/) * gameMode->GridUnitLengthYCM;
     positionX += RoomOffsetX * GetNumGridUnitsX() * gameMode->GridUnitLengthXCM - RoomOffsetX * gameMode->GridUnitLengthXCM;
     positionY += RoomOffsetY * GetNumGridUnitsY() * gameMode->GridUnitLengthYCM - RoomOffsetY * gameMode->GridUnitLengthYCM;
     return FVector2D (positionX, positionY);
