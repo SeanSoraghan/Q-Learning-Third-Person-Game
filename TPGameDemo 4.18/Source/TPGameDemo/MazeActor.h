@@ -40,6 +40,8 @@ public:
     // Maze Position
     //=========================================================================================
     UPROPERTY (BlueprintReadOnly, Category = "Actor Grid Positions")
+        FIntPoint CurrentRoomCoords = FIntPoint(0,0);
+    UPROPERTY (BlueprintReadOnly, Category = "Actor Grid Positions")
         int GridXPosition                 = 0;
     UPROPERTY (BlueprintReadOnly, Category = "Actor Grid Positions")
         int GridYPosition                 = 0;

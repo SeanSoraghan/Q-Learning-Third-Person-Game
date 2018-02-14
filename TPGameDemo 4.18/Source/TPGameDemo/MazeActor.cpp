@@ -76,8 +76,22 @@ void AMazeActor::UpdatePosition (bool broadcastChange)
     FVector worldPosition = GetActorLocation();
     const int totalGridLengthCMX = CurrentLevelGridUnitLengthXCM * CurrentLevelNumGridUnitsX;
     const int totalGridLengthCMY = CurrentLevelGridUnitLengthYCM * CurrentLevelNumGridUnitsY;
-    GridXPosition = (int) (worldPosition.X + totalGridLengthCMX / 2 - CurrentLevelGridUnitLengthXCM * 0.5f) / (CurrentLevelGridUnitLengthXCM);
-    GridYPosition = (int) (worldPosition.Y + totalGridLengthCMY / 2 - CurrentLevelGridUnitLengthYCM * 0.5f) / (CurrentLevelGridUnitLengthYCM);
+    // map -gridLength/2 > gridLength/2 to 0 > gridLength.
+    const int mappedX = worldPosition.X + totalGridLengthCMX / 2;
+    const int mappedY = worldPosition.Y + totalGridLengthCMY / 2;
+    // get current room coords. negative values should start indexed from -1, not 0 (hence the ternary addition).
+    const int roomX = FMath::Abs(mappedX / totalGridLengthCMX) + (mappedX < 0 ? 1 : 0) * FMath::Sign(mappedX);
+    const int roomY = FMath::Abs(mappedY / totalGridLengthCMY) + (mappedY < 0 ? 1 : 0) * FMath::Sign(mappedY);
+    CurrentRoomCoords = FIntPoint(roomX, roomY);
+    // divide mappedX and mappedY to get individual cell coordinates within room. If negative, should index backwards.
+    const int numUnitsX = (int) (mappedX /*- CurrentLevelGridUnitLengthXCM * 0.5f*/) / (CurrentLevelGridUnitLengthXCM);
+    const int numUnitsY = (int) (mappedY /*- CurrentLevelGridUnitLengthYCM * 0.5f*/) / (CurrentLevelGridUnitLengthYCM);
+    GridXPosition = numUnitsX % CurrentLevelNumGridUnitsX;
+    GridYPosition = numUnitsY % CurrentLevelNumGridUnitsY;
+    if (mappedX < 0)
+        GridXPosition = CurrentLevelNumGridUnitsX - FMath::Abs(GridXPosition);
+    if (mappedY < 0)
+        GridYPosition = CurrentLevelNumGridUnitsY - FMath::Abs(GridYPosition);
 
     if (broadcastChange && (GridYPosition != PreviousGridYPosition || GridXPosition != PreviousGridXPosition))
         GridPositionChangedEvent.Broadcast();

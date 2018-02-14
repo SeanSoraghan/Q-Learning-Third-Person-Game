@@ -280,7 +280,7 @@ void ULevelTrainerComponent::TrainNextGoalPosition(int numSimulationsPerStarting
                 }
             }
         }
-        FString CurrentPositionString = CurrentGoalPosition.X + "_" + CurrentGoalPosition.Y;
+        FString CurrentPositionString = FString::FromInt(CurrentGoalPosition.X) + FString("_") + FString::FromInt(CurrentGoalPosition.Y);
         //Create string and save to text file.
         FString CurrentPositionFileName = LevelBuilderHelpers::LevelsDir() + CurrentLevelName + "/" + CurrentPositionString + ".txt";
         TArray<TArray<int>> envArray = GetEnvironmentIntArray();
