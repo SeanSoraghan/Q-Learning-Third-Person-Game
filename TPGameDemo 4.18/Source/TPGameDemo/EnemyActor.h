@@ -55,8 +55,10 @@ public:
     // Behaviour Policy
     //====================================================================================================== 
     UFUNCTION (BlueprintCallable, Category = "Enemy Policy")
-        void LoadLevelPolicy (FString levelName);
+        void LoadLevelPolicyForRoomCoordinates (FIntPoint levelCoords);
 
+    UFUNCTION (BlueprintCallable, Category = "Enemy Policy")
+        void LoadLevelPolicy (FString levelName);
     //======================================================================================================
     // Movement
     //====================================================================================================== 

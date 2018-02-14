@@ -61,6 +61,7 @@ public:
     const float GetOptimalQValueAndActions(TArray<EActionType>* ActionsArrayToSet) const;
 
     void UpdateQValue(EActionType actionType, float deltaQ);
+    void ResetQValues();
 
     void SetIsGoal(bool isGoal);
     bool IsGoalState() const;
@@ -125,6 +126,8 @@ private:
     TSharedPtr<LevelTrainerRunnable> TrainerRunnable;
     FCriticalSection ClientSection;
 
+    TArray<TArray<int>> GetEnvironmentIntArray();
+    void ClearEnvironment();
 	TArray<TArray<GridState>> Environment;
     void InitTrainerThread();
     void TrainNextGoalPosition(int numSimulationsPerStartingPosition, int maxNumActionsPerSimulation);

@@ -219,9 +219,7 @@ FVector2D ULevelBuilderComponent::GetCellCentreWorldPosition (int x, int y, int 
 
 FVector2D ULevelBuilderComponent::FindMostCentralSpawnPosition(int RoomOffsetX, int RoomOffsetY)
 {
-    const int xOffset = RoomOffsetX * GetNumGridUnitsX();
-    const int yOffset = RoomOffsetY * GetNumGridUnitsY();
-    FVector2D cellPosition = GetClosestEmptyCell(GetNumGridUnitsX() / 2 + xOffset, GetNumGridUnitsY() / 2 + yOffset);
+    FVector2D cellPosition = GetClosestEmptyCell(GetNumGridUnitsX() / 2, GetNumGridUnitsY() / 2);
     return GetCellCentreWorldPosition ((int) cellPosition.X, (int) cellPosition.Y, RoomOffsetX, RoomOffsetY);
 }
 

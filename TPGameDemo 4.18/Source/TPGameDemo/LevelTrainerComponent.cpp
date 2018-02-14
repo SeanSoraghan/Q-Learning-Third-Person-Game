@@ -39,7 +39,7 @@ uint32 LevelTrainerRunnable::Run()
     {
         if (ShouldTrain)
         {
-            TrainerComponent.TrainNextGoalPosition(300, 100); //int numSimulationsPerStartingPosition, int maxNumActionsPerSimulation
+            TrainerComponent.TrainNextGoalPosition(100, 30); //int numSimulationsPerStartingPosition, int maxNumActionsPerSimulation
             if (TrainerComponent.LevelTrained)
                 ThreadShouldExit = true;
         }
@@ -113,6 +113,12 @@ const float GridState::GetOptimalQValueAndActions(TArray<EActionType>* ActionsAr
 FIntPoint GridState::GetActionTarget(EActionType actionType) const
 {
     return ActionTargets[(int)actionType];
+}
+
+void GridState::ResetQValues()
+{
+    for (int actionType = 0; actionType < (int)EActionType::NumActionTypes; ++actionType)
+        ActionQValues[actionType] = 0.0f;
 }
 
 void GridState::UpdateQValue(EActionType actionType, float deltaQ) 
@@ -259,6 +265,7 @@ void ULevelTrainerComponent::UpdateEnvironmentForLevel(FString levelName)
 
 void ULevelTrainerComponent::TrainNextGoalPosition(int numSimulationsPerStartingPosition, int maxNumActionsPerSimulation)
 {
+    ClearEnvironment();
     if (GetState(CurrentGoalPosition).IsStateValid())
     {
         GetState(CurrentGoalPosition).SetIsGoal(true);
@@ -274,11 +281,47 @@ void ULevelTrainerComponent::TrainNextGoalPosition(int numSimulationsPerStarting
             }
         }
         FString CurrentPositionString = CurrentGoalPosition.X + "_" + CurrentGoalPosition.Y;
-        FString CurrentPositionDir = LevelBuilderHelpers::LevelsDir() + CurrentLevelName + "/" + CurrentPositionString;
         //Create string and save to text file.
+        FString CurrentPositionFileName = LevelBuilderHelpers::LevelsDir() + CurrentLevelName + "/" + CurrentPositionString + ".txt";
+        TArray<TArray<int>> envArray = GetEnvironmentIntArray();
+        LevelBuilderHelpers::WriteArrayToTextFile(envArray, CurrentPositionFileName);
         GetState(CurrentGoalPosition).SetIsGoal(false);
     }
     IncrementGoalPosition();
+}
+
+TArray<TArray<int>> ULevelTrainerComponent::GetEnvironmentIntArray()
+{
+    TArray<TArray<int>> outArray;
+    for (int x = 0; x < Environment.Num(); ++x)
+    {
+        outArray.Add(TArray<int>());
+        for (int y = 0; y < Environment[0].Num(); ++y)
+        {
+            TArray<EActionType> optimalActions;
+            GetState(FIntPoint(x,y)).GetOptimalQValueAndActions(&optimalActions);
+            ensure(optimalActions.Num() > 0);
+            EActionType actionToTake = optimalActions[0];
+            if (optimalActions.Num() > 1)
+            {
+                int actionIndex = FMath::RandRange(0, optimalActions.Num() - 1);
+                actionToTake = optimalActions[actionIndex];
+            }
+            outArray[x].Add((int)actionToTake);
+        }
+    }
+    return outArray;
+}
+
+void ULevelTrainerComponent::ClearEnvironment()
+{
+    for(int x = 0; x < Environment.Num(); ++x)
+    {
+        for(int y = 0; y < Environment[0].Num(); ++y)
+        {
+            GetState(FIntPoint(x,y)).ResetQValues();
+        }
+    }
 }
 
 void ULevelTrainerComponent::SimulateRun(FIntPoint startingStatePosition, int maxNumActions)
@@ -312,6 +355,7 @@ void ULevelTrainerComponent::SimulateRun(FIntPoint startingStatePosition, int ma
 
 void ULevelTrainerComponent::IncrementGoalPosition()
 {
+    UE_LOG(LogTemp, Warning, TEXT("Current Pos: %d | %d"), CurrentGoalPosition.X, CurrentGoalPosition.Y);
     if (CurrentGoalPosition.Y == Environment[0].Num() - 1)
     {
         if (CurrentGoalPosition.X == Environment.Num() - 1)
@@ -319,6 +363,7 @@ void ULevelTrainerComponent::IncrementGoalPosition()
             LevelTrained = true;
             return;
         }
+        CurrentGoalPosition.Y = 0;
         ++CurrentGoalPosition.X;
         return;
     }

@@ -91,26 +91,6 @@ void AEnemyActor::UpdateMovement()
         }
         default: break;
     }
-    CheckPositionLimits();
-}
-
-void AEnemyActor::CheckPositionLimits()
-{
-    FVector currentLocation    = GetActorLocation();
-    const int halfGridStepX    = CurrentLevelGridUnitLengthXCM / 2;
-    const int totalGridLengthX = CurrentLevelGridUnitLengthXCM * CurrentLevelNumGridUnitsX;
-    const int edgeLimitX       = ((CurrentLevelNumGridUnitsX / 2) - (CurrentLevelNumGridUnitsX % 2 == 0 ? 1 : 0) - 1) * CurrentLevelGridUnitLengthXCM + halfGridStepX; 
-    const int halfGridStepY    = CurrentLevelGridUnitLengthYCM / 2;
-    const int totalGridLengthY = CurrentLevelGridUnitLengthYCM * CurrentLevelNumGridUnitsY;
-    const int edgeLimitY       = ((CurrentLevelNumGridUnitsY / 2) - (CurrentLevelNumGridUnitsY % 2 == 0 ? 1 : 0) - 1) * CurrentLevelGridUnitLengthYCM + halfGridStepY; 
-
-    if (FMath::Abs (currentLocation.X) > totalGridLengthX / 2)
-        currentLocation.X = edgeLimitX * FMath::Sign (currentLocation.X);
-
-    if (FMath::Abs (currentLocation.Y) > totalGridLengthY / 2)
-        currentLocation.Y = edgeLimitY * FMath::Sign (currentLocation.Y);
-
-    SetActorLocation (currentLocation);
 }
 
 EActionType AEnemyActor::SelectNextAction()
@@ -149,6 +129,12 @@ void AEnemyActor::SetMovementTimerPaused (bool movementTimerShouldBePaused)
 //======================================================================================================
 // Behaviour Policy
 //======================================================================================================
+void AEnemyActor::LoadLevelPolicyForRoomCoordinates (FIntPoint levelCoords)
+{
+    FString levelName = FString::FromInt(levelCoords.X) + FString("_") + FString::FromInt(levelCoords.Y);
+    LoadLevelPolicy(levelName);
+}
+
 void AEnemyActor::LoadLevelPolicy (FString levelName)
 {
     if (LevelPoliciesDirFound)
