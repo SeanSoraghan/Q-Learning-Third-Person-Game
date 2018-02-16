@@ -298,16 +298,23 @@ TArray<TArray<int>> ULevelTrainerComponent::GetEnvironmentIntArray()
         outArray.Add(TArray<int>());
         for (int y = 0; y < Environment[0].Num(); ++y)
         {
-            TArray<EActionType> optimalActions;
-            GetState(FIntPoint(x,y)).GetOptimalQValueAndActions(&optimalActions);
-            ensure(optimalActions.Num() > 0);
-            EActionType actionToTake = optimalActions[0];
-            if (optimalActions.Num() > 1)
+            if (!GetState(FIntPoint(x,y)).IsStateValid())
             {
-                int actionIndex = FMath::RandRange(0, optimalActions.Num() - 1);
-                actionToTake = optimalActions[actionIndex];
+                outArray[x].Add(-1);
             }
-            outArray[x].Add((int)actionToTake);
+            else
+            {
+                TArray<EActionType> optimalActions;
+                GetState(FIntPoint(x,y)).GetOptimalQValueAndActions(&optimalActions);
+                ensure(optimalActions.Num() > 0);
+                EActionType actionToTake = optimalActions[0];
+                if (optimalActions.Num() > 1)
+                {
+                    int actionIndex = FMath::RandRange(0, optimalActions.Num() - 1);
+                    actionToTake = optimalActions[actionIndex];
+                }
+                outArray[x].Add((int)actionToTake);
+            }
         }
     }
     return outArray;

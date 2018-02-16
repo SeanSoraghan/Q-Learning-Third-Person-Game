@@ -46,13 +46,18 @@ void AEnemyActor::EndPlay (const EEndPlayReason::Type EndPlayReason)
 void AEnemyActor::Tick( float DeltaTime )
 {
 	Super::Tick( DeltaTime );
-    UpdateMovement();
+    //UpdateMovement();
     FVector MovementVector = MovementTarget - GetActorLocation();
     MovementVector.Normalize();
     FRotator CurrentRotation = GetActorForwardVector().Rotation();
     FRotator ToTarget = UKismetMathLibrary::NormalizedDeltaRotator(CurrentRotation, MovementVector.Rotation());
     SetActorRotation (UKismetMathLibrary::RLerp(CurrentRotation, MovementVector.Rotation(), RotationSpeed/*Linear*/, true));
+   // UE_LOG(LogTemp, Warning, TEXT("Position Before: %f | %f | %f"), GetActorLocation().X, GetActorLocation().Y, GetActorLocation().Z);
+    SetActorLocation(GetActorLocation() + MovementVector * MovementSpeed, true);
     AddMovementInput(MovementVector * MovementSpeed);
+    //UE_LOG(LogTemp, Warning, TEXT("Position After: %f | %f | %f"), GetActorLocation().X, GetActorLocation().Y, GetActorLocation().Z);
+    SetActorLocation(GetActorLocation() + MovementVector * MovementSpeed, false);
+    //UE_LOG(LogTemp, Warning, TEXT("Position After No Sweep: %f | %f | %f"), GetActorLocation().X, GetActorLocation().Y, GetActorLocation().Z);
      //GetActorForwardVector().Rotation()
 }
 
@@ -68,24 +73,28 @@ void AEnemyActor::UpdateMovement()
         case EActionType::North: 
         {
             //SetActorLocation (FVector (currentLocation.X + CurrentLevelGridUnitLengthXCM, currentLocation.Y, currentLocation.Z));
+            UE_LOG(LogTemp, Warning, TEXT("Chose North"));
             MovementTarget = FVector (currentLocation.X + CurrentLevelGridUnitLengthXCM, currentLocation.Y, currentLocation.Z);
             break;
         }
         case EActionType::East: 
         {
             //SetActorLocation (FVector (currentLocation.X, currentLocation.Y + CurrentLevelGridUnitLengthYCM, currentLocation.Z));
+            UE_LOG(LogTemp, Warning, TEXT("Chose East"));
             MovementTarget = FVector (currentLocation.X, currentLocation.Y + CurrentLevelGridUnitLengthYCM, currentLocation.Z);
             break;
         }
         case EActionType::South: 
         {
             //SetActorLocation (FVector (currentLocation.X - CurrentLevelGridUnitLengthXCM, currentLocation.Y, currentLocation.Z));
+            UE_LOG(LogTemp, Warning, TEXT("Chose South"));
             MovementTarget = FVector (currentLocation.X - CurrentLevelGridUnitLengthXCM, currentLocation.Y, currentLocation.Z);
             break;
         }
         case EActionType::West: 
         {
             //SetActorLocation (FVector (currentLocation.X, currentLocation.Y - CurrentLevelGridUnitLengthYCM, currentLocation.Z));
+            UE_LOG(LogTemp, Warning, TEXT("Chose West"));
             MovementTarget = FVector (currentLocation.X, currentLocation.Y - CurrentLevelGridUnitLengthYCM, currentLocation.Z);
             break;
         }
@@ -138,7 +147,7 @@ void AEnemyActor::LoadLevelPolicyForRoomCoordinates (FIntPoint levelCoords)
 void AEnemyActor::LoadLevelPolicy (FString levelName)
 {
     if (LevelPoliciesDirFound)
-        CurrentLevelPolicyDir = LevelPoliciesDir + levelName + "/";
+        CurrentLevelPolicyDir = LevelPoliciesDir + levelName + "/";  
 }
 
 void AEnemyActor::UpdatePolicyForPlayerPosition (int targetX, int targetY)
@@ -152,6 +161,7 @@ void AEnemyActor::UpdatePolicyForPlayerPosition (int targetX, int targetY)
             FString policy = CurrentLevelPolicyDir + FString::FromInt (targetX) + "_" + FString::FromInt (targetY) + ".txt";
             LevelBuilderHelpers::FillArrayFromTextFile (policy, CurrentLevelPolicy);
         }
+        PrintLevelPolicy();
     }
 }
 
@@ -164,13 +174,17 @@ void AEnemyActor::ResetPolicy()
 
 void AEnemyActor::PrintLevelPolicy()
 {
+    UE_LOG(LogTemp, Warning, TEXT("Level Policy::"));
     for (int row = 0; row < CurrentLevelPolicy.Num(); row++)
     {
         FString s = "";
 
         for (int col = 0; col < CurrentLevelPolicy[row].Num(); col++)
-            s += FString::FromInt (CurrentLevelPolicy[row][col]);
+            s += FString("|") + 
+                 (CurrentLevelPolicy[row][col] == -1 ? FString("") : FString(" ")) + 
+                 FString::FromInt (CurrentLevelPolicy[row][col]);
 
+        UE_LOG(LogTemp, Warning, TEXT("%s"), *s);
         GEngine->AddOnScreenDebugMessage(-1, 1000.f, FColor::Red, s);
     }
 }

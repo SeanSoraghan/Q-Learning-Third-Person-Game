@@ -76,22 +76,24 @@ void AMazeActor::UpdatePosition (bool broadcastChange)
     FVector worldPosition = GetActorLocation();
     const int totalGridLengthCMX = CurrentLevelGridUnitLengthXCM * CurrentLevelNumGridUnitsX;
     const int totalGridLengthCMY = CurrentLevelGridUnitLengthYCM * CurrentLevelNumGridUnitsY;
+    const int overlappingGridLengthCMX = totalGridLengthCMX - CurrentLevelGridUnitLengthXCM;
+    const int overlappingGridLengthCMY = totalGridLengthCMY - CurrentLevelGridUnitLengthYCM;
     // map -gridLength/2 > gridLength/2 to 0 > gridLength.
-    const int mappedX = worldPosition.X + totalGridLengthCMX / 2;
-    const int mappedY = worldPosition.Y + totalGridLengthCMY / 2;
+    const int mappedX = worldPosition.X + overlappingGridLengthCMX / 2;
+    const int mappedY = worldPosition.Y + overlappingGridLengthCMY / 2;
     // get current room coords. negative values should start indexed from -1, not 0 (hence the ternary addition).
-    const int roomX = FMath::Abs(mappedX / totalGridLengthCMX) + (mappedX < 0 ? 1 : 0) * FMath::Sign(mappedX);
-    const int roomY = FMath::Abs(mappedY / totalGridLengthCMY) + (mappedY < 0 ? 1 : 0) * FMath::Sign(mappedY);
+    const int roomX = FMath::Abs(mappedX / overlappingGridLengthCMX) + (mappedX < 0 ? 1 : 0) * FMath::Sign(mappedX);
+    const int roomY = FMath::Abs(mappedY / overlappingGridLengthCMY) + (mappedY < 0 ? 1 : 0) * FMath::Sign(mappedY);
     CurrentRoomCoords = FIntPoint(roomX, roomY);
     // divide mappedX and mappedY to get individual cell coordinates within room. If negative, should index backwards.
     const int numUnitsX = (int) (mappedX /*- CurrentLevelGridUnitLengthXCM * 0.5f*/) / (CurrentLevelGridUnitLengthXCM);
     const int numUnitsY = (int) (mappedY /*- CurrentLevelGridUnitLengthYCM * 0.5f*/) / (CurrentLevelGridUnitLengthYCM);
-    GridXPosition = numUnitsX % CurrentLevelNumGridUnitsX;
-    GridYPosition = numUnitsY % CurrentLevelNumGridUnitsY;
+    GridXPosition = numUnitsX % (CurrentLevelNumGridUnitsX - 1);
+    GridYPosition = numUnitsY % (CurrentLevelNumGridUnitsY - 1);
     if (mappedX < 0)
-        GridXPosition = CurrentLevelNumGridUnitsX - FMath::Abs(GridXPosition);
+        GridXPosition = (CurrentLevelNumGridUnitsX - 1) - FMath::Abs(GridXPosition);
     if (mappedY < 0)
-        GridYPosition = CurrentLevelNumGridUnitsY - FMath::Abs(GridYPosition);
+        GridYPosition = (CurrentLevelNumGridUnitsY - 1) - FMath::Abs(GridYPosition);
 
     if (broadcastChange && (GridYPosition != PreviousGridYPosition || GridXPosition != PreviousGridXPosition))
         GridPositionChangedEvent.Broadcast();
