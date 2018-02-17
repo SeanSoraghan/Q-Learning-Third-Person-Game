@@ -39,7 +39,7 @@ uint32 LevelTrainerRunnable::Run()
     {
         if (ShouldTrain)
         {
-            TrainerComponent.TrainNextGoalPosition(200, 100); //int numSimulationsPerStartingPosition, int maxNumActionsPerSimulation
+            TrainerComponent.TrainNextGoalPosition(300, 300); //int numSimulationsPerStartingPosition, int maxNumActionsPerSimulation
             if (TrainerComponent.LevelTrained)
                 ThreadShouldExit = true;
         }
@@ -95,9 +95,9 @@ const float GridState::GetOptimalQValueAndActions(TArray<EActionType>* ActionsAr
     for (int i = 1; i < ActionQValues.Num(); ++i)
     {
         float currentV = ActionQValues[i];
-        if (currentV <= optimalQValue)
+        if (currentV >= optimalQValue)
         {
-            if (currentV < optimalQValue)
+            if (currentV > optimalQValue)
             {
                 if (updateArray)
                     ActionsArrayToSet->Empty();
@@ -137,6 +137,9 @@ void GridState::SetIsGoal(bool isGoal)
     if (IsGoal)
         ActionRewards = {GridTrainingConstants::GoalReward, GridTrainingConstants::GoalReward,
                          GridTrainingConstants::GoalReward, GridTrainingConstants::GoalReward};
+    else
+        ActionRewards = {GridTrainingConstants::MovementCost, GridTrainingConstants::MovementCost,
+                         GridTrainingConstants::MovementCost, GridTrainingConstants::MovementCost};
 }
 
 void GridState::SetValid(bool valid)
@@ -275,7 +278,7 @@ void ULevelTrainerComponent::TrainNextGoalPosition(int numSimulationsPerStarting
             {
                 for (int s = 0; s < numSimulationsPerStartingPosition; ++s)
                 {
-                    if (GetState(FIntPoint(x,y)).IsStateValid())
+                    if (GetState(FIntPoint(x,y)).IsStateValid() && FIntPoint(x,y) != CurrentGoalPosition)
                         SimulateRun(FIntPoint(x,y), maxNumActionsPerSimulation);
                 }
             }
@@ -338,6 +341,8 @@ void ULevelTrainerComponent::SimulateRun(FIntPoint startingStatePosition, int ma
     int numActionsTaken = 0;
     bool goalReached = false;
     GridState& currentState = GetState(startingStatePosition);
+    if (currentState.IsGoalState())
+            goalReached = true;
     while (numActionsTaken < maxNumActions && !goalReached)
     {
         TArray<EActionType> optimalActions;
