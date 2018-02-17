@@ -39,7 +39,7 @@ uint32 LevelTrainerRunnable::Run()
     {
         if (ShouldTrain)
         {
-            TrainerComponent.TrainNextGoalPosition(100, 30); //int numSimulationsPerStartingPosition, int maxNumActionsPerSimulation
+            TrainerComponent.TrainNextGoalPosition(200, 100); //int numSimulationsPerStartingPosition, int maxNumActionsPerSimulation
             if (TrainerComponent.LevelTrained)
                 ThreadShouldExit = true;
         }
@@ -284,6 +284,8 @@ void ULevelTrainerComponent::TrainNextGoalPosition(int numSimulationsPerStarting
         //Create string and save to text file.
         FString CurrentPositionFileName = LevelBuilderHelpers::LevelsDir() + CurrentLevelName + "/" + CurrentPositionString + ".txt";
         TArray<TArray<int>> envArray = GetEnvironmentIntArray();
+        UE_LOG(LogTemp, Warning, TEXT("Level Policy:"));
+        LevelBuilderHelpers::PrintArray(envArray);
         LevelBuilderHelpers::WriteArrayToTextFile(envArray, CurrentPositionFileName);
         GetState(CurrentGoalPosition).SetIsGoal(false);
     }

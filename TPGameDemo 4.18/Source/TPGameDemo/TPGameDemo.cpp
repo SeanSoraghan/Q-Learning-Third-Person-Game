@@ -14,7 +14,7 @@ FIntPoint LevelBuilderHelpers::GetTargetPointForAction(FIntPoint startingPoint, 
     {
         case EActionType::North:
         {
-            endPoint.X -= numSpaces;
+            endPoint.X += numSpaces;
             break;
         }
         case EActionType::East:
@@ -24,7 +24,7 @@ FIntPoint LevelBuilderHelpers::GetTargetPointForAction(FIntPoint startingPoint, 
         }
         case EActionType::South:
         {
-            endPoint.X += numSpaces;
+            endPoint.X -= numSpaces;
             break;
         }
         case EActionType::West:
@@ -107,4 +107,21 @@ void LevelBuilderHelpers::WriteArrayToTextFile (TArray<TArray<int>>& arrayRef, F
         text += row;
     }
     FFileHelper::SaveStringToFile(text, * fileName);
+}
+
+void LevelBuilderHelpers::PrintArray(TArray<TArray<int>>& arrayRef)
+{
+    UE_LOG(LogTemp, Warning, TEXT("Level Array--------------"));
+    for (int row = arrayRef.Num() - 1; row >= 0; --row)
+    {
+        FString s = "";
+
+        for (int col = 0; col < arrayRef[row].Num(); col++)
+            s += FString("|") + 
+                 (arrayRef[row][col] == -1 ? FString("") : FString(" ")) + 
+                 FString::FromInt (arrayRef[row][col]);
+
+        UE_LOG(LogTemp, Warning, TEXT("%s"), *s);
+        //GEngine->AddOnScreenDebugMessage(-1, 1000.f, FColor::Red, s);
+    }
 }

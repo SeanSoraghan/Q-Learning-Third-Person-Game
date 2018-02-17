@@ -32,9 +32,9 @@ void ULevelBuilderComponent::GenerateLevel(int sideLength, float normedDensity, 
     const int density = int(normedDensity * (FMath::Pow ((sideLength / 2.0f), 2.0f)));
     LevelStructure.Empty();
     // Generate random doors on perimiter.
-    FIntPoint northDoor = FIntPoint(0, FMath::RandRange(1, sideLength - 2));
+    FIntPoint northDoor = FIntPoint(sideLength - 1, FMath::RandRange(1, sideLength - 2));
     FIntPoint eastDoor  = FIntPoint(FMath::RandRange(1, sideLength - 2), sideLength - 1);
-    FIntPoint southDoor = FIntPoint(sideLength - 1, FMath::RandRange(1, sideLength - 2));
+    FIntPoint southDoor = FIntPoint(0, FMath::RandRange(1, sideLength - 2));
     FIntPoint westDoor  = FIntPoint(FMath::RandRange(1, sideLength - 2), 0);
     for (int x = 0; x < sideLength; ++x)
     {
@@ -79,6 +79,9 @@ void ULevelBuilderComponent::GenerateLevel(int sideLength, float normedDensity, 
         }
     }
 
+    UE_LOG(LogTemp, Warning, TEXT("Generated Level:"));
+    LevelBuilderHelpers::PrintArray(LevelStructure);
+
     if (LevelsDirFound && !levelName.IsEmpty())
     {
         CurrentLevelPath = LevelBuilderHelpers::LevelsDir() + levelName + ".txt";
@@ -111,7 +114,7 @@ void ULevelBuilderComponent::LoadLevel (FString levelName)
         if ( ! FPlatformFileManager::Get().GetPlatformFile().FileExists (*CurrentLevelPath))
             GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red, FString::Printf (TEXT("Cant Find file: | %s |"), *CurrentLevelPath));
       #endif
-
+        LevelStructure.Empty();
         LevelBuilderHelpers::FillArrayFromTextFile (CurrentLevelPath, LevelStructure);
         ATPGameDemoGameMode* gameMode = (ATPGameDemoGameMode*) GetWorld()->GetAuthGameMode();
 
@@ -141,7 +144,9 @@ bool ULevelBuilderComponent::IsGridPositionBlocked (int x, int y)
 
 ECellState ULevelBuilderComponent::GetCellState (int x, int y)
 {
-    return (ECellState)LevelStructure[x][y];
+    if (x >= 0 && y >= 0 && x < LevelStructure.Num() && y < LevelStructure.Num())
+        return (ECellState)LevelStructure[x][y];
+    return (ECellState)0;
 }
 
 EActionType ULevelBuilderComponent::GetWallTypeForDoorPosition(int x, int y)
@@ -149,11 +154,11 @@ EActionType ULevelBuilderComponent::GetWallTypeForDoorPosition(int x, int y)
     const int sizeX = LevelStructure.Num();
     const int sizeY = LevelStructure[0].Num();
     if (x == 0 && y > 0 && y < sizeY - 1)
-        return EActionType::North;
+        return EActionType::South;
     if (y == sizeY - 1 && x > 0 && x < sizeY - 1)
         return EActionType::East;
     if (x == sizeX - 1 && y > 0 && y < sizeY - 1)
-        return EActionType::South;
+        return EActionType::North;
     if (y == 0 && x > 0 && x < sizeX - 1)
         return EActionType::West;
     return EActionType::NumActionTypes;
@@ -175,16 +180,16 @@ FVector2D ULevelBuilderComponent::GetClosestEmptyCell (int x, int y)
         switch (actionType)
         {
             case EActionType::North: 
-                ++yPos;
-                break;
-            case EActionType::East: 
                 ++xPos;
                 break;
+            case EActionType::East: 
+                ++yPos;
+                break;
             case EActionType::South: 
-                --yPos;
+                --xPos;
                 break;
             case EActionType::West: 
-                --xPos;
+                --yPos;
                 break;
             default: break;
         }

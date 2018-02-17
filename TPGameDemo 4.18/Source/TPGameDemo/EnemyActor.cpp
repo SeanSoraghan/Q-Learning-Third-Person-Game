@@ -175,16 +175,5 @@ void AEnemyActor::ResetPolicy()
 void AEnemyActor::PrintLevelPolicy()
 {
     UE_LOG(LogTemp, Warning, TEXT("Level Policy::"));
-    for (int row = 0; row < CurrentLevelPolicy.Num(); row++)
-    {
-        FString s = "";
-
-        for (int col = 0; col < CurrentLevelPolicy[row].Num(); col++)
-            s += FString("|") + 
-                 (CurrentLevelPolicy[row][col] == -1 ? FString("") : FString(" ")) + 
-                 FString::FromInt (CurrentLevelPolicy[row][col]);
-
-        UE_LOG(LogTemp, Warning, TEXT("%s"), *s);
-        GEngine->AddOnScreenDebugMessage(-1, 1000.f, FColor::Red, s);
-    }
+    LevelBuilderHelpers::PrintArray(CurrentLevelPolicy);
 }

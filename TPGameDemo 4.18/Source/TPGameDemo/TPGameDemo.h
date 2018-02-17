@@ -49,4 +49,6 @@ namespace LevelBuilderHelpers
     from bottom to top (rather than top to bottom).
     */
     void WriteArrayToTextFile (TArray<TArray<int>>& arrayRef, FString fileName, bool invertX = false);
+
+    void PrintArray(TArray<TArray<int>>& arrayRef);
 };
