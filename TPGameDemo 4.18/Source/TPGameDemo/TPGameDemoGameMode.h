@@ -58,4 +58,12 @@ public:
 
     UFUNCTION (BlueprintCallable, Category = "Game Mode Grid Size")
         void SetNumGridUnitsY (int numUnitsY);
+
+    /** Returns the world position of cell x|y mapped from positive indexing (0,0 -> n,n) to world positions centered at 0,0 (-n/2 * gridUnitX, -n/2 * gridUnitY -> n/2 * gridUnitX, n/2 * gridUnityY). 
+        The x position is offset by RoomOffsetX * grid (room) width. Similar for the y position.
+        If getCentre is true, the returned position will be centred within the grid cell. 
+        If getCentre is false, the returned position will be the back left corner of the cell.
+    */
+    UFUNCTION (BlueprintCallable, Category = "Room Grid Positions")
+        static FVector2D GetCellWorldPosition (UWorld* world, int x, int y, int RoomOffsetX, int RoomOffsetY, bool getCentre = true);
 };

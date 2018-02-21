@@ -340,12 +340,13 @@ void ULevelTrainerComponent::SimulateRun(FIntPoint startingStatePosition, int ma
 {
     int numActionsTaken = 0;
     bool goalReached = false;
-    GridState& currentState = GetState(startingStatePosition);
-    if (currentState.IsGoalState())
+    if (GetState(startingStatePosition).IsGoalState())
             goalReached = true;
+    FIntPoint currentPosition = startingStatePosition;
     while (numActionsTaken < maxNumActions && !goalReached)
     {
         TArray<EActionType> optimalActions;
+        GridState& currentState = GetState(currentPosition);
         currentState.GetOptimalQValueAndActions(&optimalActions);
         ensure(optimalActions.Num() > 0);
         EActionType actionToTake = optimalActions[0];
@@ -360,9 +361,9 @@ void ULevelTrainerComponent::SimulateRun(FIntPoint startingStatePosition, int ma
         const float immediateReward = currentState.GetRewards()[(int)actionToTake];
         const float deltaQ = GridTrainingConstants::LearningRate * (immediateReward + discountedNextReward - currentQValue);
         currentState.UpdateQValue(actionToTake, deltaQ);
-        currentState = GetState(currentState.GetActionTarget(actionToTake));
+        currentPosition = currentState.GetActionTarget(actionToTake);
         ++numActionsTaken;
-        if (currentState.IsGoalState())
+        if (GetState(currentPosition).IsGoalState())
             goalReached = true;
     }
 }

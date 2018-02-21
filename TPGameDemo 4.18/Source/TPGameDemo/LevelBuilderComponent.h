@@ -57,9 +57,11 @@ public:
 
     /** Returns the world position of cell x|y mapped from positive indexing (0,0 -> n,n) to world positions centered at 0,0 (-n/2 * gridUnitX, -n/2 * gridUnitY -> n/2 * gridUnitX, n/2 * gridUnityY). 
         The x position is offset by RoomOffsetX * grid (room) width. Similar for the y position.
+        If getCentre is true, the returned position will be centred within the grid cell. 
+        If getCentre is false, the returned position will be the back left corner of the cell.
     */
     UFUNCTION (BlueprintCallable, Category = "Level Building")
-        FVector2D GetCellCentreWorldPosition (int x, int y, int RoomOffsetX, int RoomOffsetY);
+        FVector2D GetCellWorldPosition (int x, int y, int RoomOffsetX, int RoomOffsetY, bool getCentre = true);
 
     /** Starts in centre of grid and winds out clockise looking for empty grid cells. */
     UFUNCTION (BlueprintCallable, Category = "Level Building")

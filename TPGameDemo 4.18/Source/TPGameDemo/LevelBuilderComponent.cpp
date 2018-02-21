@@ -61,19 +61,22 @@ void ULevelBuilderComponent::GenerateLevel(int sideLength, float normedDensity, 
     for (int island = 0; island < density; ++island)
     {
         FIntPoint currentIslandPoint = GetRandomEvenCell();
-        for (int islandSection = 0; islandSection < complexity; ++islandSection)
+        if (!IsCellTouchingDoorCell(currentIslandPoint))
         {
-            EActionType direction = (EActionType)FMath::RandRange(0, (int)EActionType::NumActionTypes - 1);
-            FIntPoint islandSectionEndTarget = LevelBuilderHelpers::GetTargetPointForAction(currentIslandPoint, direction, 2);
-            if (LevelBuilderHelpers::GridPositionIsValid(islandSectionEndTarget, sideLength, sideLength) &&
-                LevelStructure[islandSectionEndTarget.X][islandSectionEndTarget.Y] == (int)ECellState::Open)
+            for (int islandSection = 0; islandSection < complexity; ++islandSection)
             {
-                FIntPoint islandSectionMiddle = LevelBuilderHelpers::GetTargetPointForAction(currentIslandPoint, direction, 1);
-                if (!IsCellTouchingDoorCell(islandSectionEndTarget) && !IsCellTouchingDoorCell(islandSectionMiddle))
+                EActionType direction = (EActionType)FMath::RandRange(0, (int)EActionType::NumActionTypes - 1);
+                FIntPoint islandSectionEndTarget = LevelBuilderHelpers::GetTargetPointForAction(currentIslandPoint, direction, 2);
+                if (LevelBuilderHelpers::GridPositionIsValid(islandSectionEndTarget, sideLength, sideLength) &&
+                    LevelStructure[islandSectionEndTarget.X][islandSectionEndTarget.Y] == (int)ECellState::Open)
                 {
-                    LevelStructure[islandSectionEndTarget.X][islandSectionEndTarget.Y] = (int)ECellState::Closed;
-                    LevelStructure[islandSectionMiddle.X][islandSectionMiddle.Y] = (int)ECellState::Closed;
-                    currentIslandPoint = islandSectionEndTarget;
+                    FIntPoint islandSectionMiddle = LevelBuilderHelpers::GetTargetPointForAction(currentIslandPoint, direction, 1);
+                    if (!IsCellTouchingDoorCell(islandSectionEndTarget) && !IsCellTouchingDoorCell(islandSectionMiddle))
+                    {
+                        LevelStructure[islandSectionEndTarget.X][islandSectionEndTarget.Y] = (int)ECellState::Closed;
+                        LevelStructure[islandSectionMiddle.X][islandSectionMiddle.Y] = (int)ECellState::Closed;
+                        currentIslandPoint = islandSectionEndTarget;
+                    }
                 }
             }
         }
@@ -208,24 +211,25 @@ FVector2D ULevelBuilderComponent::GetClosestEmptyCell (int x, int y)
     return FVector2D::ZeroVector;
 }
 
-FVector2D ULevelBuilderComponent::GetCellCentreWorldPosition (int x, int y, int RoomOffsetX, int RoomOffsetY)
+FVector2D ULevelBuilderComponent::GetCellWorldPosition (int x, int y, int RoomOffsetX, int RoomOffsetY, bool getCentre /* = true */)
 {
     ATPGameDemoGameMode* gameMode = (ATPGameDemoGameMode*) GetWorld()->GetAuthGameMode();
 
     if (gameMode == nullptr)
         return FVector2D (0.0f, 0.0f);
 
-    float positionX = ((x - gameMode->NumGridUnitsX / 2) /*+ 0.5f*/) * gameMode->GridUnitLengthXCM;
-    float positionY = ((y - gameMode->NumGridUnitsY / 2) /*+ 0.5f*/) * gameMode->GridUnitLengthYCM;
-    positionX += RoomOffsetX * GetNumGridUnitsX() * gameMode->GridUnitLengthXCM - RoomOffsetX * gameMode->GridUnitLengthXCM;
-    positionY += RoomOffsetY * GetNumGridUnitsY() * gameMode->GridUnitLengthYCM - RoomOffsetY * gameMode->GridUnitLengthYCM;
+    float centreOffset = getCentre ? 0.5f : 0.0f;
+    float positionX = ((x - gameMode->NumGridUnitsX / 2) + centreOffset) * gameMode->GridUnitLengthXCM;
+    float positionY = ((y - gameMode->NumGridUnitsY / 2) + centreOffset) * gameMode->GridUnitLengthYCM;
+    positionX += RoomOffsetX * gameMode->NumGridUnitsX * gameMode->GridUnitLengthXCM - RoomOffsetX * gameMode->GridUnitLengthXCM;
+    positionY += RoomOffsetY * gameMode->NumGridUnitsY * gameMode->GridUnitLengthYCM - RoomOffsetY * gameMode->GridUnitLengthYCM;
     return FVector2D (positionX, positionY);
 }
 
 FVector2D ULevelBuilderComponent::FindMostCentralSpawnPosition(int RoomOffsetX, int RoomOffsetY)
 {
     FVector2D cellPosition = GetClosestEmptyCell(GetNumGridUnitsX() / 2, GetNumGridUnitsY() / 2);
-    return GetCellCentreWorldPosition ((int) cellPosition.X, (int) cellPosition.Y, RoomOffsetX, RoomOffsetY);
+    return GetCellWorldPosition ((int) cellPosition.X, (int) cellPosition.Y, RoomOffsetX, RoomOffsetY);
 }
 
 void ULevelBuilderComponent::BeginPlay()

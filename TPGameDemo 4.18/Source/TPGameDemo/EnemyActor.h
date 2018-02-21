@@ -69,6 +69,7 @@ public:
     UPROPERTY(BlueprintReadWrite, EditAnywhere, Category = "Enemy Movement")
         float RotationSpeed = 0.1f;
 private:
+    FIntPoint             CurrentRoomCoords = FIntPoint::ZeroValue;
     FString               LevelPoliciesDir;
     FString               CurrentLevelPolicyDir;
     TArray<TArray<int>>   CurrentLevelPolicy;

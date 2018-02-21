@@ -91,9 +91,9 @@ void AMazeActor::UpdatePosition (bool broadcastChange)
     GridXPosition = numUnitsX % (CurrentLevelNumGridUnitsX - 1);
     GridYPosition = numUnitsY % (CurrentLevelNumGridUnitsY - 1);
     if (mappedX < 0)
-        GridXPosition = (CurrentLevelNumGridUnitsX - 1) - FMath::Abs(GridXPosition);
+        GridXPosition = (CurrentLevelNumGridUnitsX - 2) - FMath::Abs(GridXPosition);
     if (mappedY < 0)
-        GridYPosition = (CurrentLevelNumGridUnitsY - 1) - FMath::Abs(GridYPosition);
+        GridYPosition = (CurrentLevelNumGridUnitsY - 2) - FMath::Abs(GridYPosition);
 
     if (broadcastChange && (GridYPosition != PreviousGridYPosition || GridXPosition != PreviousGridXPosition))
         GridPositionChangedEvent.Broadcast();

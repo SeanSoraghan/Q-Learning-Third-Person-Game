@@ -53,10 +53,10 @@ void AEnemyActor::Tick( float DeltaTime )
     FRotator ToTarget = UKismetMathLibrary::NormalizedDeltaRotator(CurrentRotation, MovementVector.Rotation());
     SetActorRotation (UKismetMathLibrary::RLerp(CurrentRotation, MovementVector.Rotation(), RotationSpeed/*Linear*/, true));
    // UE_LOG(LogTemp, Warning, TEXT("Position Before: %f | %f | %f"), GetActorLocation().X, GetActorLocation().Y, GetActorLocation().Z);
-    SetActorLocation(GetActorLocation() + MovementVector * MovementSpeed, true);
+    //SetActorLocation(GetActorLocation() + MovementVector * MovementSpeed, true);
     AddMovementInput(MovementVector * MovementSpeed);
     //UE_LOG(LogTemp, Warning, TEXT("Position After: %f | %f | %f"), GetActorLocation().X, GetActorLocation().Y, GetActorLocation().Z);
-    SetActorLocation(GetActorLocation() + MovementVector * MovementSpeed, false);
+    //SetActorLocation(GetActorLocation() + MovementVector * MovementSpeed, false);
     //UE_LOG(LogTemp, Warning, TEXT("Position After No Sweep: %f | %f | %f"), GetActorLocation().X, GetActorLocation().Y, GetActorLocation().Z);
      //GetActorForwardVector().Rotation()
 }
@@ -74,28 +74,36 @@ void AEnemyActor::UpdateMovement()
         {
             //SetActorLocation (FVector (currentLocation.X + CurrentLevelGridUnitLengthXCM, currentLocation.Y, currentLocation.Z));
             UE_LOG(LogTemp, Warning, TEXT("Chose North"));
-            MovementTarget = FVector (currentLocation.X + CurrentLevelGridUnitLengthXCM, currentLocation.Y, currentLocation.Z);
+            FVector2D targetWorldPos = ATPGameDemoGameMode::GetCellWorldPosition(GetWorld(), GridXPosition + 1, GridYPosition, 
+                                                                                 CurrentRoomCoords.X, CurrentRoomCoords.Y);
+            MovementTarget = FVector (targetWorldPos.X, targetWorldPos.Y, currentLocation.Z);
             break;
         }
         case EActionType::East: 
         {
             //SetActorLocation (FVector (currentLocation.X, currentLocation.Y + CurrentLevelGridUnitLengthYCM, currentLocation.Z));
             UE_LOG(LogTemp, Warning, TEXT("Chose East"));
-            MovementTarget = FVector (currentLocation.X, currentLocation.Y + CurrentLevelGridUnitLengthYCM, currentLocation.Z);
+            FVector2D targetWorldPos = ATPGameDemoGameMode::GetCellWorldPosition(GetWorld(), GridXPosition, GridYPosition + 1, 
+                                                                                 CurrentRoomCoords.X, CurrentRoomCoords.Y);
+            MovementTarget = FVector (targetWorldPos.X, targetWorldPos.Y, currentLocation.Z);
             break;
         }
         case EActionType::South: 
         {
             //SetActorLocation (FVector (currentLocation.X - CurrentLevelGridUnitLengthXCM, currentLocation.Y, currentLocation.Z));
             UE_LOG(LogTemp, Warning, TEXT("Chose South"));
-            MovementTarget = FVector (currentLocation.X - CurrentLevelGridUnitLengthXCM, currentLocation.Y, currentLocation.Z);
+            FVector2D targetWorldPos = ATPGameDemoGameMode::GetCellWorldPosition(GetWorld(), GridXPosition - 1, GridYPosition, 
+                                                                                 CurrentRoomCoords.X, CurrentRoomCoords.Y);
+            MovementTarget = FVector (targetWorldPos.X, targetWorldPos.Y, currentLocation.Z);
             break;
         }
         case EActionType::West: 
         {
             //SetActorLocation (FVector (currentLocation.X, currentLocation.Y - CurrentLevelGridUnitLengthYCM, currentLocation.Z));
             UE_LOG(LogTemp, Warning, TEXT("Chose West"));
-            MovementTarget = FVector (currentLocation.X, currentLocation.Y - CurrentLevelGridUnitLengthYCM, currentLocation.Z);
+            FVector2D targetWorldPos = ATPGameDemoGameMode::GetCellWorldPosition(GetWorld(), GridXPosition, GridYPosition - 1, 
+                                                                                 CurrentRoomCoords.X, CurrentRoomCoords.Y);
+            MovementTarget = FVector (targetWorldPos.X, targetWorldPos.Y, currentLocation.Z);
             break;
         }
         default: break;
@@ -140,6 +148,7 @@ void AEnemyActor::SetMovementTimerPaused (bool movementTimerShouldBePaused)
 //======================================================================================================
 void AEnemyActor::LoadLevelPolicyForRoomCoordinates (FIntPoint levelCoords)
 {
+    CurrentRoomCoords = levelCoords;
     FString levelName = FString::FromInt(levelCoords.X) + FString("_") + FString::FromInt(levelCoords.Y);
     LoadLevelPolicy(levelName);
 }
