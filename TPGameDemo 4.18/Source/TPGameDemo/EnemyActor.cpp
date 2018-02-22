@@ -177,6 +177,7 @@ void AEnemyActor::UpdatePolicyForPlayerPosition (int targetX, int targetY)
             ResetPolicy();
             FString policy = CurrentLevelPolicyDir + FString::FromInt (targetX) + "_" + FString::FromInt (targetY) + ".txt";
             LevelBuilderHelpers::FillArrayFromTextFile (policy, CurrentLevelPolicy);
+            UpdateMovement();
         }
         PrintLevelPolicy();
     }

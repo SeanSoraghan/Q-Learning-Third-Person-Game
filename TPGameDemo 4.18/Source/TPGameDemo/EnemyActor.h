@@ -67,7 +67,7 @@ public:
     UPROPERTY(BlueprintReadWrite, EditAnywhere, Category = "Enemy Movement")
         float MovementSpeed = 1.0f;
     UPROPERTY(BlueprintReadWrite, EditAnywhere, Category = "Enemy Movement")
-        float RotationSpeed = 0.1f;
+        float RotationSpeed = 0.1f;        
 private:
     FIntPoint             CurrentRoomCoords = FIntPoint::ZeroValue;
     FString               LevelPoliciesDir;
@@ -76,15 +76,15 @@ private:
     bool                  LevelPoliciesDirFound = false;
 
     //======================================================================================================
-    // Movement
-    //====================================================================================================== 
-    void UpdateMovement();
-
-    //======================================================================================================
     // Behaviour Policy
     //====================================================================================================== 
     void ResetPolicy();
     void PrintLevelPolicy();
+
+    //======================================================================================================
+    // Movement
+    //====================================================================================================== 
+    void UpdateMovement();
 
     //======================================================================================================
     // From AMazeActor
