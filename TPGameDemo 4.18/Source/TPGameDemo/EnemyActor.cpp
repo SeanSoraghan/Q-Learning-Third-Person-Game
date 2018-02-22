@@ -25,9 +25,9 @@ void AEnemyActor::BeginPlay()
 	    GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red, FString::Printf (TEXT("Couldn't find level policies directory at %s"), *LevelPoliciesDir));
   #endif
 
-    UWorld* world = GetWorld();
-    if (world != nullptr)
-        world->GetTimerManager().SetTimer (MoveTimerHandle, [this](){ UpdateMovement(); }, 0.5f, true);
+    //UWorld* world = GetWorld();
+    //if (world != nullptr)
+    //    world->GetTimerManager().SetTimer (MoveTimerHandle, [this](){ UpdateMovement(); }, 0.5f, true);
 }
 
 void AEnemyActor::EndPlay (const EEndPlayReason::Type EndPlayReason)
@@ -63,7 +63,12 @@ void AEnemyActor::Tick( float DeltaTime )
 
 //======================================================================================================
 // Movement
-//====================================================================================================== 
+//======================================================================================================
+void AEnemyActor::PositionChanged()
+{
+    UpdateMovement();
+}
+
 void AEnemyActor::UpdateMovement()
 {
     EActionType actionType = SelectNextAction();
@@ -156,7 +161,10 @@ void AEnemyActor::LoadLevelPolicyForRoomCoordinates (FIntPoint levelCoords)
 void AEnemyActor::LoadLevelPolicy (FString levelName)
 {
     if (LevelPoliciesDirFound)
-        CurrentLevelPolicyDir = LevelPoliciesDir + levelName + "/";  
+    {
+        CurrentLevelPolicyDir = LevelPoliciesDir + levelName + "/";
+        UpdateMovement();
+    }
 }
 
 void AEnemyActor::UpdatePolicyForPlayerPosition (int targetX, int targetY)

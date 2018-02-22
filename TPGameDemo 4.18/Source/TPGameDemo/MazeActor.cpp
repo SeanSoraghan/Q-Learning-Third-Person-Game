@@ -96,7 +96,10 @@ void AMazeActor::UpdatePosition (bool broadcastChange)
         GridYPosition = (CurrentLevelNumGridUnitsY - 2) - FMath::Abs(GridYPosition);
 
     if (broadcastChange && (GridYPosition != PreviousGridYPosition || GridXPosition != PreviousGridXPosition))
+    {
+        PositionChanged();
         GridPositionChangedEvent.Broadcast();
+    }
 
     PreviousGridXPosition = GridXPosition;
     PreviousGridYPosition = GridYPosition;
@@ -108,3 +111,5 @@ void AMazeActor::Tick( float DeltaTime )
 	Super::Tick( DeltaTime );
     UpdatePosition();
 }
+
+void AMazeActor::PositionChanged(){}

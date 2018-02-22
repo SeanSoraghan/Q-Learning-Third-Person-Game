@@ -80,6 +80,9 @@ public:
 
     UFUNCTION (BlueprintCallable, Category = "Maze Actor Maze Model")
         void UpdateMazeDimensions();
+
 private:
     void UpdatePosition (bool broadcastChange = true);
+
+    virtual void PositionChanged();
 };
