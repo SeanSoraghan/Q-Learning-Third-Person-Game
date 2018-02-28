@@ -25,7 +25,19 @@ FIntPoint ULevelBuilderComponent::GetRandomEvenCell()
     return FIntPoint(xPos,yPos);
 }
 
-void ULevelBuilderComponent::GenerateLevel(int sideLength, float normedDensity, float normedComplexity, FString levelName)
+void ULevelBuilderComponent::GenerateLevel(float normedDensity, float normedComplexity, FString levelName)
+{
+    int sideLength = 3;
+    ATPGameDemoGameMode* gameMode = (ATPGameDemoGameMode*) GetWorld()->GetAuthGameMode();
+    if (gameMode != nullptr)
+    {
+        sideLength = gameMode->NumGridUnitsX; 
+    }
+
+    GenerateLevelOfSize(sideLength, normedDensity, normedComplexity, levelName);
+}
+
+void ULevelBuilderComponent::GenerateLevelOfSize(int sideLength, float normedDensity, float normedComplexity, FString levelName)
 {
     ensure(normedDensity >= 0.0f && normedDensity <= 1.0f && normedComplexity >= 0.0f && normedComplexity <= 1.0f);
     const int complexity = int(normedComplexity * (10 * (sideLength)));

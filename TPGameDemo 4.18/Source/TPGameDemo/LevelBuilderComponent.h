@@ -32,7 +32,10 @@ public:
 	virtual void TickComponent( float DeltaTime, ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction ) override;
 
     UFUNCTION (BlueprintCallable, Category = "Level Building")
-        virtual void GenerateLevel(int sideLength, float normedDensity, float normedComplexity, FString levelName);
+        virtual void GenerateLevelOfSize(int sideLength, float normedDensity, float normedComplexity, FString levelName);
+
+    UFUNCTION (BlueprintCallable, Category = "Level Building")
+        virtual void GenerateLevel(float normedDensity, float normedComplexity, FString levelName);
 
     UFUNCTION (BlueprintCallable, Category = "Level Building")
         virtual void LoadLevel (FString levelName);
