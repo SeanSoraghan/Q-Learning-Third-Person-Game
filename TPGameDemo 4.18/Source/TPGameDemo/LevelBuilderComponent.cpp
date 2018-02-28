@@ -83,7 +83,7 @@ void ULevelBuilderComponent::GenerateLevel(int sideLength, float normedDensity, 
     }
 
     UE_LOG(LogTemp, Warning, TEXT("Generated Level:"));
-    LevelBuilderHelpers::PrintArray(LevelStructure);
+    //LevelBuilderHelpers::PrintArray(LevelStructure);
 
     if (LevelsDirFound && !levelName.IsEmpty())
     {

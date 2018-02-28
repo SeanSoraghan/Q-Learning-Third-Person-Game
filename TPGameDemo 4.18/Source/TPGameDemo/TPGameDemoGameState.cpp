@@ -11,6 +11,19 @@ void ATPGameDemoGameState::BeginPlay()
     InitialiseRoomStates();
 }
 
+
+EWallPosition ATPGameDemoGameState::GetWallPositionForActionType(EActionType actionType)
+{
+    switch (actionType)
+    {
+        case EActionType::North: return EWallPosition::North;
+        case EActionType::East: return EWallPosition::East;
+        case EActionType::South: return EWallPosition::South;
+        case EActionType::West: return EWallPosition::West;
+        default: ensure(false); return EWallPosition::NumWallPositions;
+    }
+}
+
 void ATPGameDemoGameState::InitialiseRoomStates()
 {
     for (int x = 0; x < NumGridsXY; ++x)
@@ -22,6 +35,13 @@ void ATPGameDemoGameState::InitialiseRoomStates()
         }
         RoomStates.Add(statesRow);
     }
+}
+
+void ATPGameDemoGameState::DestroyDoorInRoom(FIntPoint roomCoords, EWallPosition doorWallPosition)
+{
+    FIntPoint roomIndicesXY = GetRoomXYIndices(roomCoords);
+    ensure(RoomXYIndicesValid(roomIndicesXY));
+    RoomStates[roomIndicesXY.X][roomIndicesXY.Y].DestroyDoor(doorWallPosition);
 }
 
 FIntPoint ATPGameDemoGameState::GetNeighbouringRoomIndices(FIntPoint roomCoords, EWallPosition neighbourPosition)
@@ -75,7 +95,7 @@ void ATPGameDemoGameState::DestroyNeighbouringDoors(FIntPoint roomCoords, TArray
 
     for (int p = 0; p < (int)EWallPosition::NumWallPositions; ++p)
     {
-        if (positionsToDestroy[p])
+        if (p < positionsToDestroy.Num() && positionsToDestroy[p])
         {
             FIntPoint neighbourRoom = GetNeighbouringRoomIndices(roomCoords, EWallPosition(p));
             if(RoomXYIndicesValid(neighbourRoom))

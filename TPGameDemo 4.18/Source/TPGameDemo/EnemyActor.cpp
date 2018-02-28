@@ -78,7 +78,6 @@ void AEnemyActor::UpdateMovement()
         case EActionType::North: 
         {
             //SetActorLocation (FVector (currentLocation.X + CurrentLevelGridUnitLengthXCM, currentLocation.Y, currentLocation.Z));
-            UE_LOG(LogTemp, Warning, TEXT("Chose North"));
             FVector2D targetWorldPos = ATPGameDemoGameMode::GetCellWorldPosition(GetWorld(), GridXPosition + 1, GridYPosition, 
                                                                                  CurrentRoomCoords.X, CurrentRoomCoords.Y);
             MovementTarget = FVector (targetWorldPos.X, targetWorldPos.Y, currentLocation.Z);
@@ -87,7 +86,6 @@ void AEnemyActor::UpdateMovement()
         case EActionType::East: 
         {
             //SetActorLocation (FVector (currentLocation.X, currentLocation.Y + CurrentLevelGridUnitLengthYCM, currentLocation.Z));
-            UE_LOG(LogTemp, Warning, TEXT("Chose East"));
             FVector2D targetWorldPos = ATPGameDemoGameMode::GetCellWorldPosition(GetWorld(), GridXPosition, GridYPosition + 1, 
                                                                                  CurrentRoomCoords.X, CurrentRoomCoords.Y);
             MovementTarget = FVector (targetWorldPos.X, targetWorldPos.Y, currentLocation.Z);
@@ -96,7 +94,6 @@ void AEnemyActor::UpdateMovement()
         case EActionType::South: 
         {
             //SetActorLocation (FVector (currentLocation.X - CurrentLevelGridUnitLengthXCM, currentLocation.Y, currentLocation.Z));
-            UE_LOG(LogTemp, Warning, TEXT("Chose South"));
             FVector2D targetWorldPos = ATPGameDemoGameMode::GetCellWorldPosition(GetWorld(), GridXPosition - 1, GridYPosition, 
                                                                                  CurrentRoomCoords.X, CurrentRoomCoords.Y);
             MovementTarget = FVector (targetWorldPos.X, targetWorldPos.Y, currentLocation.Z);
@@ -105,7 +102,6 @@ void AEnemyActor::UpdateMovement()
         case EActionType::West: 
         {
             //SetActorLocation (FVector (currentLocation.X, currentLocation.Y - CurrentLevelGridUnitLengthYCM, currentLocation.Z));
-            UE_LOG(LogTemp, Warning, TEXT("Chose West"));
             FVector2D targetWorldPos = ATPGameDemoGameMode::GetCellWorldPosition(GetWorld(), GridXPosition, GridYPosition - 1, 
                                                                                  CurrentRoomCoords.X, CurrentRoomCoords.Y);
             MovementTarget = FVector (targetWorldPos.X, targetWorldPos.Y, currentLocation.Z);
@@ -179,7 +175,7 @@ void AEnemyActor::UpdatePolicyForPlayerPosition (int targetX, int targetY)
             LevelBuilderHelpers::FillArrayFromTextFile (policy, CurrentLevelPolicy);
             UpdateMovement();
         }
-        PrintLevelPolicy();
+        //PrintLevelPolicy();
     }
 }
 

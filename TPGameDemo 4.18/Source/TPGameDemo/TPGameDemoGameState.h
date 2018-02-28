@@ -2,9 +2,10 @@
 
 #pragma once
 
-#include <memory>
+#include "TPGameDemo.h"
 #include "CoreMinimal.h"
 #include "GameFramework/GameStateBase.h"
+#include <memory>
 #include "TPGameDemoGameState.generated.h"
 
 UENUM(BlueprintType)
@@ -53,6 +54,7 @@ struct RoomState
                     NorthDoor->Destroy();
                     NorthDoor = nullptr;                
                 }
+                break;
             }
             case EWallPosition::East: 
             {
@@ -61,6 +63,7 @@ struct RoomState
                     EastDoor->Destroy();
                     EastDoor = nullptr;
                 }
+                break;
             }
             case EWallPosition::South: 
             {
@@ -69,6 +72,7 @@ struct RoomState
                     SouthDoor->Destroy();
                     SouthDoor = nullptr;
                 }
+                break;
             }
             case EWallPosition::West: 
             {
@@ -77,6 +81,7 @@ struct RoomState
                     WestDoor->Destroy();
                     WestDoor = nullptr;
                 }
+                break;
             }
         }
     }
@@ -92,11 +97,14 @@ struct RoomState
  * 
  */
 UCLASS()
-class TPGAMEDEMO_API ATPGameDemoGameState : public AGameStateBase
+class TPGAMEDEMO_API ATPGameDemoGameState : public AGameState
 {
 public:
 	GENERATED_BODY()
 	
+    UFUNCTION(BlueprintCallable, Category = "World Grids State")
+        static EWallPosition GetWallPositionForActionType(EActionType actionType);
+
     void BeginPlay() override;
 
     UFUNCTION(BlueprintCallable, Category = "World Grids State")
@@ -112,6 +120,9 @@ public:
     /** Destroys the door on each adjoining wall in the neighbouring rooms (North through West, clockwise). */
     UFUNCTION(BlueprintCallable, Category = "World Grids State")
         void DestroyNeighbouringDoors(FIntPoint roomCoords, TArray<bool> positionsToDestroy);
+
+    UFUNCTION(BlueprintCallable, Category = "World Grids State")
+        void DestroyDoorInRoom(FIntPoint roomCoords, EWallPosition doorWallPosition);
 
     UFUNCTION(BlueprintCallable, Category = "World Grids State")
         void EnableRoomState(FIntPoint roomCoords, TArray<AActor*> doors);

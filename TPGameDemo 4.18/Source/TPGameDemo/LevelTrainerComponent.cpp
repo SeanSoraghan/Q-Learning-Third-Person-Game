@@ -287,8 +287,7 @@ void ULevelTrainerComponent::TrainNextGoalPosition(int numSimulationsPerStarting
         //Create string and save to text file.
         FString CurrentPositionFileName = LevelBuilderHelpers::LevelsDir() + CurrentLevelName + "/" + CurrentPositionString + ".txt";
         TArray<TArray<int>> envArray = GetEnvironmentIntArray();
-        UE_LOG(LogTemp, Warning, TEXT("Level Policy:"));
-        LevelBuilderHelpers::PrintArray(envArray);
+        //LevelBuilderHelpers::PrintArray(envArray);
         LevelBuilderHelpers::WriteArrayToTextFile(envArray, CurrentPositionFileName);
         GetState(CurrentGoalPosition).SetIsGoal(false);
     }
@@ -370,7 +369,6 @@ void ULevelTrainerComponent::SimulateRun(FIntPoint startingStatePosition, int ma
 
 void ULevelTrainerComponent::IncrementGoalPosition()
 {
-    UE_LOG(LogTemp, Warning, TEXT("Current Pos: %d | %d"), CurrentGoalPosition.X, CurrentGoalPosition.Y);
     if (CurrentGoalPosition.Y == Environment[0].Num() - 1)
     {
         if (CurrentGoalPosition.X == Environment.Num() - 1)
