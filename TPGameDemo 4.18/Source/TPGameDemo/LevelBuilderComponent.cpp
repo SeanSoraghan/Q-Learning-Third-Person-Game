@@ -73,7 +73,8 @@ void ULevelBuilderComponent::GenerateLevelOfSize(int sideLength, float normedDen
     for (int island = 0; island < density; ++island)
     {
         FIntPoint currentIslandPoint = GetRandomEvenCell();
-        if (!IsCellTouchingDoorCell(currentIslandPoint))
+        if(LevelStructure[currentIslandPoint.X][currentIslandPoint.Y] == (int)ECellState::Open && 
+           !IsCellTouchingDoorCell(currentIslandPoint))
         {
             for (int islandSection = 0; islandSection < complexity; ++islandSection)
             {
@@ -87,6 +88,7 @@ void ULevelBuilderComponent::GenerateLevelOfSize(int sideLength, float normedDen
                     {
                         LevelStructure[islandSectionEndTarget.X][islandSectionEndTarget.Y] = (int)ECellState::Closed;
                         LevelStructure[islandSectionMiddle.X][islandSectionMiddle.Y] = (int)ECellState::Closed;
+                        LevelStructure[currentIslandPoint.X][currentIslandPoint.Y] = (int)ECellState::Closed;
                         currentIslandPoint = islandSectionEndTarget;
                     }
                 }
