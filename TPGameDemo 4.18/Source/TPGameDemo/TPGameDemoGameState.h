@@ -141,6 +141,9 @@ public:
     UFUNCTION(BlueprintCallable, Category = "World Room Builders")
         AActor* GetRoomBuilder(FIntPoint roomCoords);
 
+    UFUNCTION(BlueprintCallable, Category = "World Room Builders")
+        void SetRoomBuilder(FIntPoint roomCoords, AActor* roomBuilderActor);
+
 private:
     TArray<TArray<AActor*>> RoomBuilders;
 	TArray<TArray<RoomState>> RoomStates;

@@ -163,3 +163,10 @@ AActor* ATPGameDemoGameState::GetRoomBuilder(FIntPoint roomCoords)
     ensure(RoomXYIndicesValid(roomIndices));
     return RoomBuilders[roomIndices.X][roomIndices.Y];
 }
+
+void ATPGameDemoGameState::SetRoomBuilder(FIntPoint roomCoords, AActor* roomBuilderActor)
+{
+    FIntPoint roomIndices = GetRoomXYIndices(roomCoords);
+    ensure(RoomXYIndicesValid(roomIndices));
+    RoomBuilders[roomIndices.X][roomIndices.Y] = roomBuilderActor;
+}
