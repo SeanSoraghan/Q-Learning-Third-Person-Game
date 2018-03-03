@@ -5,12 +5,23 @@
 #include "TPGameDemoGameMode.h"
 #include "TPGameDemoGameState.h"
 
+ATPGameDemoGameState::~ATPGameDemoGameState()
+{
+    for(int i = 0; i < RoomBuilders.Num(); ++i)
+    {
+        TArray<AActor*>& builderRow = RoomBuilders[i];
+        for (int i = 0; i < builderRow.Num(); ++i)
+        {
+            builderRow[i] = nullptr;
+        }
+    }
+    RoomBuilders.Empty();
+}
 
 void ATPGameDemoGameState::BeginPlay()
 {
-    InitialiseRoomStates();
+    InitialiseArrays();
 }
-
 
 EWallPosition ATPGameDemoGameState::GetWallPositionForActionType(EActionType actionType)
 {
@@ -24,16 +35,19 @@ EWallPosition ATPGameDemoGameState::GetWallPositionForActionType(EActionType act
     }
 }
 
-void ATPGameDemoGameState::InitialiseRoomStates()
+void ATPGameDemoGameState::InitialiseArrays()
 {
     for (int x = 0; x < NumGridsXY; ++x)
     {
         TArray<RoomState> statesRow;
+        TArray<AActor*> builderRow;
         for (int y = 0; y < NumGridsXY; ++y)
         {
+            builderRow.Add(nullptr);
             statesRow.Add(RoomState());
         }
         RoomStates.Add(statesRow);
+        RoomBuilders.Add(builderRow);
     }
 }
 
@@ -141,4 +155,11 @@ bool ATPGameDemoGameState::RoomXYIndicesValid(FIntPoint roomIndices)
     const int x = roomIndices.X;
     const int y = roomIndices.Y;
     return x >= 0 && x < RoomStates.Num() && y >= 0 && y < RoomStates[0].Num();
+}
+
+AActor* ATPGameDemoGameState::GetRoomBuilder(FIntPoint roomCoords)
+{
+    FIntPoint roomIndices = GetRoomXYIndices(roomCoords);
+    ensure(RoomXYIndicesValid(roomIndices));
+    return RoomBuilders[roomIndices.X][roomIndices.Y];
 }

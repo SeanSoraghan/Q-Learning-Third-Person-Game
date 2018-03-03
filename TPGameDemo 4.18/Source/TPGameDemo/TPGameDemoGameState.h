@@ -90,7 +90,7 @@ struct RoomState
     AActor* EastDoor = nullptr;
     AActor* SouthDoor = nullptr;
     AActor* WestDoor = nullptr;
-    
+
     bool bRoomExists = false;
 };
 /**
@@ -102,41 +102,47 @@ class TPGAMEDEMO_API ATPGameDemoGameState : public AGameState
 public:
 	GENERATED_BODY()
 	
-    UFUNCTION(BlueprintCallable, Category = "World Grids State")
+    ~ATPGameDemoGameState();
+
+    UFUNCTION(BlueprintCallable, Category = "World Rooms States")
         static EWallPosition GetWallPositionForActionType(EActionType actionType);
 
     void BeginPlay() override;
 
-    UFUNCTION(BlueprintCallable, Category = "World Grids State")
+    UFUNCTION(BlueprintCallable, Category = "World Rooms States")
         bool DoesRoomExist(FIntPoint roomCoords);
     
-    UFUNCTION(BlueprintCallable, Category = "World Grids State")
+    UFUNCTION(BlueprintCallable, Category = "World Rooms States")
         FIntPoint GetNeighbouringRoomIndices(FIntPoint roomCoords, EWallPosition neighbourPosition);
 
     /** Returns a bool array indicating whether the neihgbouring rooms in each direction (North through West, clockwise) exist. */
-    UFUNCTION(BlueprintCallable, Category = "World Grids State")
+    UFUNCTION(BlueprintCallable, Category = "World Rooms States")
         TArray<bool> GetNeighbouringRoomStates(FIntPoint doorPosition);
 
     /** Destroys the door on each adjoining wall in the neighbouring rooms (North through West, clockwise). */
-    UFUNCTION(BlueprintCallable, Category = "World Grids State")
+    UFUNCTION(BlueprintCallable, Category = "World Rooms States")
         void DestroyNeighbouringDoors(FIntPoint roomCoords, TArray<bool> positionsToDestroy);
 
-    UFUNCTION(BlueprintCallable, Category = "World Grids State")
+    UFUNCTION(BlueprintCallable, Category = "World Rooms States")
         void DestroyDoorInRoom(FIntPoint roomCoords, EWallPosition doorWallPosition);
 
-    UFUNCTION(BlueprintCallable, Category = "World Grids State")
+    UFUNCTION(BlueprintCallable, Category = "World Rooms States")
         void EnableRoomState(FIntPoint roomCoords, TArray<AActor*> doors);
 
-    UFUNCTION(BlueprintCallable, Category = "World Grids State")
+    UFUNCTION(BlueprintCallable, Category = "World Rooms States")
         void DisableRoomState(FIntPoint roomCoords);
 
-    UFUNCTION(BlueprintCallable, Category = "World Grids State")
-        void InitialiseRoomStates();
+    UFUNCTION(BlueprintCallable, Category = "World Rooms States")
+        void InitialiseArrays();
 
     UPROPERTY (BlueprintReadWrite, EditAnywhere, Category = "World Grid Size")
         int NumGridsXY = 20;
 
+    UFUNCTION(BlueprintCallable, Category = "World Room Builders")
+        AActor* GetRoomBuilder(FIntPoint roomCoords);
+
 private:
+    TArray<TArray<AActor*>> RoomBuilders;
 	TArray<TArray<RoomState>> RoomStates;
     /** Converts coords from centred at 0 to centred at max num grids / 2. */
     FIntPoint GetRoomXYIndices(FIntPoint roomCoords);
