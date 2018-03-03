@@ -88,24 +88,24 @@ TArray<bool> ATPGameDemoGameState::GetNeighbouringRoomStates(FIntPoint roomCoord
     return neighbouringRoomStates;
 }
 
+EWallPosition ATPGameDemoGameState::GetWallPositionInNeighbouringRoom(EWallPosition wallPosition)
+{
+    switch(wallPosition)
+    {
+        case EWallPosition::North: return EWallPosition::South;
+        case EWallPosition::East: return EWallPosition::West;
+        case EWallPosition::South: return EWallPosition::North;
+        case EWallPosition::West: return EWallPosition::East;
+        default: ensure(false); return EWallPosition::NumWallPositions;
+    }
+    ensure(false);
+    return EWallPosition::NumWallPositions;
+}
+
 void ATPGameDemoGameState::DestroyNeighbouringDoors(FIntPoint roomCoords, TArray<bool> positionsToDestroy)
 {
     FIntPoint roomIndices = GetRoomXYIndices(roomCoords);
     ensure(RoomXYIndicesValid(roomIndices));
-
-    std::function<EWallPosition(EWallPosition wallPosition)> GetWallPositionInNeighbouringRoom = [](EWallPosition wallPosition)
-    {
-        switch(wallPosition)
-        {
-            case EWallPosition::North: return EWallPosition::South;
-            case EWallPosition::East: return EWallPosition::West;
-            case EWallPosition::South: return EWallPosition::North;
-            case EWallPosition::West: return EWallPosition::East;
-            default: ensure(false); return EWallPosition::NumWallPositions;
-        }
-        ensure(false);
-        return EWallPosition::North;
-    };
 
     for (int p = 0; p < (int)EWallPosition::NumWallPositions; ++p)
     {
@@ -139,7 +139,18 @@ void ATPGameDemoGameState::DisableRoomState(FIntPoint roomCoords)
 {
     FIntPoint roomIndices = GetRoomXYIndices(roomCoords);
     ensure(RoomXYIndicesValid(roomIndices));
-    RoomStates[roomIndices.X][roomIndices.Y].TerminateRoom();
+    TArray<bool> neighbouringRoomStates = GetNeighbouringRoomStates(roomCoords);
+    RoomStates[roomIndices.X][roomIndices.Y].DisableRoom(neighbouringRoomStates);
+    for (int p = 0; p < (int)EWallPosition::NumWallPositions; ++p)
+    {
+        if (neighbouringRoomStates[p])
+        {
+            FIntPoint neighbourIndices = GetNeighbouringRoomIndices(roomCoords, (EWallPosition)p);
+            FIntPoint neighbourCoords = GetRoomCoords(neighbourIndices);
+            EWallPosition positionInNeighbour = GetWallPositionInNeighbouringRoom((EWallPosition)p);
+            OnSpawnDoor.Broadcast(neighbourCoords, /*door position ... how to get that?*/);
+        }
+    }
 }
 
 FIntPoint ATPGameDemoGameState::GetRoomXYIndices(FIntPoint roomCoords)
@@ -148,6 +159,14 @@ FIntPoint ATPGameDemoGameState::GetRoomXYIndices(FIntPoint roomCoords)
     const int y = roomCoords.Y + NumGridsXY / 2;
     FIntPoint roomIndices = FIntPoint(x,y);
     return roomIndices;
+}
+
+FIntPoint ATPGameDemoGameState::GetRoomCoords(FIntPoint roomIndices)
+{
+    const int x = roomIndices.X - NumGridsXY / 2;
+    const int y = roomIndices.Y - NumGridsXY / 2;
+    FIntPoint roomCoords = FIntPoint(x,y);
+    return roomCoords;
 }
 
 bool ATPGameDemoGameState::RoomXYIndicesValid(FIntPoint roomIndices)
@@ -169,4 +188,35 @@ void ATPGameDemoGameState::SetRoomBuilder(FIntPoint roomCoords, AActor* roomBuil
     FIntPoint roomIndices = GetRoomXYIndices(roomCoords);
     ensure(RoomXYIndicesValid(roomIndices));
     RoomBuilders[roomIndices.X][roomIndices.Y] = roomBuilderActor;
+}
+
+void ATPGameDemoGameState::UpdateRoomHealth(FIntPoint roomCoords, float healthDelta)
+{
+    FIntPoint roomIndices = GetRoomXYIndices(roomCoords);
+    ensure(RoomXYIndicesValid(roomIndices));
+    RoomStates[roomIndices.X][roomIndices.Y].RoomHealth += healthDelta;
+    if (RoomStates[roomIndices.X][roomIndices.Y].RoomHealth <= 0.0f)
+        KillRoom(roomCoords);
+}
+
+void ATPGameDemoGameState::SetRoomHealth(FIntPoint roomCoords, float health)
+{
+    FIntPoint roomIndices = GetRoomXYIndices(roomCoords);
+    ensure(RoomXYIndicesValid(roomIndices));
+    RoomStates[roomIndices.X][roomIndices.Y].RoomHealth = health;
+    if (RoomStates[roomIndices.X][roomIndices.Y].RoomHealth <= 0.0f)
+        KillRoom(roomCoords);
+}
+
+float ATPGameDemoGameState::GetRoomHealth(FIntPoint roomCoords)
+{
+    FIntPoint roomIndices = GetRoomXYIndices(roomCoords);
+    ensure(RoomXYIndicesValid(roomIndices));
+    return RoomStates[roomIndices.X][roomIndices.Y].RoomHealth;
+}
+
+void ATPGameDemoGameState::KillRoom(FIntPoint roomCoords)
+{
+    DisableRoomState(roomCoords);
+    OnRoomDied.Broadcast(roomCoords);
 }

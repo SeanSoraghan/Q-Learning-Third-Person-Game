@@ -22,7 +22,11 @@ struct RoomState
 {
     ~RoomState()
     {
-        TerminateRoom();
+        NorthDoor = nullptr;
+        EastDoor = nullptr;
+        SouthDoor = nullptr;
+        WestDoor = nullptr;
+        bRoomExists = false;
     }
 
     void InitializeRoom(TArray<AActor*> doors)
@@ -34,13 +38,15 @@ struct RoomState
         WestDoor  = doors[(int)EWallPosition::West];
     }
 
-    void TerminateRoom()
+    void DisableRoom(TArray<bool> NeighbourStates)
     {
-        NorthDoor = nullptr;
-        EastDoor = nullptr;
-        SouthDoor = nullptr;
-        WestDoor = nullptr;
         bRoomExists = false;
+        // If a neighbour doesn't exist, we kill the door that would lead to it.
+        for (int p = 0; p < (int)EWallPosition::NumWallPositions; ++p)
+        {
+            if (NeighbourStates[p])
+                DestroyDoor((EWallPosition)p);
+        }
     }
 
     void DestroyDoor(EWallPosition wallPosition)
@@ -90,9 +96,14 @@ struct RoomState
     AActor* EastDoor = nullptr;
     AActor* SouthDoor = nullptr;
     AActor* WestDoor = nullptr;
-
+    float RoomHealth = 100.0f;
     bool bRoomExists = false;
 };
+
+
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FRoomDiedDelegate, FIntPoint RoomCoords);
+DECLARE_DYNAMIC_DELEGATE_TwoParams(FOnSpawnDoorDelegate, FIntPoint RoomCoords, FIntPoint PositionInRoom);
+
 /**
  * 
  */
@@ -119,6 +130,10 @@ public:
     UFUNCTION(BlueprintCallable, Category = "World Rooms States")
         TArray<bool> GetNeighbouringRoomStates(FIntPoint doorPosition);
 
+    /** Returns the position of a wall from a neighbouring room's perspective. */
+    UFUNCTION(BlueprintCallable, Category = "World Rooms Layout")
+        static EWallPosition GetWallPositionInNeighbouringRoom(EWallPosition wallPosition);
+
     /** Destroys the door on each adjoining wall in the neighbouring rooms (North through West, clockwise). */
     UFUNCTION(BlueprintCallable, Category = "World Rooms States")
         void DestroyNeighbouringDoors(FIntPoint roomCoords, TArray<bool> positionsToDestroy);
@@ -144,10 +159,29 @@ public:
     UFUNCTION(BlueprintCallable, Category = "World Room Builders")
         void SetRoomBuilder(FIntPoint roomCoords, AActor* roomBuilderActor);
 
+    UFUNCTION(BlueprintCallable, Category = "World Rooms States")
+        void UpdateRoomHealth(FIntPoint roomCoords, float healthDelta);
+
+    UFUNCTION(BlueprintCallable, Category = "World Room States")
+        void SetRoomHealth(FIntPoint roomCoords, float health);
+
+    UFUNCTION(BlueprintCallable, Category = "World Room States")
+        float GetRoomHealth(FIntPoint roomCoords);
+
+    UFUNCTION(BlueprintCallable, Category = "World Room States")
+        void KillRoom(FIntPoint roomCoords); 
+
+    UPROPERTY(BlueprintReadWrite, VisibleAnywhere, Category = "World Rooms States")
+        FRoomDiedDelegate OnRoomDied;
+
+    UPROPERTY(BlueprintReadWrite, VisibleAnywhere, Category = "World Rooms Spawning")
+        FOnSpawnDoorDelegate OnSpawnDoor;
+
 private:
     TArray<TArray<AActor*>> RoomBuilders;
 	TArray<TArray<RoomState>> RoomStates;
     /** Converts coords from centred at 0 to centred at max num grids / 2. */
     FIntPoint GetRoomXYIndices(FIntPoint roomCoords);
+    FIntPoint GetRoomCoords(FIntPoint roomIndices);
     bool RoomXYIndicesValid(FIntPoint roomCoords);
 };
