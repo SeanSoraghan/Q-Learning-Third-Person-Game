@@ -10,9 +10,9 @@ ATPGameDemoGameState::~ATPGameDemoGameState()
     for(int i = 0; i < RoomBuilders.Num(); ++i)
     {
         TArray<AActor*>& builderRow = RoomBuilders[i];
-        for (int i = 0; i < builderRow.Num(); ++i)
+        for (int c = 0; c < builderRow.Num(); ++c)
         {
-            builderRow[i] = nullptr;
+            builderRow[c] = nullptr;
         }
     }
     RoomBuilders.Empty();
@@ -128,11 +128,11 @@ bool ATPGameDemoGameState::DoesRoomExist(FIntPoint roomCoords)
     return RoomStates[roomIndices.X][roomIndices.Y].bRoomExists;
 }
 
-void ATPGameDemoGameState::EnableRoomState(FIntPoint roomCoords, TArray<AActor*> doors)
+void ATPGameDemoGameState::EnableRoomState(FIntPoint roomCoords, TArray<AActor*> doors, TArray<int> doorPositionsOnWalls)
 {
     FIntPoint roomIndices = GetRoomXYIndices(roomCoords);
     ensure(RoomXYIndicesValid(roomIndices));
-    RoomStates[roomIndices.X][roomIndices.Y].InitializeRoom(doors);
+    RoomStates[roomIndices.X][roomIndices.Y].InitializeRoom(doors, doorPositionsOnWalls);
 }
 
 void ATPGameDemoGameState::DisableRoomState(FIntPoint roomCoords)
@@ -147,8 +147,9 @@ void ATPGameDemoGameState::DisableRoomState(FIntPoint roomCoords)
         {
             FIntPoint neighbourIndices = GetNeighbouringRoomIndices(roomCoords, (EWallPosition)p);
             FIntPoint neighbourCoords = GetRoomCoords(neighbourIndices);
-            EWallPosition positionInNeighbour = GetWallPositionInNeighbouringRoom((EWallPosition)p);
-            OnSpawnDoor.Broadcast(neighbourCoords, /*door position ... how to get that?*/);
+            EWallPosition wallPositionInNeighbour = GetWallPositionInNeighbouringRoom((EWallPosition)p);
+            int doorPositionOnWall = RoomStates[roomIndices.X][roomIndices.Y].GetDoorPositionOnWall((EWallPosition)p);
+            OnSpawnDoor.Broadcast(neighbourCoords, wallPositionInNeighbour, doorPositionOnWall, roomCoords);
         }
     }
 }

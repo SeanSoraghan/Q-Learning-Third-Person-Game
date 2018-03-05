@@ -18,24 +18,35 @@ enum class EWallPosition : uint8
     NumWallPositions
 };
 
+struct DoorState
+{
+    DoorState(){DoorActor = nullptr;}
+    ~DoorState(){DoorActor = nullptr;}
+
+    void InitializeDoor(AActor* doorActor, int positionOnWall)
+    {
+        DoorActor = doorActor;
+        PositionOnWall = positionOnWall;
+    }
+
+    AActor* DoorActor;
+    int PositionOnWall = 0;
+};
+
 struct RoomState
 {
     ~RoomState()
     {
-        NorthDoor = nullptr;
-        EastDoor = nullptr;
-        SouthDoor = nullptr;
-        WestDoor = nullptr;
         bRoomExists = false;
     }
 
-    void InitializeRoom(TArray<AActor*> doors)
+    void InitializeRoom(TArray<AActor*> doors, TArray<int> doorPositionsOnWalls)
     {
         bRoomExists = true;
-        NorthDoor = doors[(int)EWallPosition::North];
-        EastDoor  = doors[(int)EWallPosition::East];
-        SouthDoor = doors[(int)EWallPosition::South];
-        WestDoor  = doors[(int)EWallPosition::West];
+        NorthDoor.InitializeDoor(doors[(int)EWallPosition::North], doorPositionsOnWalls[(int)EWallPosition::North]);
+        EastDoor.InitializeDoor(doors[(int)EWallPosition::East], doorPositionsOnWalls[(int)EWallPosition::East]);
+        SouthDoor.InitializeDoor(doors[(int)EWallPosition::South], doorPositionsOnWalls[(int)EWallPosition::South]);
+        WestDoor.InitializeDoor(doors[(int)EWallPosition::West], doorPositionsOnWalls[(int)EWallPosition::West]);
     }
 
     void DisableRoom(TArray<bool> NeighbourStates)
@@ -55,54 +66,82 @@ struct RoomState
         {
             case EWallPosition::North: 
             {
-                if (NorthDoor != nullptr)
+                if (NorthDoor.DoorActor != nullptr)
                 {
-                    NorthDoor->Destroy();
-                    NorthDoor = nullptr;                
+                    NorthDoor.DoorActor->Destroy();
+                    NorthDoor.DoorActor = nullptr;                
                 }
                 break;
             }
             case EWallPosition::East: 
             {
-                if (EastDoor != nullptr)
+                if (EastDoor.DoorActor != nullptr)
                 {
-                    EastDoor->Destroy();
-                    EastDoor = nullptr;
+                    EastDoor.DoorActor->Destroy();
+                    EastDoor.DoorActor = nullptr;
                 }
                 break;
             }
             case EWallPosition::South: 
             {
-                if (SouthDoor != nullptr)
+                if (SouthDoor.DoorActor != nullptr)
                 {
-                    SouthDoor->Destroy();
-                    SouthDoor = nullptr;
+                    SouthDoor.DoorActor->Destroy();
+                    SouthDoor.DoorActor = nullptr;
                 }
                 break;
             }
             case EWallPosition::West: 
             {
-                if (WestDoor != nullptr)
+                if (WestDoor.DoorActor != nullptr)
                 {
-                    WestDoor->Destroy();
-                    WestDoor = nullptr;
+                    WestDoor.DoorActor->Destroy();
+                    WestDoor.DoorActor = nullptr;
                 }
                 break;
             }
         }
     }
 
-    AActor* NorthDoor = nullptr;
-    AActor* EastDoor = nullptr;
-    AActor* SouthDoor = nullptr;
-    AActor* WestDoor = nullptr;
+    void SetDoor(AActor* doorActor, EWallPosition wallPosition)
+    {
+        switch(wallPosition)
+        {
+            case EWallPosition::North: NorthDoor.DoorActor = doorActor;
+            case EWallPosition::East:  EastDoor.DoorActor = doorActor;
+            case EWallPosition::South: SouthDoor.DoorActor = doorActor;
+            case EWallPosition::West:  WestDoor.DoorActor = doorActor;
+            default: ensure(false);
+        }
+    }
+
+    int GetDoorPositionOnWall(EWallPosition wallPosition)
+    {
+        switch(wallPosition)
+        {
+            case EWallPosition::North: return NorthDoor.PositionOnWall;
+            case EWallPosition::East: return EastDoor.PositionOnWall;
+            case EWallPosition::South: return SouthDoor.PositionOnWall;
+            case EWallPosition::West: return WestDoor.PositionOnWall;
+            default: ensure(false); return -1;
+        }
+    }
+
+    DoorState NorthDoor;
+    DoorState EastDoor;
+    DoorState SouthDoor;
+    DoorState WestDoor;
     float RoomHealth = 100.0f;
     bool bRoomExists = false;
 };
 
+//Bind all room builders to destroy their inner room walls when this happens.
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FRoomDiedDelegate, FIntPoint, RoomCoords);
 
-DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FRoomDiedDelegate, FIntPoint RoomCoords);
-DECLARE_DYNAMIC_DELEGATE_TwoParams(FOnSpawnDoorDelegate, FIntPoint RoomCoords, FIntPoint PositionInRoom);
+//Bind in one place to spawn doors when this happens.
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_FourParams(FOnSpawnDoorDelegate, FIntPoint, RoomCoords, 
+                                              EWallPosition, WallPosition, int, PositionOnWall, 
+                                              FIntPoint, TargetRoomCoords);
 
 /**
  * 
@@ -142,7 +181,7 @@ public:
         void DestroyDoorInRoom(FIntPoint roomCoords, EWallPosition doorWallPosition);
 
     UFUNCTION(BlueprintCallable, Category = "World Rooms States")
-        void EnableRoomState(FIntPoint roomCoords, TArray<AActor*> doors);
+        void EnableRoomState(FIntPoint roomCoords, TArray<AActor*> doors, TArray<int> doorPositionsOnWalls);
 
     UFUNCTION(BlueprintCallable, Category = "World Rooms States")
         void DisableRoomState(FIntPoint roomCoords);
@@ -171,12 +210,12 @@ public:
     UFUNCTION(BlueprintCallable, Category = "World Room States")
         void KillRoom(FIntPoint roomCoords); 
 
-    UPROPERTY(BlueprintReadWrite, VisibleAnywhere, Category = "World Rooms States")
+    UPROPERTY(BlueprintAssignable, VisibleAnywhere, Category = "World Rooms States")
         FRoomDiedDelegate OnRoomDied;
 
-    UPROPERTY(BlueprintReadWrite, VisibleAnywhere, Category = "World Rooms Spawning")
+    UPROPERTY(BlueprintAssignable, VisibleAnywhere, Category = "World Rooms Spawning")
         FOnSpawnDoorDelegate OnSpawnDoor;
-
+        
 private:
     TArray<TArray<AActor*>> RoomBuilders;
 	TArray<TArray<RoomState>> RoomStates;

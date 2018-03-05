@@ -71,43 +71,50 @@ void AEnemyActor::PositionChanged()
 
 void AEnemyActor::UpdateMovement()
 {
-    EActionType actionType = SelectNextAction();
-    FVector currentLocation = GetActorLocation();
-    switch (actionType)
+    ATPGameDemoGameMode* gameMode = (ATPGameDemoGameMode*) GetWorld()->GetAuthGameMode();
+
+    if (gameMode != nullptr)
     {
-        case EActionType::North: 
+        EActionType actionType = SelectNextAction();
+        FVector currentLocation = GetActorLocation();
+
+        switch (actionType)
         {
-            //SetActorLocation (FVector (currentLocation.X + CurrentLevelGridUnitLengthXCM, currentLocation.Y, currentLocation.Z));
-            FVector2D targetWorldPos = ATPGameDemoGameMode::GetCellWorldPosition(GetWorld(), GridXPosition + 1, GridYPosition, 
-                                                                                 CurrentRoomCoords.X, CurrentRoomCoords.Y);
-            MovementTarget = FVector (targetWorldPos.X, targetWorldPos.Y, currentLocation.Z);
-            break;
+            case EActionType::North: 
+            {
+            
+                //SetActorLocation (FVector (currentLocation.X + CurrentLevelGridUnitLengthXCM, currentLocation.Y, currentLocation.Z));
+                FVector2D targetWorldPos = gameMode->GetCellWorldPosition(this, GridXPosition + 1, GridYPosition, 
+                                                                          CurrentRoomCoords.X, CurrentRoomCoords.Y);
+                MovementTarget = FVector (targetWorldPos.X, targetWorldPos.Y, currentLocation.Z);
+                break;
+            }
+            case EActionType::East: 
+            {
+                //SetActorLocation (FVector (currentLocation.X, currentLocation.Y + CurrentLevelGridUnitLengthYCM, currentLocation.Z));
+                FVector2D targetWorldPos = gameMode->GetCellWorldPosition(this, GridXPosition, GridYPosition + 1, 
+                                                                          CurrentRoomCoords.X, CurrentRoomCoords.Y);
+                MovementTarget = FVector (targetWorldPos.X, targetWorldPos.Y, currentLocation.Z);
+                break;
+            }
+            case EActionType::South: 
+            {
+                //SetActorLocation (FVector (currentLocation.X - CurrentLevelGridUnitLengthXCM, currentLocation.Y, currentLocation.Z));
+                FVector2D targetWorldPos = gameMode->GetCellWorldPosition(this, GridXPosition - 1, GridYPosition, 
+                                                                          CurrentRoomCoords.X, CurrentRoomCoords.Y);
+                MovementTarget = FVector (targetWorldPos.X, targetWorldPos.Y, currentLocation.Z);
+                break;
+            }
+            case EActionType::West: 
+            {
+                //SetActorLocation (FVector (currentLocation.X, currentLocation.Y - CurrentLevelGridUnitLengthYCM, currentLocation.Z));
+                FVector2D targetWorldPos = gameMode->GetCellWorldPosition(this, GridXPosition, GridYPosition - 1, 
+                                                                          CurrentRoomCoords.X, CurrentRoomCoords.Y);
+                MovementTarget = FVector (targetWorldPos.X, targetWorldPos.Y, currentLocation.Z);
+                break;
+            }
+            default: break;
         }
-        case EActionType::East: 
-        {
-            //SetActorLocation (FVector (currentLocation.X, currentLocation.Y + CurrentLevelGridUnitLengthYCM, currentLocation.Z));
-            FVector2D targetWorldPos = ATPGameDemoGameMode::GetCellWorldPosition(GetWorld(), GridXPosition, GridYPosition + 1, 
-                                                                                 CurrentRoomCoords.X, CurrentRoomCoords.Y);
-            MovementTarget = FVector (targetWorldPos.X, targetWorldPos.Y, currentLocation.Z);
-            break;
-        }
-        case EActionType::South: 
-        {
-            //SetActorLocation (FVector (currentLocation.X - CurrentLevelGridUnitLengthXCM, currentLocation.Y, currentLocation.Z));
-            FVector2D targetWorldPos = ATPGameDemoGameMode::GetCellWorldPosition(GetWorld(), GridXPosition - 1, GridYPosition, 
-                                                                                 CurrentRoomCoords.X, CurrentRoomCoords.Y);
-            MovementTarget = FVector (targetWorldPos.X, targetWorldPos.Y, currentLocation.Z);
-            break;
-        }
-        case EActionType::West: 
-        {
-            //SetActorLocation (FVector (currentLocation.X, currentLocation.Y - CurrentLevelGridUnitLengthYCM, currentLocation.Z));
-            FVector2D targetWorldPos = ATPGameDemoGameMode::GetCellWorldPosition(GetWorld(), GridXPosition, GridYPosition - 1, 
-                                                                                 CurrentRoomCoords.X, CurrentRoomCoords.Y);
-            MovementTarget = FVector (targetWorldPos.X, targetWorldPos.Y, currentLocation.Z);
-            break;
-        }
-        default: break;
     }
 }
 

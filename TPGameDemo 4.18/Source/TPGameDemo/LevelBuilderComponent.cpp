@@ -227,17 +227,13 @@ FVector2D ULevelBuilderComponent::GetClosestEmptyCell (int x, int y)
 
 FVector2D ULevelBuilderComponent::GetCellWorldPosition (int x, int y, int RoomOffsetX, int RoomOffsetY, bool getCentre /* = true */)
 {
-    ATPGameDemoGameMode* gameMode = (ATPGameDemoGameMode*) GetWorld()->GetAuthGameMode();
+    //ATPGameDemoGameMode* gameMode = (ATPGameDemoGameMode*) GetWorld()->GetAuthGameMode();
 
-    if (gameMode == nullptr)
-        return FVector2D (0.0f, 0.0f);
+    //if (gameMode == nullptr)
+    //    return FVector2D (0.0f, 0.0f);
 
-    float centreOffset = getCentre ? 0.5f : 0.0f;
-    float positionX = ((x - gameMode->NumGridUnitsX / 2) + centreOffset) * gameMode->GridUnitLengthXCM;
-    float positionY = ((y - gameMode->NumGridUnitsY / 2) + centreOffset) * gameMode->GridUnitLengthYCM;
-    positionX += RoomOffsetX * gameMode->NumGridUnitsX * gameMode->GridUnitLengthXCM - RoomOffsetX * gameMode->GridUnitLengthXCM;
-    positionY += RoomOffsetY * gameMode->NumGridUnitsY * gameMode->GridUnitLengthYCM - RoomOffsetY * gameMode->GridUnitLengthYCM;
-    return FVector2D (positionX, positionY);
+    //return gameMode->GetCellWorldPosition(x, y, RoomOffsetX, RoomOffsetY, getCentre);
+    return ATPGameDemoGameMode::GetCellWorldPosition(this, x, y, RoomOffsetX, RoomOffsetY, getCentre);
 }
 
 FVector2D ULevelBuilderComponent::FindMostCentralSpawnPosition(int RoomOffsetX, int RoomOffsetY)

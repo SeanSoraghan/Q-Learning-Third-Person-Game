@@ -65,5 +65,10 @@ public:
         If getCentre is false, the returned position will be the back left corner of the cell.
     */
     UFUNCTION (BlueprintCallable, Category = "Room Grid Positions")
-        static FVector2D GetCellWorldPosition (UWorld* world, int x, int y, int RoomOffsetX, int RoomOffsetY, bool getCentre = true);
+        FVector2D GetGridCellWorldPosition (int x, int y, int RoomOffsetX, int RoomOffsetY, bool getCentre = true);
+    /** Static version of GetCellWorldPosition that can be called from any UObject by passing in a pointer to self.
+     */
+    UFUNCTION(BlueprintCallable, Category = "World Layout")
+        static FVector2D GetCellWorldPosition(UObject* worldContextObject, int x, int y, int RoomOffsetX, int RoomOffsetY, bool getCentre = true);
+
 };
