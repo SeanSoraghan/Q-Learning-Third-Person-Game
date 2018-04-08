@@ -25,7 +25,7 @@ FIntPoint ULevelBuilderComponent::GetRandomEvenCell()
     return FIntPoint(xPos,yPos);
 }
 
-void ULevelBuilderComponent::GenerateLevel(float normedDensity, float normedComplexity, FString levelName)
+void ULevelBuilderComponent::GenerateLevel(float normedDensity, float normedComplexity, FString levelName, TArray<int> ExistingDoorPositions /* = {0,0,0,0}*/)
 {
     int sideLength = 3;
     ATPGameDemoGameMode* gameMode = (ATPGameDemoGameMode*) GetWorld()->GetAuthGameMode();
@@ -34,19 +34,32 @@ void ULevelBuilderComponent::GenerateLevel(float normedDensity, float normedComp
         sideLength = gameMode->NumGridUnitsX; 
     }
 
-    GenerateLevelOfSize(sideLength, normedDensity, normedComplexity, levelName);
+    GenerateLevelOfSize(sideLength, normedDensity, normedComplexity, levelName, ExistingDoorPositions);
 }
 
-void ULevelBuilderComponent::GenerateLevelOfSize(int sideLength, float normedDensity, float normedComplexity, FString levelName)
+void ULevelBuilderComponent::GenerateLevelOfSize(int sideLength, float normedDensity, float normedComplexity, FString levelName, TArray<int> ExistingDoorPositions /* = {0,0,0,0}*/)
 {
     ensure(normedDensity >= 0.0f && normedDensity <= 1.0f && normedComplexity >= 0.0f && normedComplexity <= 1.0f);
     
     LevelStructure.Empty();
-    // Generate random doors on perimiter.
-    FIntPoint northDoor = FIntPoint(sideLength - 1, FMath::RandRange(1, sideLength - 2));
-    FIntPoint eastDoor  = FIntPoint(FMath::RandRange(1, sideLength - 2), sideLength - 1);
-    FIntPoint southDoor = FIntPoint(0, FMath::RandRange(1, sideLength - 2));
-    FIntPoint westDoor  = FIntPoint(FMath::RandRange(1, sideLength - 2), 0);
+    // Generate random doors on perimiter, unless doors already exist.
+    int existingDoorNorth = ExistingDoorPositions[(int)EActionType::North];
+    int existingDoorEast  = ExistingDoorPositions[(int)EActionType::East];
+    int existingDoorSouth = ExistingDoorPositions[(int)EActionType::South];
+    int existingDoorWest  = ExistingDoorPositions[(int)EActionType::West];
+
+    int doorPositionNorth = (existingDoorNorth > 0 && existingDoorNorth < sideLength - 1) ? existingDoorNorth 
+                                                                                        : FMath::RandRange(1, sideLength - 2);
+    int doorPositionEast = (existingDoorEast > 0 && existingDoorEast < sideLength - 1) ? existingDoorEast 
+                                                                                     : FMath::RandRange(1, sideLength - 2);
+    int doorPositionSouth = (existingDoorSouth > 0 && existingDoorSouth < sideLength - 1) ? existingDoorSouth 
+                                                                                        : FMath::RandRange(1, sideLength - 2);
+    int doorPositionWest = (existingDoorWest > 0 && existingDoorWest < sideLength - 1) ? existingDoorWest 
+                                                                                       : FMath::RandRange(1, sideLength - 2);
+    FIntPoint northDoor = FIntPoint(sideLength - 1, doorPositionNorth);
+    FIntPoint eastDoor  = FIntPoint(existingDoorEast, sideLength - 1);
+    FIntPoint southDoor = FIntPoint(0, doorPositionSouth);
+    FIntPoint westDoor  = FIntPoint(doorPositionWest, 0);
     for (int x = 0; x < sideLength; ++x)
     {
         TArray<int> row;

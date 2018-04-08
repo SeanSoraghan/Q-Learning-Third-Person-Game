@@ -112,6 +112,9 @@ public:
     UFUNCTION(BlueprintCallable, Category = "Level Training")
     void PauseTraining();
 
+    UFUNCTION(BlueprintCallable, Category = "Level Training")
+    void ResetGoalPosition();
+
 private:
     FThreadSafeBool LevelTrained = false;
     FString CurrentLevelName = FString("");

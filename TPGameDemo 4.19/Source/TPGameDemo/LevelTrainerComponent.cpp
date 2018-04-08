@@ -294,6 +294,11 @@ void ULevelTrainerComponent::TrainNextGoalPosition(int numSimulationsPerStarting
     IncrementGoalPosition();
 }
 
+void ULevelTrainerComponent::ResetGoalPosition()
+{
+    CurrentGoalPosition = FIntPoint(0,0);
+}
+
 TArray<TArray<int>> ULevelTrainerComponent::GetEnvironmentIntArray()
 {
     TArray<TArray<int>> outArray;

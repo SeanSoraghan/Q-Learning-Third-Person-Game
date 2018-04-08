@@ -157,8 +157,6 @@ public:
     UFUNCTION(BlueprintCallable, Category = "World Rooms States")
         static EWallPosition GetWallPositionForActionType(EActionType actionType);
 
-    void BeginPlay() override;
-
     UFUNCTION(BlueprintCallable, Category = "World Rooms States")
         bool DoesRoomExist(FIntPoint roomCoords);
     
