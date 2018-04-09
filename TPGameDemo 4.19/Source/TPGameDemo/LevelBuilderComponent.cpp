@@ -25,7 +25,7 @@ FIntPoint ULevelBuilderComponent::GetRandomEvenCell()
     return FIntPoint(xPos,yPos);
 }
 
-void ULevelBuilderComponent::GenerateLevel(float normedDensity, float normedComplexity, FString levelName, TArray<int> ExistingDoorPositions /* = {0,0,0,0}*/)
+void ULevelBuilderComponent::GenerateLevel(float normedDensity, float normedComplexity, FString levelName, TArray<int> ExistingDoorPositions)
 {
     int sideLength = 3;
     ATPGameDemoGameMode* gameMode = (ATPGameDemoGameMode*) GetWorld()->GetAuthGameMode();
@@ -37,7 +37,7 @@ void ULevelBuilderComponent::GenerateLevel(float normedDensity, float normedComp
     GenerateLevelOfSize(sideLength, normedDensity, normedComplexity, levelName, ExistingDoorPositions);
 }
 
-void ULevelBuilderComponent::GenerateLevelOfSize(int sideLength, float normedDensity, float normedComplexity, FString levelName, TArray<int> ExistingDoorPositions /* = {0,0,0,0}*/)
+void ULevelBuilderComponent::GenerateLevelOfSize(int sideLength, float normedDensity, float normedComplexity, FString levelName, TArray<int> ExistingDoorPositions)
 {
     ensure(normedDensity >= 0.0f && normedDensity <= 1.0f && normedComplexity >= 0.0f && normedComplexity <= 1.0f);
     
@@ -229,6 +229,21 @@ EActionType ULevelBuilderComponent::GetWallTypeForDoorPosition(int x, int y)
     if (x == sizeX - 1 && y > 0 && y < sizeY - 1)
         return EActionType::North;
     if (y == 0 && x > 0 && x < sizeX - 1)
+        return EActionType::West;
+    return EActionType::NumActionTypes;
+}
+
+EActionType ULevelBuilderComponent::GetWallTypeForBlockPosition(int x, int y)
+{
+    const int sizeX = LevelStructure.Num();
+    const int sizeY = LevelStructure[0].Num();
+    if (x == 0 && y >= 0 && y < sizeY)
+        return EActionType::South;
+    if (y == sizeY - 1 && x >= 0 && x < sizeY)
+        return EActionType::East;
+    if (x == sizeX - 1 && y >= 0 && y < sizeY)
+        return EActionType::North;
+    if (y == 0 && x >= 0 && x < sizeX)
         return EActionType::West;
     return EActionType::NumActionTypes;
 }

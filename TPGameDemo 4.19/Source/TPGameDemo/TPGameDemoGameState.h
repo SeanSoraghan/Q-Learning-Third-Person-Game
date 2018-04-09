@@ -213,7 +213,14 @@ public:
 
     UPROPERTY(BlueprintAssignable, VisibleAnywhere, Category = "World Rooms Spawning")
         FOnSpawnDoorDelegate OnSpawnDoor;
-        
+       
+    UFUNCTION(BlueprintCallable, Category = "World Room States")
+        int GetDoorPositionOnWall(FIntPoint roomCoords, EWallPosition wallType);
+
+    /* returns an array of 4 elements (N,E,S,W) where 0 indicates no neighbour, and 1 -> NumGridUnitsX - 1 indicates the position of a door to an existing neighbour. */
+    UFUNCTION(BlueprintCallable, Category = "World Room States")
+        TArray<int> GetDoorPositionsForExistingNeighbours(FIntPoint roomCoords);
+
 private:
     TArray<TArray<AActor*>> RoomBuilders;
 	TArray<TArray<RoomState>> RoomStates;

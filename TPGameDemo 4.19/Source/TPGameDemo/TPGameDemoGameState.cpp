@@ -218,3 +218,24 @@ void ATPGameDemoGameState::KillRoom(FIntPoint roomCoords)
     DisableRoomState(roomCoords);
     OnRoomDied.Broadcast(roomCoords);
 }
+
+int ATPGameDemoGameState::GetDoorPositionOnWall(FIntPoint roomCoords, EWallPosition wallType)
+{
+    FIntPoint roomIndices = GetRoomXYIndices(roomCoords);
+    ensure(RoomXYIndicesValid(roomIndices));
+    return RoomStates[roomIndices.X][roomIndices.Y].GetDoorPositionOnWall(wallType);
+}
+
+TArray<int> ATPGameDemoGameState::GetDoorPositionsForExistingNeighbours(FIntPoint roomCoords)
+{
+    TArray<bool> neighbourStates = GetNeighbouringRoomStates(roomCoords);
+    TArray<int> doorPositions = {0,0,0,0};
+    for (EWallPosition p = EWallPosition::North; p < EWallPosition::NumWallPositions; p = (EWallPosition)((int)p + 1))
+    {
+        if (neighbourStates[(int)p])
+        {
+            doorPositions[(int)p] = GetDoorPositionOnWall(roomCoords, p);
+        }
+    }
+    return doorPositions;
+}

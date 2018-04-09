@@ -32,10 +32,10 @@ public:
 	virtual void TickComponent( float DeltaTime, ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction ) override;
 
     UFUNCTION (BlueprintCallable, Category = "Level Building")
-        virtual void GenerateLevelOfSize(int sideLength, float normedDensity, float normedComplexity, FString levelName, TArray<int> ExistingDoorPositions = {0,0,0,0});
+        virtual void GenerateLevelOfSize(int sideLength, float normedDensity, float normedComplexity, FString levelName, TArray<int> ExistingDoorPositions);
 
     UFUNCTION (BlueprintCallable, Category = "Level Building")
-        virtual void GenerateLevel(float normedDensity, float normedComplexity, FString levelName, TArray<int> ExistingDoorPositions = {0,0,0,0});
+        virtual void GenerateLevel(float normedDensity, float normedComplexity, FString levelName, TArray<int> ExistingDoorPositions);
 
     UFUNCTION (BlueprintCallable, Category = "Level Building")
         virtual void GenerateInnerStructure(int sideLength, float normedDensity, float normedComplexity);
@@ -60,7 +60,10 @@ public:
 
     UFUNCTION (BlueprintCallable, Category = "Level Building")
         virtual EActionType GetWallTypeForDoorPosition(int x, int y);
-
+    
+    UFUNCTION (BlueprintCallable, Category = "Level Building")
+        virtual EActionType GetWallTypeForBlockPosition(int x, int y);
+    
     UFUNCTION (BlueprintCallable, Category = "Level Building")
         FVector2D GetClosestEmptyCell (int x, int y);
 
