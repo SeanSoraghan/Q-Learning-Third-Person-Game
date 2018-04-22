@@ -107,10 +107,10 @@ struct RoomState
     {
         switch(wallPosition)
         {
-            case EWallPosition::North: NorthDoor.DoorActor = doorActor;
-            case EWallPosition::East:  EastDoor.DoorActor = doorActor;
-            case EWallPosition::South: SouthDoor.DoorActor = doorActor;
-            case EWallPosition::West:  WestDoor.DoorActor = doorActor;
+            case EWallPosition::North: NorthDoor.DoorActor = doorActor; break;
+            case EWallPosition::East:  EastDoor.DoorActor = doorActor; break;
+            case EWallPosition::South: SouthDoor.DoorActor = doorActor; break;
+            case EWallPosition::West:  WestDoor.DoorActor = doorActor; break;
             default: ensure(false);
         }
     }
@@ -213,7 +213,10 @@ public:
 
     UPROPERTY(BlueprintAssignable, VisibleAnywhere, Category = "World Rooms Spawning")
         FOnSpawnDoorDelegate OnSpawnDoor;
-       
+    
+    UFUNCTION(BlueprintCallable, Category = "World Rooms Spawning")
+        void SetDoor(FIntPoint roomCoords, AActor* doorActor, EWallPosition wallPosition);
+
     UFUNCTION(BlueprintCallable, Category = "World Room States")
         int GetDoorPositionOnWall(FIntPoint roomCoords, EWallPosition wallType);
 

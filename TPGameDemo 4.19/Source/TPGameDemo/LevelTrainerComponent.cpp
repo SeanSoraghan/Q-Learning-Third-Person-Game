@@ -41,7 +41,7 @@ uint32 LevelTrainerRunnable::Run()
         {
             TrainerComponent.TrainNextGoalPosition(300, 300); //int numSimulationsPerStartingPosition, int maxNumActionsPerSimulation
             if (TrainerComponent.LevelTrained)
-                ThreadShouldExit = true;
+                ShouldTrain = false;//ThreadShouldExit = true;
         }
         IsTraining = false;
     }

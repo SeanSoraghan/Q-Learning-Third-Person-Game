@@ -57,7 +57,7 @@ void ULevelBuilderComponent::GenerateLevelOfSize(int sideLength, float normedDen
     int doorPositionWest = (existingDoorWest > 0 && existingDoorWest < sideLength - 1) ? existingDoorWest 
                                                                                        : FMath::RandRange(1, sideLength - 2);
     FIntPoint northDoor = FIntPoint(sideLength - 1, doorPositionNorth);
-    FIntPoint eastDoor  = FIntPoint(existingDoorEast, sideLength - 1);
+    FIntPoint eastDoor  = FIntPoint(doorPositionEast, sideLength - 1);
     FIntPoint southDoor = FIntPoint(0, doorPositionSouth);
     FIntPoint westDoor  = FIntPoint(doorPositionWest, 0);
     for (int x = 0; x < sideLength; ++x)

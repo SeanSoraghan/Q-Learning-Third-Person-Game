@@ -143,10 +143,17 @@ void ATPGameDemoGameState::DisableRoomState(FIntPoint roomCoords)
             FIntPoint neighbourIndices = GetNeighbouringRoomIndices(roomCoords, (EWallPosition)p);
             FIntPoint neighbourCoords = GetRoomCoords(neighbourIndices);
             EWallPosition wallPositionInNeighbour = GetWallPositionInNeighbouringRoom((EWallPosition)p);
-            int doorPositionOnWall = RoomStates[roomIndices.X][roomIndices.Y].GetDoorPositionOnWall((EWallPosition)p);
+            int doorPositionOnWall = RoomStates[neighbourIndices.X][neighbourIndices.Y].GetDoorPositionOnWall(wallPositionInNeighbour);
             OnSpawnDoor.Broadcast(neighbourCoords, wallPositionInNeighbour, doorPositionOnWall, roomCoords);
         }
     }
+}
+
+void ATPGameDemoGameState::SetDoor(FIntPoint roomCoords, AActor* doorActor, EWallPosition wallPosition)
+{
+    FIntPoint roomIndices = GetRoomXYIndices(roomCoords);
+    ensure(RoomXYIndicesValid(roomIndices));
+    RoomStates[roomIndices.X][roomIndices.Y].SetDoor(doorActor, wallPosition);
 }
 
 FIntPoint ATPGameDemoGameState::GetRoomXYIndices(FIntPoint roomCoords)
