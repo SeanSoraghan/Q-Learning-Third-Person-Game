@@ -41,7 +41,7 @@ uint32 LevelTrainerRunnable::Run()
         {
             TrainerComponent.TrainNextGoalPosition(300, 300); //int numSimulationsPerStartingPosition, int maxNumActionsPerSimulation
             if (TrainerComponent.LevelTrained)
-                ShouldTrain = false;//ThreadShouldExit = true;
+                ThreadShouldExit = true;
         }
         IsTraining = false;
     }
@@ -201,12 +201,17 @@ void ULevelTrainerComponent::TickComponent( float DeltaTime, ELevelTick TickType
 
 void ULevelTrainerComponent::StartTraining()
 {
-    if (!TrainerRunnable.IsValid() || !TrainerThread.IsValid())
+    if(TrainerRunnable.IsValid())
+        TrainerRunnable->Stop();
+    if (TrainerThread.IsValid())
     {
-        InitTrainerThread();
+        TrainerThread->WaitForCompletion();
+        TrainerThread.Reset();
     }
-    if (TrainerRunnable.IsValid())
-        TrainerRunnable->StartTraining();
+    if(TrainerRunnable.IsValid())
+        TrainerRunnable.Reset();
+    InitTrainerThread();
+    TrainerRunnable->StartTraining();
 }
 
 void ULevelTrainerComponent::PauseTraining()
@@ -279,7 +284,9 @@ void ULevelTrainerComponent::TrainNextGoalPosition(int numSimulationsPerStarting
                 for (int s = 0; s < numSimulationsPerStartingPosition; ++s)
                 {
                     if (GetState(FIntPoint(x,y)).IsStateValid() && FIntPoint(x,y) != CurrentGoalPosition)
+                    {
                         SimulateRun(FIntPoint(x,y), maxNumActionsPerSimulation);
+                    }
                 }
             }
         }
@@ -336,6 +343,23 @@ void ULevelTrainerComponent::ClearEnvironment()
         for(int y = 0; y < Environment[0].Num(); ++y)
         {
             GetState(FIntPoint(x,y)).ResetQValues();
+            // Move in from edges if on an edge.
+            if (x == 0)
+            {
+                GetState(FIntPoint(x,y)).UpdateQValue(EActionType::North, 100.0f);
+            }
+            else if (y == 0)
+            {
+                GetState(FIntPoint(x,y)).UpdateQValue(EActionType::East, 100.0f);
+            }
+            else if (x == Environment.Num() - 1)
+            {
+                GetState(FIntPoint(x,y)).UpdateQValue(EActionType::South, 100.0f);
+            }
+            else if (y == Environment[0].Num() - 1)
+            {
+                GetState(FIntPoint(x,y)).UpdateQValue(EActionType::West, 100.0f);
+            }
         }
     }
 }

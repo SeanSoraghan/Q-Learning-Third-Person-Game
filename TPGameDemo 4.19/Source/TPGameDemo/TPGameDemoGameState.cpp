@@ -226,6 +226,27 @@ void ATPGameDemoGameState::KillRoom(FIntPoint roomCoords)
     OnRoomDied.Broadcast(roomCoords);
 }
 
+EQuadrantType ATPGameDemoGameState::GetQuadrantTypeForRoomCoords(FIntPoint roomCoords)
+{
+    FIntPoint roomIndices = GetRoomXYIndices(roomCoords);
+    ensure(RoomXYIndicesValid(roomIndices));
+    int x = roomIndices.X;
+    int y = roomIndices.Y;
+    if(x >= NumGridsXY / 2)
+    {
+        if (y >= NumGridsXY / 2)
+        {
+            return EQuadrantType::NorthEast;
+        }
+        return EQuadrantType::SouthEast;
+    }
+    else if (y < NumGridsXY / 2)
+    {
+        return EQuadrantType::SouthWest;
+    }
+    return EQuadrantType::NorthWest;
+}
+
 int ATPGameDemoGameState::GetDoorPositionOnWall(FIntPoint roomCoords, EWallPosition wallType)
 {
     FIntPoint roomIndices = GetRoomXYIndices(roomCoords);
@@ -241,7 +262,13 @@ TArray<int> ATPGameDemoGameState::GetDoorPositionsForExistingNeighbours(FIntPoin
     {
         if (neighbourStates[(int)p])
         {
-            doorPositions[(int)p] = GetDoorPositionOnWall(roomCoords, p);
+            FIntPoint neighbourRoom = GetNeighbouringRoomIndices(roomCoords, EWallPosition(p));
+            if(RoomXYIndicesValid(neighbourRoom))
+            {
+                const EWallPosition positionInNeighbouringRoom = GetWallPositionInNeighbouringRoom((EWallPosition)p);//(p + 2) % EWallPosition::NumWallPositions
+                int posOnWall = RoomStates[neighbourRoom.X][neighbourRoom.Y].GetDoorPositionOnWall(positionInNeighbouringRoom);
+                doorPositions[(int)p] = posOnWall;
+            }
         }
     }
     return doorPositions;

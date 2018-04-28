@@ -3,6 +3,7 @@
 #pragma once
 #include "TPGameDemo.h"
 #include "MazeActor.h"
+#include "TPGameDemoGameState.h"
 #include "EnemyActor.generated.h"
 
 
@@ -20,6 +21,28 @@ this delegate is bound to a function that calls UpdatePolicyForPlayerPosition (i
 
 See MazeActor.h
 */
+
+UENUM(BlueprintType)
+enum class EEnemyBehaviourState : uint8
+{
+    Exploring,
+    ChangingRooms,
+    NumBehaviourStates
+};
+
+USTRUCT()
+struct FTargetPosition
+{
+    GENERATED_BODY()
+    // Invalid initial values to avoid TargetReached miss-fire
+    FIntPoint Position = FIntPoint(-1,-1);
+    EActionType DoorAction = EActionType::NumActionTypes;
+
+    bool TargetIsDoor() const
+    {
+        return DoorAction != EActionType::NumActionTypes;
+    }
+};
 
 UCLASS()
 class TPGAMEDEMO_API AEnemyActor : public AMazeActor
@@ -40,8 +63,8 @@ public:
     UFUNCTION (BlueprintCallable, Category = "Enemy Movement")
         virtual EActionType SelectNextAction();
 
-    UFUNCTION (BlueprintCallable, Category = "Enemy Movement")
-        virtual void UpdatePolicyForPlayerPosition (int playerX, int playerY);
+    UFUNCTION (BlueprintCallable, Category = "Enemy Behaviour")
+        virtual void ChooseDoorTarget();
 
     UPROPERTY (BlueprintReadOnly, Category = "Enemy Movement Timing")
         FTimerHandle MoveTimerHandle;
@@ -51,11 +74,20 @@ public:
 
     UFUNCTION (BlueprintCallable, Category = "Enemy Movement Timing")
         virtual void SetMovementTimerPaused (bool movementTimerShouldBePaused);
+
+    UFUNCTION (BlueprintCallable, Category = "Enemy Movement")
+        void UpdateMovementForActionType(EActionType actionType);
     //======================================================================================================
     // Behaviour Policy
     //====================================================================================================== 
     UFUNCTION (BlueprintCallable, Category = "Enemy Policy")
         void LoadLevelPolicyForRoomCoordinates (FIntPoint levelCoords);
+
+    UFUNCTION (BlueprintCallable, Category = "Enemy Movement")
+        virtual void UpdatePolicyForPlayerPosition (int playerX, int playerY);
+
+    UFUNCTION (BlueprintCallable, Category = "Enemy Movement")
+        virtual void UpdatePolicyForDoorType (EActionType doorTypem, int doorPositionOnWall);
 
     UFUNCTION (BlueprintCallable, Category = "Enemy Policy")
         void LoadLevelPolicy (FString levelName);
@@ -69,7 +101,9 @@ public:
     UPROPERTY(BlueprintReadWrite, EditAnywhere, Category = "Enemy Movement")
         float RotationSpeed = 0.1f;        
 private:
-    FIntPoint             CurrentRoomCoords = FIntPoint::ZeroValue;
+    EEnemyBehaviourState  BehaviourState = EEnemyBehaviourState::Exploring;
+    FTargetPosition        TargetRoomPosition;
+    //FIntPoint             CurrentRoomCoords = FIntPoint::ZeroValue;
     FString               LevelPoliciesDir;
     FString               CurrentLevelPolicyDir;
     TArray<TArray<int>>   CurrentLevelPolicy;
@@ -80,6 +114,7 @@ private:
     //====================================================================================================== 
     void ResetPolicy();
     void PrintLevelPolicy();
+    void UpdatePolicyForTargetPosition();
 
     //======================================================================================================
     // Movement
@@ -90,4 +125,5 @@ private:
     // From AMazeActor
     //====================================================================================================== 
     virtual void PositionChanged() override;
+    virtual void RoomCoordsChanged() override;
 };

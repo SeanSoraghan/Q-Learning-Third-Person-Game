@@ -18,6 +18,16 @@ enum class EWallPosition : uint8
     NumWallPositions
 };
 
+UENUM(BlueprintType)
+enum class EQuadrantType : uint8
+{
+    NorthEast,
+    SouthEast,
+    SouthWest,
+    NorthWest,
+    NumQuadrants
+};
+
 struct DoorState
 {
     DoorState(){DoorActor = nullptr;}
@@ -207,6 +217,9 @@ public:
 
     UFUNCTION(BlueprintCallable, Category = "World Room States")
         void KillRoom(FIntPoint roomCoords); 
+
+    UFUNCTION(BlueprintCallable, Category = "World Room States")
+        EQuadrantType GetQuadrantTypeForRoomCoords(FIntPoint roomCoords);
 
     UPROPERTY(BlueprintAssignable, VisibleAnywhere, Category = "World Rooms States")
         FRoomDiedDelegate OnRoomDied;
