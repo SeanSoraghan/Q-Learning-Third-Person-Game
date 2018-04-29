@@ -90,14 +90,25 @@ void ATPGameDemoGameState::Tick( float DeltaTime )
     for (auto wallPosition : WallsToUpdate)
     {
         auto roomCoords = wallPosition.WallCoupleCoords;
-        auto wallState = GetWallState(roomCoords, wallPosition.WallType);
-        auto neighbourCoords = GetRoomCoords(GetNeighbouringRoomIndices(roomCoords, wallPosition.WallType));
-        if (DoesRoomExist(roomCoords) || DoesRoomExist(neighbourCoords))
+        auto wallType = wallPosition.WallType;
+        auto wallState = GetWallState(roomCoords, wallType);
+        auto neighbourCoords = GetRoomCoords(GetNeighbouringRoomIndices(roomCoords, wallType));
+        bool roomExists = DoesRoomExist(roomCoords);
+        bool neighbourExists = DoesRoomExist(neighbourCoords); 
+        if (roomExists || neighbourExists)
         {
-            
+            EnableWallState(roomCoords, wallType);
+            if (roomExists && neighbourExists)
+                DisableDoorState(roomCoords, wallType);
+            else
+                EnableDoorState(roomCoords, wallType);
         }
-
+        else
+        {
+            DisableWallState(roomCoords, wallType);
+        }
     }
+    WallsToUpdate.Empty();
 }
 
 //============================================================================
@@ -109,6 +120,20 @@ bool ATPGameDemoGameState::DoesRoomExist(FIntPoint roomCoords) const
     FIntPoint roomIndices = GetRoomXYIndices(roomCoords);
     ensure(RoomXYIndicesValid(roomIndices));
     return RoomStates[roomIndices.X][roomIndices.Y].bRoomExists;
+}
+
+bool ATPGameDemoGameState::DoesWallExist(FIntPoint roomCoords, EDirectionType wallType)
+{
+    auto wallState = GetWallState(roomCoords, wallType);
+    return wallState.bWallExists;
+}
+
+bool ATPGameDemoGameState::DoesDoorExist(FIntPoint roomCoords, EDirectionType wallType)
+{
+    auto wallState = GetWallState(roomCoords, wallType);
+    if (!wallState.bWallExists && wallState.bDoorExists)
+        ensure(false); // Invalid state!
+    return wallState.bWallExists && wallState.bDoorExists;
 }
 
 float ATPGameDemoGameState::GetRoomHealth(FIntPoint roomCoords) const
@@ -265,7 +290,7 @@ void ATPGameDemoGameState::SetWallBuilder(FIntPoint roomCoords, AWallBuilder* bu
 
 void ATPGameDemoGameState::EnableRoomState(FIntPoint roomCoords)
 {
-    // initialize random door positions for walls that haven't yet been initialized...
+    // initialize random door positions for walls that haven't yet generated their door positions....
     auto wallStates = GetWallStatesForRoom(roomCoords);
 
     ATPGameDemoGameMode* gameMode = (ATPGameDemoGameMode*) GetWorld()->GetAuthGameMode();
@@ -286,48 +311,92 @@ void ATPGameDemoGameState::EnableRoomState(FIntPoint roomCoords)
 
     FIntPoint roomIndices = GetRoomXYIndices(roomCoords);
     ensure(RoomXYIndicesValid(roomIndices));
-    RoomStates[roomIndices.X][roomIndices.Y].InitializeRoom();
+    if (!DoesRoomExist(roomCoords))
+    {
+        RoomStates[roomIndices.X][roomIndices.Y].InitializeRoom();
 
-    RoomBuilders[roomIndices.X][roomIndices.Y]->BuildRoom({wallStates[(int)EDirectionType::North]->DoorPosition,
-                                                           wallStates[(int)EDirectionType::East]->DoorPosition,
-                                                           wallStates[(int)EDirectionType::South]->DoorPosition,
-                                                           wallStates[(int)EDirectionType::West]->DoorPosition});
+        RoomBuilders[roomIndices.X][roomIndices.Y]->BuildRoom({wallStates[(int)EDirectionType::North]->DoorPosition,
+                                                               wallStates[(int)EDirectionType::East]->DoorPosition,
+                                                               wallStates[(int)EDirectionType::South]->DoorPosition,
+                                                               wallStates[(int)EDirectionType::West]->DoorPosition});
     
-    FlagWallsForUpdate(roomCoords);
+        FlagWallsForUpdate(roomCoords);
+    }
 }
 
 void ATPGameDemoGameState::DisableRoomState(FIntPoint roomCoords)
 {
     FIntPoint roomIndices = GetRoomXYIndices(roomCoords);
     ensure(RoomXYIndicesValid(roomIndices));
-    RoomStates[roomIndices.X][roomIndices.Y].DisableRoom();
-    RoomBuilders[roomIndices.X][roomIndices.Y]->DestroyRoom();
-    FlagWallsForUpdate(roomCoords);
+    if (DoesRoomExist(roomCoords))
+    {
+        RoomStates[roomIndices.X][roomIndices.Y].DisableRoom();
+        RoomBuilders[roomIndices.X][roomIndices.Y]->DestroyRoom();
+        FlagWallsForUpdate(roomCoords);
+    }
 }
 
 void ATPGameDemoGameState::EnableWallState(FIntPoint roomCoords, EDirectionType wallType)
 {
-    GetWallState(roomCoords, wallType).InitializeWall();
-    auto wallBuilder = GetWallBuilder(roomCoords, wallType);
-    if (wallBuilder != nullptr)
+    if (!DoesWallExist(roomCoords, wallType))
     {
-        if (wallType == EDirectionType::North || wallType == EDirectionType::South)
-            wallBuilder->BuildSouthWall();
-        else
-            wallBuilder->BuildWestWall();
+        GetWallState(roomCoords, wallType).InitializeWall();
+        auto wallBuilder = GetWallBuilder(roomCoords, wallType);
+        if (wallBuilder != nullptr)
+        {
+            if (wallType == EDirectionType::North || wallType == EDirectionType::South)
+                wallBuilder->BuildSouthWall();
+            else
+                wallBuilder->BuildWestWall();
+        }
     }
 }
 
 void ATPGameDemoGameState::DisableWallState(FIntPoint roomCoords, EDirectionType wallType)
 {
-    GetWallState(roomCoords, wallType).DisableWall();
-    auto wallBuilder = GetWallBuilder(roomCoords, wallType);
-    if (wallBuilder != nullptr)
+    if (DoesWallExist(roomCoords, wallType))
     {
-        if (wallType == EDirectionType::North || wallType == EDirectionType::South)
-            wallBuilder->DestroySouthWall();
-        else
-            wallBuilder->DestroyWestWall();
+        GetWallState(roomCoords, wallType).DisableWall();
+        auto wallBuilder = GetWallBuilder(roomCoords, wallType);
+        if (wallBuilder != nullptr)
+        {
+            if (wallType == EDirectionType::North || wallType == EDirectionType::South)
+                wallBuilder->DestroySouthWall();
+            else
+                wallBuilder->DestroyWestWall();
+        }
+    }
+}
+
+void ATPGameDemoGameState::EnableDoorState(FIntPoint roomCoords, EDirectionType wallType)
+{
+    if (!DoesDoorExist(roomCoords, wallType))
+    {
+        GetWallState(roomCoords, wallType).InitializeDoor();
+        auto wallBuilder = GetWallBuilder(roomCoords, wallType);
+        if (wallBuilder != nullptr)
+        {
+            if (wallType == EDirectionType::North || wallType == EDirectionType::South)
+                wallBuilder->SpawnSouthDoor();
+            else
+                wallBuilder->SpawnWestDoor();
+        }
+    }
+}
+
+void ATPGameDemoGameState::DisableDoorState(FIntPoint roomCoords, EDirectionType wallType)
+{
+    if (DoesDoorExist(roomCoords, wallType))
+    {
+        GetWallState(roomCoords, wallType).DisableDoor();
+        auto wallBuilder = GetWallBuilder(roomCoords, wallType);
+        if (wallBuilder != nullptr)
+        {
+            if (wallType == EDirectionType::North || wallType == EDirectionType::South)
+                wallBuilder->DestroySouthDoor();
+            else
+                wallBuilder->DestroyWestDoor();
+        }
     }
 }
 

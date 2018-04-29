@@ -42,6 +42,17 @@ struct WallState
     void DisableWall()
     {
         bWallExists = false;
+        bDoorExists = false;
+    }
+
+    void InitializeDoor()
+    {
+        bDoorExists = true;
+    }
+
+    void DisableDoor()
+    {
+        bDoorExists = false;
     }
 
     bool HasDoor() const
@@ -57,6 +68,7 @@ struct WallState
     EDoorState DoorState = EDoorState::Closed;
     int DoorPosition = -1;
     bool bWallExists = false;
+    bool bDoorExists = false;
 };
 
 // The game state manages a 2D array of WallStateCouple structs that is the same size as the 2D rooms array.
@@ -167,6 +179,12 @@ public:
 
     UFUNCTION(BlueprintCallable, Category = "World Rooms States")
         bool DoesRoomExist(FIntPoint roomCoords) const;
+
+    UFUNCTION(BlueprintCallable, Category = "World Rooms States")
+        bool DoesWallExist(FIntPoint roomCoords, EDirectionType wallType);
+
+    UFUNCTION(BlueprintCallable, Category = "World Rooms States")
+        bool DoesDoorExist(FIntPoint roomCoords, EDirectionType wallType);
     
     UFUNCTION(BlueprintCallable, Category = "World Room States")
         float GetRoomHealth(FIntPoint roomCoords) const;
@@ -238,6 +256,12 @@ public:
 
     UFUNCTION(BlueprintCallable, Category = "World Rooms States")
         void DisableWallState(FIntPoint roomCoords, EDirectionType wallType);
+
+    UFUNCTION(BlueprintCallable, Category = "World Rooms States")
+        void EnableDoorState(FIntPoint roomCoords, EDirectionType wallType);
+
+    UFUNCTION(BlueprintCallable, Category = "World Rooms States")
+        void DisableDoorState(FIntPoint roomCoords, EDirectionType wallType);
 
     // --------------------- Door Interaction -------------------------------------\\ 
 
