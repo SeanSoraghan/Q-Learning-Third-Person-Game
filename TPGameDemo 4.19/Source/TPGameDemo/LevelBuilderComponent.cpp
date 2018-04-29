@@ -43,10 +43,10 @@ void ULevelBuilderComponent::GenerateLevelOfSize(int sideLength, float normedDen
     
     LevelStructure.Empty();
     // Generate random doors on perimiter, unless doors already exist.
-    int existingDoorNorth = ExistingDoorPositions[(int)EActionType::North];
-    int existingDoorEast  = ExistingDoorPositions[(int)EActionType::East];
-    int existingDoorSouth = ExistingDoorPositions[(int)EActionType::South];
-    int existingDoorWest  = ExistingDoorPositions[(int)EActionType::West];
+    int existingDoorNorth = ExistingDoorPositions[(int)EDirectionType::North];
+    int existingDoorEast  = ExistingDoorPositions[(int)EDirectionType::East];
+    int existingDoorSouth = ExistingDoorPositions[(int)EDirectionType::South];
+    int existingDoorWest  = ExistingDoorPositions[(int)EDirectionType::West];
 
     int doorPositionNorth = (existingDoorNorth > 0 && existingDoorNorth < sideLength - 1) ? existingDoorNorth 
                                                                                         : FMath::RandRange(1, sideLength - 2);
@@ -107,7 +107,7 @@ void ULevelBuilderComponent::GenerateInnerStructure(int sideLength, float normed
         {
             for (int islandSection = 0; islandSection < complexity; ++islandSection)
             {
-                EActionType direction = (EActionType)FMath::RandRange(0, (int)EActionType::NumActionTypes - 1);
+                EDirectionType direction = (EDirectionType)FMath::RandRange(0, (int)EDirectionType::NumDirectionTypes - 1);
                 FIntPoint islandSectionEndTarget = LevelBuilderHelpers::GetTargetPointForAction(currentIslandPoint, direction, 2);
                 if (LevelBuilderHelpers::GridPositionIsValid(islandSectionEndTarget, sideLength, sideLength) &&
                     LevelStructure[islandSectionEndTarget.X][islandSectionEndTarget.Y] == (int)ECellState::Open)
@@ -163,9 +163,9 @@ bool ULevelBuilderComponent::IsCellTouchingDoorCell(FIntPoint cellPosition)
     const int sizeX = LevelStructure.Num();
     ensure(LevelStructure.Num() > 0);
     const int sizeY = LevelStructure[0].Num();
-    for (int action = 0; action < (int)EActionType::NumActionTypes; ++action)
+    for (int action = 0; action < (int)EDirectionType::NumDirectionTypes; ++action)
     {
-        FIntPoint actionTarget = LevelBuilderHelpers::GetTargetPointForAction(cellPosition, (EActionType)action);
+        FIntPoint actionTarget = LevelBuilderHelpers::GetTargetPointForAction(cellPosition, (EDirectionType)action);
         if (LevelBuilderHelpers::GridPositionIsValid(actionTarget, sizeX, sizeY) && 
             LevelStructure[actionTarget.X][actionTarget.Y] == (int)ECellState::Door)
             return true;
@@ -218,34 +218,34 @@ ECellState ULevelBuilderComponent::GetCellState (int x, int y)
     return (ECellState)0;
 }
 
-EActionType ULevelBuilderComponent::GetWallTypeForDoorPosition(int x, int y)
+EDirectionType ULevelBuilderComponent::GetWallTypeForDoorPosition(int x, int y)
 {
     const int sizeX = LevelStructure.Num();
     const int sizeY = LevelStructure[0].Num();
     if (x == 0 && y > 0 && y < sizeY - 1)
-        return EActionType::South;
+        return EDirectionType::South;
     if (y == sizeY - 1 && x > 0 && x < sizeY - 1)
-        return EActionType::East;
+        return EDirectionType::East;
     if (x == sizeX - 1 && y > 0 && y < sizeY - 1)
-        return EActionType::North;
+        return EDirectionType::North;
     if (y == 0 && x > 0 && x < sizeX - 1)
-        return EActionType::West;
-    return EActionType::NumActionTypes;
+        return EDirectionType::West;
+    return EDirectionType::NumDirectionTypes;
 }
 
-EActionType ULevelBuilderComponent::GetWallTypeForBlockPosition(int x, int y)
+EDirectionType ULevelBuilderComponent::GetWallTypeForBlockPosition(int x, int y)
 {
     const int sizeX = LevelStructure.Num();
     const int sizeY = LevelStructure[0].Num();
     if (x == 0 && y >= 0 && y < sizeY)
-        return EActionType::South;
+        return EDirectionType::South;
     if (y == sizeY - 1 && x >= 0 && x < sizeY)
-        return EActionType::East;
+        return EDirectionType::East;
     if (x == sizeX - 1 && y >= 0 && y < sizeY)
-        return EActionType::North;
+        return EDirectionType::North;
     if (y == 0 && x >= 0 && x < sizeX)
-        return EActionType::West;
-    return EActionType::NumActionTypes;
+        return EDirectionType::West;
+    return EDirectionType::NumDirectionTypes;
 }
 
 FVector2D ULevelBuilderComponent::GetClosestEmptyCell (int x, int y)
@@ -254,7 +254,7 @@ FVector2D ULevelBuilderComponent::GetClosestEmptyCell (int x, int y)
     int yPos = y;
     const int totalCells = GetNumGridUnitsX() * GetNumGridUnitsY();
     int numCellsVisited = 0;
-    EActionType actionType = EActionType::North;
+    EDirectionType actionType = EDirectionType::North;
     int numActionsToTake = 1;
     int numActionsTaken = 0;
     while(numCellsVisited < totalCells)
@@ -263,16 +263,16 @@ FVector2D ULevelBuilderComponent::GetClosestEmptyCell (int x, int y)
             return FVector2D(xPos, yPos);
         switch (actionType)
         {
-            case EActionType::North: 
+            case EDirectionType::North: 
                 ++xPos;
                 break;
-            case EActionType::East: 
+            case EDirectionType::East: 
                 ++yPos;
                 break;
-            case EActionType::South: 
+            case EDirectionType::South: 
                 --xPos;
                 break;
-            case EActionType::West: 
+            case EDirectionType::West: 
                 --yPos;
                 break;
             default: break;
@@ -281,8 +281,8 @@ FVector2D ULevelBuilderComponent::GetClosestEmptyCell (int x, int y)
         if (numActionsTaken == numActionsToTake)
         {
             // change action to the next clockwise action (north goes to east, east to south etc.)
-            actionType = (EActionType)(((int)actionType + 1) % (int)EActionType::NumActionTypes);
-            if (actionType == EActionType::North || actionType == EActionType::South)
+            actionType = (EDirectionType)(((int)actionType + 1) % (int)EDirectionType::NumDirectionTypes);
+            if (actionType == EDirectionType::North || actionType == EDirectionType::South)
                 ++numActionsToTake;
             numActionsTaken = 0;
         }

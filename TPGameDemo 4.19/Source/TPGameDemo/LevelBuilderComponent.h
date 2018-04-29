@@ -59,10 +59,10 @@ public:
         virtual ECellState GetCellState (int x, int y);
 
     UFUNCTION (BlueprintCallable, Category = "Level Building")
-        virtual EActionType GetWallTypeForDoorPosition(int x, int y);
+        virtual EDirectionType GetWallTypeForDoorPosition(int x, int y);
     
     UFUNCTION (BlueprintCallable, Category = "Level Building")
-        virtual EActionType GetWallTypeForBlockPosition(int x, int y);
+        virtual EDirectionType GetWallTypeForBlockPosition(int x, int y);
     
     UFUNCTION (BlueprintCallable, Category = "Level Building")
         FVector2D GetClosestEmptyCell (int x, int y);

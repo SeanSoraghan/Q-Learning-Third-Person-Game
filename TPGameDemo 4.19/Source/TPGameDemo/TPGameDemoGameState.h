@@ -9,16 +9,6 @@
 #include "TPGameDemoGameState.generated.h"
 
 UENUM(BlueprintType)
-enum class EWallPosition : uint8
-{
-    North UMETA (DisplayName = "NorthWall"),
-    East  UMETA (DisplayName = "EastWall"),
-    South UMETA (DisplayName = "SouthWall"),
-    West  UMETA (DisplayName = "WestWall"),
-    NumWallPositions
-};
-
-UENUM(BlueprintType)
 enum class EQuadrantType : uint8
 {
     NorthEast,
@@ -28,19 +18,52 @@ enum class EQuadrantType : uint8
     NumQuadrants
 };
 
-struct DoorState
+UENUM(BlueprintType)
+enum class EDoorState : uint8
 {
-    DoorState(){DoorActor = nullptr;}
-    ~DoorState(){DoorActor = nullptr;}
+    Open,
+    Closed,
+    Opening,
+    Closing,
+    NumStates
+};
 
-    void InitializeDoor(AActor* doorActor, int positionOnWall)
+struct WallState
+{
+
+    WallState(){}
+    ~WallState(){}
+
+    void InitializeWall()
     {
-        DoorActor = doorActor;
-        PositionOnWall = positionOnWall;
+        bWallExists = true;
     }
 
-    AActor* DoorActor;
-    int PositionOnWall = 0;
+    void DisableWall()
+    {
+        bWallExists = false;
+    }
+
+    bool HasDoor() const
+    {
+        return DoorPosition != -1;
+    }
+
+    void GenerateRandomDoorPosition(int doorPositionMax)
+    {
+        DoorPosition = FMath::RandRange(1, doorPositionMax);
+    }
+
+    EDoorState DoorState = EDoorState::Closed;
+    int DoorPosition = -1;
+    bool bWallExists = false;
+};
+
+// The game state manages a 2D array of WallStateCouple structs that is the same size as the 2D rooms array.
+struct WallStateCouple
+{
+    WallState WestWall;
+    WallState SouthWall;
 };
 
 struct RoomState
@@ -50,108 +73,69 @@ struct RoomState
         bRoomExists = false;
     }
 
-    void InitializeRoom(TArray<AActor*> doors, TArray<int> doorPositionsOnWalls)
+    void InitializeRoom()
     {
         bRoomExists = true;
-        NorthDoor.InitializeDoor(doors[(int)EWallPosition::North], doorPositionsOnWalls[(int)EWallPosition::North]);
-        EastDoor.InitializeDoor(doors[(int)EWallPosition::East], doorPositionsOnWalls[(int)EWallPosition::East]);
-        SouthDoor.InitializeDoor(doors[(int)EWallPosition::South], doorPositionsOnWalls[(int)EWallPosition::South]);
-        WestDoor.InitializeDoor(doors[(int)EWallPosition::West], doorPositionsOnWalls[(int)EWallPosition::West]);
     }
 
-    void DisableRoom(TArray<bool> NeighbourStates)
+    void DisableRoom()
     {
         bRoomExists = false;
-        // If a neighbour doesn't exist, we kill the door that would lead to it.
-        for (int p = 0; p < (int)EWallPosition::NumWallPositions; ++p)
-        {
-            if (NeighbourStates[p])
-                DestroyDoor((EWallPosition)p);
-        }
     }
 
-    void DestroyDoor(EWallPosition wallPosition)
-    {
-        switch (wallPosition)
-        {
-            case EWallPosition::North: 
-            {
-                if (NorthDoor.DoorActor != nullptr)
-                {
-                    NorthDoor.DoorActor->Destroy();
-                    NorthDoor.DoorActor = nullptr;                
-                }
-                break;
-            }
-            case EWallPosition::East: 
-            {
-                if (EastDoor.DoorActor != nullptr)
-                {
-                    EastDoor.DoorActor->Destroy();
-                    EastDoor.DoorActor = nullptr;
-                }
-                break;
-            }
-            case EWallPosition::South: 
-            {
-                if (SouthDoor.DoorActor != nullptr)
-                {
-                    SouthDoor.DoorActor->Destroy();
-                    SouthDoor.DoorActor = nullptr;
-                }
-                break;
-            }
-            case EWallPosition::West: 
-            {
-                if (WestDoor.DoorActor != nullptr)
-                {
-                    WestDoor.DoorActor->Destroy();
-                    WestDoor.DoorActor = nullptr;
-                }
-                break;
-            }
-        }
-    }
-
-    void SetDoor(AActor* doorActor, EWallPosition wallPosition)
-    {
-        switch(wallPosition)
-        {
-            case EWallPosition::North: NorthDoor.DoorActor = doorActor; break;
-            case EWallPosition::East:  EastDoor.DoorActor = doorActor; break;
-            case EWallPosition::South: SouthDoor.DoorActor = doorActor; break;
-            case EWallPosition::West:  WestDoor.DoorActor = doorActor; break;
-            default: ensure(false);
-        }
-    }
-
-    int GetDoorPositionOnWall(EWallPosition wallPosition)
-    {
-        switch(wallPosition)
-        {
-            case EWallPosition::North: return NorthDoor.PositionOnWall;
-            case EWallPosition::East: return EastDoor.PositionOnWall;
-            case EWallPosition::South: return SouthDoor.PositionOnWall;
-            case EWallPosition::West: return WestDoor.PositionOnWall;
-            default: ensure(false); return -1;
-        }
-    }
-
-    DoorState NorthDoor;
-    DoorState EastDoor;
-    DoorState SouthDoor;
-    DoorState WestDoor;
     float RoomHealth = 100.0f;
     bool bRoomExists = false;
 };
 
-//Bind all room builders to destroy their inner room walls when this happens.
-DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FRoomDiedDelegate, FIntPoint, RoomCoords);
+/**
+ * 
+ */
+UCLASS()
+class TPGAMEDEMO_API ARoomBuilder : public AActor
+{
+public:
+	GENERATED_BODY()
 
-//Bind in one place to spawn doors when this happens.
-DECLARE_DYNAMIC_MULTICAST_DELEGATE_FourParams(FOnSpawnDoorDelegate, FIntPoint, RoomCoords, 
-                                              EWallPosition, WallPosition, int, PositionOnWall, 
-                                              FIntPoint, TargetRoomCoords);
+    UFUNCTION(BlueprintCallable, Category = "World Room Building")
+        virtual void BuildRoom(const TArray<int> doorPositionsOnWalls);
+
+    UFUNCTION(BlueprintCallable, Category = "World Room Building")
+        virtual void DestroyRoom();
+};
+
+/**
+ * 
+ */
+UCLASS()
+class TPGAMEDEMO_API AWallBuilder : public AActor
+{
+public:
+	GENERATED_BODY()
+
+    UFUNCTION(BlueprintCallable, Category = "World Wall Building")
+        virtual void BuildSouthWall();
+
+    UFUNCTION(BlueprintCallable, Category = "World Wall Building")
+        virtual void BuildWestWall();
+
+    UFUNCTION(BlueprintCallable, Category = "World Wall Building")
+        virtual void DestroySouthWall();
+
+    UFUNCTION(BlueprintCallable, Category = "World Wall Building")
+        virtual void DestroyWestWall();
+
+    UFUNCTION(BlueprintCallable, Category = "World Door States")
+        virtual void SpawnSouthDoor();
+
+    UFUNCTION(BlueprintCallable, Category = "World Door States")
+        virtual void SpawnWestDoor();
+
+    UFUNCTION(BlueprintCallable, Category = "World Door States")
+        virtual void DestroySouthDoor();
+
+    UFUNCTION(BlueprintCallable, Category = "World Door States")
+        virtual void DestroyWestDoor();
+};
 
 /**
  * 
@@ -162,86 +146,135 @@ class TPGAMEDEMO_API ATPGameDemoGameState : public AGameState
 public:
 	GENERATED_BODY()
 	
+	ATPGameDemoGameState (const FObjectInitializer& ObjectInitializer);
+
+    UFUNCTION(BlueprintCallable, Category = "World Rooms States")
+        void InitialiseArrays();
+
     ~ATPGameDemoGameState();
 
-    UFUNCTION(BlueprintCallable, Category = "World Rooms States")
-        static EWallPosition GetWallPositionForActionType(EActionType actionType);
+    //============================================================================
+    // AActor Overrides
+    //============================================================================
+
+    void Tick( float DeltaTime ) override;
+    
+    //============================================================================
+    // Acessors
+    //============================================================================
+
+    // --------------------- room properties -------------------------------------\\
 
     UFUNCTION(BlueprintCallable, Category = "World Rooms States")
-        bool DoesRoomExist(FIntPoint roomCoords);
+        bool DoesRoomExist(FIntPoint roomCoords) const;
     
+    UFUNCTION(BlueprintCallable, Category = "World Room States")
+        float GetRoomHealth(FIntPoint roomCoords) const;
+
+    UFUNCTION(BlueprintCallable, Category = "World Room States")
+        EQuadrantType GetQuadrantTypeForRoomCoords(FIntPoint roomCoords) const;
+
+    UFUNCTION(BlueprintCallable, Category = "World Room States")
+        int GetDoorPositionOnWall(FIntPoint roomCoords, EDirectionType wallType); 
+
+    // --------------------- neighbouring rooms -------------------------------------\\
+
     UFUNCTION(BlueprintCallable, Category = "World Rooms States")
-        FIntPoint GetNeighbouringRoomIndices(FIntPoint roomCoords, EWallPosition neighbourPosition);
+        FIntPoint GetNeighbouringRoomIndices(FIntPoint roomCoords, EDirectionType neighbourPosition) const;
 
     /** Returns a bool array indicating whether the neihgbouring rooms in each direction (North through West, clockwise) exist. */
     UFUNCTION(BlueprintCallable, Category = "World Rooms States")
-        TArray<bool> GetNeighbouringRoomStates(FIntPoint doorPosition);
+        TArray<bool> GetNeighbouringRoomStates(FIntPoint doorPosition) const;
+    
+    /* returns an array of 4 elements (N,E,S,W) where 0 indicates no neighbour, and 1 -> NumGridUnitsX - 1 indicates the position of a door to an existing neighbour. */
+    UFUNCTION(BlueprintCallable, Category = "World Room States")
+        TArray<int> GetDoorPositionsForExistingNeighbours(FIntPoint roomCoords);
 
-    /** Returns the position of a wall from a neighbouring room's perspective. */
-    UFUNCTION(BlueprintCallable, Category = "World Rooms Layout")
-        static EWallPosition GetWallPositionInNeighbouringRoom(EWallPosition wallPosition);
+    // --------------------- Builders -------------------------------------\\
+
+    UFUNCTION(BlueprintCallable, Category = "World Room Builders")
+        AActor* GetRoomBuilder(FIntPoint roomCoords);
+
+    UFUNCTION(BlueprintCallable, Category = "World Room Building")
+        AWallBuilder* GetWallBuilder(FIntPoint roomCoords, EDirectionType direction);
+    
+    //============================================================================
+    // Modifiers
+    //============================================================================
+
+    UFUNCTION(BlueprintCallable, Category = "World Rooms States")
+        void DestroyDoorInRoom(FIntPoint roomCoords, EDirectionType doorWallPosition);
+
+    // --------------------- neighbouring rooms -------------------------------------\\
 
     /** Destroys the door on each adjoining wall in the neighbouring rooms (North through West, clockwise). */
     UFUNCTION(BlueprintCallable, Category = "World Rooms States")
         void DestroyNeighbouringDoors(FIntPoint roomCoords, TArray<bool> positionsToDestroy);
 
-    UFUNCTION(BlueprintCallable, Category = "World Rooms States")
-        void DestroyDoorInRoom(FIntPoint roomCoords, EWallPosition doorWallPosition);
+    // --------------------- Setters -------------------------------------\\
+    
+    UFUNCTION(BlueprintCallable, Category = "World Room States")
+        void SetRoomHealth(FIntPoint roomCoords, float health);
+
+    UFUNCTION(BlueprintCallable, Category = "World Room Building")
+        void SetWallBuilder(FIntPoint roomCoords, AWallBuilder* builder);
+
+    UFUNCTION(BlueprintCallable, Category = "World Room Builders")
+        void SetRoomBuilder(FIntPoint roomCoords, ARoomBuilder* roomBuilderActor);
 
     UFUNCTION(BlueprintCallable, Category = "World Rooms States")
-        void EnableRoomState(FIntPoint roomCoords, TArray<AActor*> doors, TArray<int> doorPositionsOnWalls);
+        void UpdateRoomHealth(FIntPoint roomCoords, float healthDelta);
+
+    // --------------------- Room & Wall Initialization / Destruction -------------------------------------\\
+
+    UFUNCTION(BlueprintCallable, Category = "World Rooms States")
+        void EnableRoomState(FIntPoint roomCoords);
 
     UFUNCTION(BlueprintCallable, Category = "World Rooms States")
         void DisableRoomState(FIntPoint roomCoords);
 
     UFUNCTION(BlueprintCallable, Category = "World Rooms States")
-        void InitialiseArrays();
+        void EnableWallState(FIntPoint roomCoords, EDirectionType wallType);
 
+    UFUNCTION(BlueprintCallable, Category = "World Rooms States")
+        void DisableWallState(FIntPoint roomCoords, EDirectionType wallType);
+
+    // --------------------- Door Interaction -------------------------------------\\ 
+
+    UFUNCTION(BlueprintCallable, Category = "Door Interaction")
+        void DoorOpened(FIntPoint roomCoords, EDirectionType wallDirection); 
+
+    //============================================================================
+    // Properties
+    //============================================================================
     UPROPERTY (BlueprintReadWrite, EditAnywhere, Category = "World Grid Size")
         int NumGridsXY = 20;
 
-    UFUNCTION(BlueprintCallable, Category = "World Room Builders")
-        AActor* GetRoomBuilder(FIntPoint roomCoords);
-
-    UFUNCTION(BlueprintCallable, Category = "World Room Builders")
-        void SetRoomBuilder(FIntPoint roomCoords, AActor* roomBuilderActor);
-
-    UFUNCTION(BlueprintCallable, Category = "World Rooms States")
-        void UpdateRoomHealth(FIntPoint roomCoords, float healthDelta);
-
-    UFUNCTION(BlueprintCallable, Category = "World Room States")
-        void SetRoomHealth(FIntPoint roomCoords, float health);
-
-    UFUNCTION(BlueprintCallable, Category = "World Room States")
-        float GetRoomHealth(FIntPoint roomCoords);
-
-    UFUNCTION(BlueprintCallable, Category = "World Room States")
-        void KillRoom(FIntPoint roomCoords); 
-
-    UFUNCTION(BlueprintCallable, Category = "World Room States")
-        EQuadrantType GetQuadrantTypeForRoomCoords(FIntPoint roomCoords);
-
-    UPROPERTY(BlueprintAssignable, VisibleAnywhere, Category = "World Rooms States")
-        FRoomDiedDelegate OnRoomDied;
-
-    UPROPERTY(BlueprintAssignable, VisibleAnywhere, Category = "World Rooms Spawning")
-        FOnSpawnDoorDelegate OnSpawnDoor;
-    
-    UFUNCTION(BlueprintCallable, Category = "World Rooms Spawning")
-        void SetDoor(FIntPoint roomCoords, AActor* doorActor, EWallPosition wallPosition);
-
-    UFUNCTION(BlueprintCallable, Category = "World Room States")
-        int GetDoorPositionOnWall(FIntPoint roomCoords, EWallPosition wallType);
-
-    /* returns an array of 4 elements (N,E,S,W) where 0 indicates no neighbour, and 1 -> NumGridUnitsX - 1 indicates the position of a door to an existing neighbour. */
-    UFUNCTION(BlueprintCallable, Category = "World Room States")
-        TArray<int> GetDoorPositionsForExistingNeighbours(FIntPoint roomCoords);
-
 private:
-    TArray<TArray<AActor*>> RoomBuilders;
+    TArray<TArray<ARoomBuilder*>> RoomBuilders;
+    TArray<TArray<AWallBuilder*>> WallBuilders;
 	TArray<TArray<RoomState>> RoomStates;
+    TArray<TArray<WallStateCouple>> WallStates;
+
+    // Struct containing the coordinates of a west/south wall state couple and the specific wall type.
+    struct WallPosition
+    {
+        FIntPoint WallCoupleCoords;
+        EDirectionType WallType;
+    };
+    // This is added to during a frame when rooms are created / destroyed. It is consumed during the tick function and cleared.
+    TArray<WallPosition> WallsToUpdate;
+    // Checks if the list of WallsToUpdate already contains the given wall.
+    bool IsWallInUpdateList(FIntPoint coords, EDirectionType wallType);
+    // Adds all of the walls of a room to the WallsToUpate list.
+    void FlagWallsForUpdate(FIntPoint roomCoords);
+
+    WallState& GetWallState(FIntPoint roomCoords, EDirectionType direction);
+    // Indexed as North, East, South, West
+    TArray<WallState*> GetWallStatesForRoom(FIntPoint roomCoords);
+    
     /** Converts coords from centred at 0 to centred at max num grids / 2. */
-    FIntPoint GetRoomXYIndices(FIntPoint roomCoords);
-    FIntPoint GetRoomCoords(FIntPoint roomIndices);
-    bool RoomXYIndicesValid(FIntPoint roomCoords);
+    FIntPoint GetRoomXYIndices(FIntPoint roomCoords) const;
+    FIntPoint GetRoomCoords(FIntPoint roomIndices) const;
+    bool RoomXYIndicesValid(FIntPoint roomCoords) const;
 };

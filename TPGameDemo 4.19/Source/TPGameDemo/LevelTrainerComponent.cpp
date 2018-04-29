@@ -83,15 +83,15 @@ const TArray<float> GridState::GetRewards() const
     return ActionRewards;
 }
 
-const float GridState::GetOptimalQValueAndActions(TArray<EActionType>* ActionsArrayToSet) const 
+const float GridState::GetOptimalQValueAndActions(TArray<EDirectionType>* ActionsArrayToSet) const 
 {
     const bool updateArray = ActionsArrayToSet != nullptr;
     if (updateArray)
         ActionsArrayToSet->Empty();
-    ensure(ActionQValues.Num() == (int)EActionType::NumActionTypes);
+    ensure(ActionQValues.Num() == (int)EDirectionType::NumDirectionTypes);
     float optimalQValue = ActionQValues[0];
     if (updateArray)
-        ActionsArrayToSet->Add((EActionType)0);
+        ActionsArrayToSet->Add((EDirectionType)0);
     for (int i = 1; i < ActionQValues.Num(); ++i)
     {
         float currentV = ActionQValues[i];
@@ -104,24 +104,24 @@ const float GridState::GetOptimalQValueAndActions(TArray<EActionType>* ActionsAr
                 optimalQValue = currentV;
             }
             if (updateArray)
-                ActionsArrayToSet->Add((EActionType)i);
+                ActionsArrayToSet->Add((EDirectionType)i);
         }
     }
     return optimalQValue;
 } 
 
-FIntPoint GridState::GetActionTarget(EActionType actionType) const
+FIntPoint GridState::GetActionTarget(EDirectionType actionType) const
 {
     return ActionTargets[(int)actionType];
 }
 
 void GridState::ResetQValues()
 {
-    for (int actionType = 0; actionType < (int)EActionType::NumActionTypes; ++actionType)
+    for (int actionType = 0; actionType < (int)EDirectionType::NumDirectionTypes; ++actionType)
         ActionQValues[actionType] = 0.0f;
 }
 
-void GridState::UpdateQValue(EActionType actionType, float deltaQ) 
+void GridState::UpdateQValue(EDirectionType actionType, float deltaQ) 
 {
     ActionQValues[(int)actionType] += deltaQ;
 }
@@ -152,9 +152,9 @@ bool GridState::IsStateValid()
     return IsValid;
 }
 
-void GridState::SetActionTarget(EActionType actionType, FIntPoint position)
+void GridState::SetActionTarget(EDirectionType actionType, FIntPoint position)
 {
-    ensure(ActionTargets.Num() == (int)EActionType::NumActionTypes);
+    ensure(ActionTargets.Num() == (int)EDirectionType::NumDirectionTypes);
     ActionTargets[(int)actionType] = position;
 }
 
@@ -256,9 +256,9 @@ void ULevelTrainerComponent::UpdateEnvironmentForLevel(FString levelName)
             state.SetValid(LevelStructure[x][y] == (int)ECellState::Open);
             if (state.IsStateValid())
             {
-                for (int a = 0; a < (int)EActionType::NumActionTypes; ++a)
+                for (int a = 0; a < (int)EDirectionType::NumDirectionTypes; ++a)
                 {
-                    EActionType actionType = EActionType(a);
+                    EDirectionType actionType = EDirectionType(a);
                     FIntPoint targetPoint = LevelBuilderHelpers::GetTargetPointForAction(FIntPoint(x,y), actionType);
                     
                     const bool targetValid = LevelBuilderHelpers::GridPositionIsValid(targetPoint, sizeX, sizeY) &&
@@ -320,10 +320,10 @@ TArray<TArray<int>> ULevelTrainerComponent::GetEnvironmentIntArray()
             }
             else
             {
-                TArray<EActionType> optimalActions;
+                TArray<EDirectionType> optimalActions;
                 GetState(FIntPoint(x,y)).GetOptimalQValueAndActions(&optimalActions);
                 ensure(optimalActions.Num() > 0);
-                EActionType actionToTake = optimalActions[0];
+                EDirectionType actionToTake = optimalActions[0];
                 if (optimalActions.Num() > 1)
                 {
                     int actionIndex = FMath::RandRange(0, optimalActions.Num() - 1);
@@ -346,19 +346,19 @@ void ULevelTrainerComponent::ClearEnvironment()
             // Move in from edges if on an edge.
             if (x == 0)
             {
-                GetState(FIntPoint(x,y)).UpdateQValue(EActionType::North, 100.0f);
+                GetState(FIntPoint(x,y)).UpdateQValue(EDirectionType::North, 100.0f);
             }
             else if (y == 0)
             {
-                GetState(FIntPoint(x,y)).UpdateQValue(EActionType::East, 100.0f);
+                GetState(FIntPoint(x,y)).UpdateQValue(EDirectionType::East, 100.0f);
             }
             else if (x == Environment.Num() - 1)
             {
-                GetState(FIntPoint(x,y)).UpdateQValue(EActionType::South, 100.0f);
+                GetState(FIntPoint(x,y)).UpdateQValue(EDirectionType::South, 100.0f);
             }
             else if (y == Environment[0].Num() - 1)
             {
-                GetState(FIntPoint(x,y)).UpdateQValue(EActionType::West, 100.0f);
+                GetState(FIntPoint(x,y)).UpdateQValue(EDirectionType::West, 100.0f);
             }
         }
     }
@@ -373,11 +373,11 @@ void ULevelTrainerComponent::SimulateRun(FIntPoint startingStatePosition, int ma
     FIntPoint currentPosition = startingStatePosition;
     while (numActionsTaken < maxNumActions && !goalReached)
     {
-        TArray<EActionType> optimalActions;
+        TArray<EDirectionType> optimalActions;
         GridState& currentState = GetState(currentPosition);
         currentState.GetOptimalQValueAndActions(&optimalActions);
         ensure(optimalActions.Num() > 0);
-        EActionType actionToTake = optimalActions[0];
+        EDirectionType actionToTake = optimalActions[0];
         if (optimalActions.Num() > 1)
         {
             int actionIndex = FMath::RandRange(0, optimalActions.Num() - 1);

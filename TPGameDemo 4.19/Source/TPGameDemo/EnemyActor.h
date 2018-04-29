@@ -36,11 +36,11 @@ struct FTargetPosition
     GENERATED_BODY()
     // Invalid initial values to avoid TargetReached miss-fire
     FIntPoint Position = FIntPoint(-1,-1);
-    EActionType DoorAction = EActionType::NumActionTypes;
+    EDirectionType DoorAction = EDirectionType::NumDirectionTypes;
 
     bool TargetIsDoor() const
     {
-        return DoorAction != EActionType::NumActionTypes;
+        return DoorAction != EDirectionType::NumDirectionTypes;
     }
 };
 
@@ -61,7 +61,7 @@ public:
 	virtual void Tick( float DeltaSeconds ) override;
 
     UFUNCTION (BlueprintCallable, Category = "Enemy Movement")
-        virtual EActionType SelectNextAction();
+        virtual EDirectionType SelectNextAction();
 
     UFUNCTION (BlueprintCallable, Category = "Enemy Behaviour")
         virtual void ChooseDoorTarget();
@@ -76,7 +76,7 @@ public:
         virtual void SetMovementTimerPaused (bool movementTimerShouldBePaused);
 
     UFUNCTION (BlueprintCallable, Category = "Enemy Movement")
-        void UpdateMovementForActionType(EActionType actionType);
+        void UpdateMovementForActionType(EDirectionType actionType);
     //======================================================================================================
     // Behaviour Policy
     //====================================================================================================== 
@@ -87,7 +87,7 @@ public:
         virtual void UpdatePolicyForPlayerPosition (int playerX, int playerY);
 
     UFUNCTION (BlueprintCallable, Category = "Enemy Movement")
-        virtual void UpdatePolicyForDoorType (EActionType doorTypem, int doorPositionOnWall);
+        virtual void UpdatePolicyForDoorType (EDirectionType doorTypem, int doorPositionOnWall);
 
     UFUNCTION (BlueprintCallable, Category = "Enemy Policy")
         void LoadLevelPolicy (FString levelName);

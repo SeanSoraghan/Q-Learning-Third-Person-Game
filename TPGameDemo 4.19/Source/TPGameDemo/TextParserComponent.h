@@ -6,20 +6,20 @@
 //#include "MazeActor.h"
 
 //UENUM(BlueprintType)
-//enum class EActionType : uint8
+//enum class EDirectionType : uint8
 //{
 //    North UMETA (DisplayName = "North"),
 //    East  UMETA (DisplayName = "East"),
 //    South UMETA (DisplayName = "South"),
 //    West  UMETA (DisplayName = "West"),
-//    NumActionTypes
+//    NumDirectionTypes
 //};
 //
 //namespace LevelBuilderHelpers
 //{
 //    const FString LevelsDir();
 //
-//    FIntPoint GetTargetPointForAction(FIntPoint startingPoint, EActionType actionType, int numSpaces = 1);
+//    FIntPoint GetTargetPointForAction(FIntPoint startingPoint, EDirectionType actionType, int numSpaces = 1);
 //
 //    bool GridPositionIsValid(FIntPoint position, int sizeX, int sizeY);
 //

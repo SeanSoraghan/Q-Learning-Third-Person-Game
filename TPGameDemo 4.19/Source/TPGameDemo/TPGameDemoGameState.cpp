@@ -5,228 +5,128 @@
 #include "TPGameDemoGameMode.h"
 #include "TPGameDemoGameState.h"
 
+void ARoomBuilder::BuildRoom(const TArray<int> doorPositionsOnWalls){}
+
+void ARoomBuilder::DestroyRoom(){}
+
+void AWallBuilder::BuildSouthWall(){}
+
+void AWallBuilder::BuildWestWall(){}
+
+void AWallBuilder::DestroySouthWall(){}
+
+void AWallBuilder::DestroyWestWall(){}
+
+void AWallBuilder::SpawnSouthDoor(){}
+
+void AWallBuilder::SpawnWestDoor(){}
+
+void AWallBuilder::DestroySouthDoor(){}
+
+void AWallBuilder::DestroyWestDoor(){}
+
+ATPGameDemoGameState::ATPGameDemoGameState(const FObjectInitializer& ObjectInitializer)
+{
+	PrimaryActorTick.bCanEverTick = true;
+    PrimaryActorTick.TickGroup = TG_PostUpdateWork;
+}
+
 ATPGameDemoGameState::~ATPGameDemoGameState()
 {
     for(int i = 0; i < RoomBuilders.Num(); ++i)
     {
-        TArray<AActor*>& builderRow = RoomBuilders[i];
+        TArray<ARoomBuilder*>& builderRow = RoomBuilders[i];
         for (int c = 0; c < builderRow.Num(); ++c)
         {
             builderRow[c] = nullptr;
         }
     }
     RoomBuilders.Empty();
-}
 
-EWallPosition ATPGameDemoGameState::GetWallPositionForActionType(EActionType actionType)
-{
-    switch (actionType)
+    for(int i = 0; i < WallBuilders.Num(); ++i)
     {
-        case EActionType::North: return EWallPosition::North;
-        case EActionType::East: return EWallPosition::East;
-        case EActionType::South: return EWallPosition::South;
-        case EActionType::West: return EWallPosition::West;
-        default: ensure(false); return EWallPosition::NumWallPositions;
+        TArray<AWallBuilder*>& builderRow = WallBuilders[i];
+        for (int c = 0; c < builderRow.Num(); ++c)
+        {
+            builderRow[c] = nullptr;
+        }
     }
+    WallBuilders.Empty();
 }
 
 void ATPGameDemoGameState::InitialiseArrays()
 {
     for (int x = 0; x < NumGridsXY; ++x)
     {
-        TArray<RoomState> statesRow;
-        TArray<AActor*> builderRow;
+        TArray<WallStateCouple> wallsRow;
+        TArray<RoomState> roomsRow;
+        TArray<ARoomBuilder*> roomBuilderRow;
+        TArray<AWallBuilder*> wallBuilderRow;
         for (int y = 0; y < NumGridsXY; ++y)
         {
-            builderRow.Add(nullptr);
-            statesRow.Add(RoomState());
+            wallsRow.Add(WallStateCouple());
+            roomsRow.Add(RoomState());
+            roomBuilderRow.Add(nullptr);
+            wallBuilderRow.Add(nullptr);
         }
-        RoomStates.Add(statesRow);
-        RoomBuilders.Add(builderRow);
+        // Add one final wall couple (where the west wall will be the east wall of the final room, and the south wall will be ignored).
+        wallsRow.Add(WallStateCouple());
+        RoomStates.Add(roomsRow);
+        WallStates.Add(wallsRow);
+        RoomBuilders.Add(roomBuilderRow);
+        WallBuilders.Add(wallBuilderRow);
     }
-}
-
-void ATPGameDemoGameState::DestroyDoorInRoom(FIntPoint roomCoords, EWallPosition doorWallPosition)
-{
-    FIntPoint roomIndicesXY = GetRoomXYIndices(roomCoords);
-    ensure(RoomXYIndicesValid(roomIndicesXY));
-    RoomStates[roomIndicesXY.X][roomIndicesXY.Y].DestroyDoor(doorWallPosition);
-}
-
-FIntPoint ATPGameDemoGameState::GetNeighbouringRoomIndices(FIntPoint roomCoords, EWallPosition neighbourPosition)
-{
-    FIntPoint roomIndices = GetRoomXYIndices(roomCoords);
-    ensure(RoomXYIndicesValid(roomIndices));
-
-    switch(neighbourPosition)
+    // Add the last row of wall couples (where the south wall will be the north wall of the final room, and the west wall will be ignored).
+    TArray<WallStateCouple> wallsRow;
+    for (int y = 0; y < NumGridsXY + 1; ++y)
     {
-        case EWallPosition::North: return FIntPoint(roomIndices.X + 1, roomIndices.Y);
-        case EWallPosition::East:  return FIntPoint(roomIndices.X, roomIndices.Y + 1);
-        case EWallPosition::South: return FIntPoint(roomIndices.X - 1, roomIndices.Y);
-        case EWallPosition::West:  return FIntPoint(roomIndices.X, roomIndices.Y - 1);
-        default: ensure(false); return FIntPoint(-1, -1);
+        wallsRow.Add(WallStateCouple());
     }
+    WallStates.Add(wallsRow);
 }
 
-TArray<bool> ATPGameDemoGameState::GetNeighbouringRoomStates(FIntPoint roomCoords)
+void ATPGameDemoGameState::Tick( float DeltaTime )
 {
-    TArray<bool> neighbouringRoomStates{false, false, false, false};
-    FIntPoint roomIndices = GetRoomXYIndices(roomCoords);
-    ensure(RoomXYIndicesValid(roomIndices));
-    
-    for (int p = 0; p < (int)EWallPosition::NumWallPositions; ++p)
+    for (auto wallPosition : WallsToUpdate)
     {
-        FIntPoint neighbour = GetNeighbouringRoomIndices(roomCoords, (EWallPosition)p);
-        if (RoomXYIndicesValid(neighbour) && RoomStates[neighbour.X][neighbour.Y].bRoomExists)
-            neighbouringRoomStates[p] = true;
-    }
-    return neighbouringRoomStates;
-}
-
-EWallPosition ATPGameDemoGameState::GetWallPositionInNeighbouringRoom(EWallPosition wallPosition)
-{
-    switch(wallPosition)
-    {
-        case EWallPosition::North: return EWallPosition::South;
-        case EWallPosition::East: return EWallPosition::West;
-        case EWallPosition::South: return EWallPosition::North;
-        case EWallPosition::West: return EWallPosition::East;
-        default: ensure(false); return EWallPosition::NumWallPositions;
-    }
-    ensure(false);
-    return EWallPosition::NumWallPositions;
-}
-
-void ATPGameDemoGameState::DestroyNeighbouringDoors(FIntPoint roomCoords, TArray<bool> positionsToDestroy)
-{
-    FIntPoint roomIndices = GetRoomXYIndices(roomCoords);
-    ensure(RoomXYIndicesValid(roomIndices));
-
-    for (int p = 0; p < (int)EWallPosition::NumWallPositions; ++p)
-    {
-        if (p < positionsToDestroy.Num() && positionsToDestroy[p])
+        auto roomCoords = wallPosition.WallCoupleCoords;
+        auto wallState = GetWallState(roomCoords, wallPosition.WallType);
+        auto neighbourCoords = GetRoomCoords(GetNeighbouringRoomIndices(roomCoords, wallPosition.WallType));
+        if (DoesRoomExist(roomCoords) || DoesRoomExist(neighbourCoords))
         {
-            FIntPoint neighbourRoom = GetNeighbouringRoomIndices(roomCoords, EWallPosition(p));
-            if(RoomXYIndicesValid(neighbourRoom))
-            {
-                const EWallPosition positionInNeighbouringRoom = GetWallPositionInNeighbouringRoom((EWallPosition)p);//(p + 2) % EWallPosition::NumWallPositions
-                RoomStates[neighbourRoom.X][neighbourRoom.Y].DestroyDoor(positionInNeighbouringRoom);
-            }
+            
         }
+
     }
 }
 
-bool ATPGameDemoGameState::DoesRoomExist(FIntPoint roomCoords)
+//============================================================================
+// Acessors
+//============================================================================
+
+bool ATPGameDemoGameState::DoesRoomExist(FIntPoint roomCoords) const
 {
     FIntPoint roomIndices = GetRoomXYIndices(roomCoords);
     ensure(RoomXYIndicesValid(roomIndices));
     return RoomStates[roomIndices.X][roomIndices.Y].bRoomExists;
 }
 
-void ATPGameDemoGameState::EnableRoomState(FIntPoint roomCoords, TArray<AActor*> doors, TArray<int> doorPositionsOnWalls)
-{
-    FIntPoint roomIndices = GetRoomXYIndices(roomCoords);
-    ensure(RoomXYIndicesValid(roomIndices));
-    RoomStates[roomIndices.X][roomIndices.Y].InitializeRoom(doors, doorPositionsOnWalls);
-}
-
-void ATPGameDemoGameState::DisableRoomState(FIntPoint roomCoords)
-{
-    FIntPoint roomIndices = GetRoomXYIndices(roomCoords);
-    ensure(RoomXYIndicesValid(roomIndices));
-    TArray<bool> neighbouringRoomStates = GetNeighbouringRoomStates(roomCoords);
-    RoomStates[roomIndices.X][roomIndices.Y].DisableRoom(neighbouringRoomStates);
-    for (int p = 0; p < (int)EWallPosition::NumWallPositions; ++p)
-    {
-        if (neighbouringRoomStates[p])
-        {
-            FIntPoint neighbourIndices = GetNeighbouringRoomIndices(roomCoords, (EWallPosition)p);
-            FIntPoint neighbourCoords = GetRoomCoords(neighbourIndices);
-            EWallPosition wallPositionInNeighbour = GetWallPositionInNeighbouringRoom((EWallPosition)p);
-            int doorPositionOnWall = RoomStates[neighbourIndices.X][neighbourIndices.Y].GetDoorPositionOnWall(wallPositionInNeighbour);
-            OnSpawnDoor.Broadcast(neighbourCoords, wallPositionInNeighbour, doorPositionOnWall, roomCoords);
-        }
-    }
-}
-
-void ATPGameDemoGameState::SetDoor(FIntPoint roomCoords, AActor* doorActor, EWallPosition wallPosition)
-{
-    FIntPoint roomIndices = GetRoomXYIndices(roomCoords);
-    ensure(RoomXYIndicesValid(roomIndices));
-    RoomStates[roomIndices.X][roomIndices.Y].SetDoor(doorActor, wallPosition);
-}
-
-FIntPoint ATPGameDemoGameState::GetRoomXYIndices(FIntPoint roomCoords)
-{
-    const int x = roomCoords.X + NumGridsXY / 2;
-    const int y = roomCoords.Y + NumGridsXY / 2;
-    FIntPoint roomIndices = FIntPoint(x,y);
-    return roomIndices;
-}
-
-FIntPoint ATPGameDemoGameState::GetRoomCoords(FIntPoint roomIndices)
-{
-    const int x = roomIndices.X - NumGridsXY / 2;
-    const int y = roomIndices.Y - NumGridsXY / 2;
-    FIntPoint roomCoords = FIntPoint(x,y);
-    return roomCoords;
-}
-
-bool ATPGameDemoGameState::RoomXYIndicesValid(FIntPoint roomIndices)
-{
-    const int x = roomIndices.X;
-    const int y = roomIndices.Y;
-    return x >= 0 && x < RoomStates.Num() && y >= 0 && y < RoomStates[0].Num();
-}
-
-AActor* ATPGameDemoGameState::GetRoomBuilder(FIntPoint roomCoords)
-{
-    FIntPoint roomIndices = GetRoomXYIndices(roomCoords);
-    ensure(RoomXYIndicesValid(roomIndices));
-    return RoomBuilders[roomIndices.X][roomIndices.Y];
-}
-
-void ATPGameDemoGameState::SetRoomBuilder(FIntPoint roomCoords, AActor* roomBuilderActor)
-{
-    FIntPoint roomIndices = GetRoomXYIndices(roomCoords);
-    ensure(RoomXYIndicesValid(roomIndices));
-    RoomBuilders[roomIndices.X][roomIndices.Y] = roomBuilderActor;
-}
-
-void ATPGameDemoGameState::UpdateRoomHealth(FIntPoint roomCoords, float healthDelta)
-{
-    FIntPoint roomIndices = GetRoomXYIndices(roomCoords);
-    ensure(RoomXYIndicesValid(roomIndices));
-    RoomStates[roomIndices.X][roomIndices.Y].RoomHealth += healthDelta;
-    if (RoomStates[roomIndices.X][roomIndices.Y].RoomHealth <= 0.0f && 
-        RoomStates[roomIndices.X][roomIndices.Y].bRoomExists)
-        KillRoom(roomCoords);
-}
-
-void ATPGameDemoGameState::SetRoomHealth(FIntPoint roomCoords, float health)
-{
-    FIntPoint roomIndices = GetRoomXYIndices(roomCoords);
-    ensure(RoomXYIndicesValid(roomIndices));
-    RoomStates[roomIndices.X][roomIndices.Y].RoomHealth = health;
-    if (RoomStates[roomIndices.X][roomIndices.Y].RoomHealth <= 0.0f && 
-        RoomStates[roomIndices.X][roomIndices.Y].bRoomExists)
-        KillRoom(roomCoords);
-}
-
-float ATPGameDemoGameState::GetRoomHealth(FIntPoint roomCoords)
+float ATPGameDemoGameState::GetRoomHealth(FIntPoint roomCoords) const
 {
     FIntPoint roomIndices = GetRoomXYIndices(roomCoords);
     ensure(RoomXYIndicesValid(roomIndices));
     return RoomStates[roomIndices.X][roomIndices.Y].RoomHealth;
 }
 
-void ATPGameDemoGameState::KillRoom(FIntPoint roomCoords)
+int ATPGameDemoGameState::GetDoorPositionOnWall(FIntPoint roomCoords, EDirectionType wallType)
 {
-    DisableRoomState(roomCoords);
-    OnRoomDied.Broadcast(roomCoords);
+    FIntPoint roomIndices = GetRoomXYIndices(roomCoords);
+    ensure(RoomXYIndicesValid(roomIndices));
+    WallState& wallState = GetWallState(roomCoords, wallType);
+    return wallState.DoorPosition;
 }
 
-EQuadrantType ATPGameDemoGameState::GetQuadrantTypeForRoomCoords(FIntPoint roomCoords)
+EQuadrantType ATPGameDemoGameState::GetQuadrantTypeForRoomCoords(FIntPoint roomCoords) const
 {
     FIntPoint roomIndices = GetRoomXYIndices(roomCoords);
     ensure(RoomXYIndicesValid(roomIndices));
@@ -247,29 +147,307 @@ EQuadrantType ATPGameDemoGameState::GetQuadrantTypeForRoomCoords(FIntPoint roomC
     return EQuadrantType::NorthWest;
 }
 
-int ATPGameDemoGameState::GetDoorPositionOnWall(FIntPoint roomCoords, EWallPosition wallType)
+TArray<WallState*> ATPGameDemoGameState::GetWallStatesForRoom(FIntPoint roomCoords)
 {
     FIntPoint roomIndices = GetRoomXYIndices(roomCoords);
     ensure(RoomXYIndicesValid(roomIndices));
-    return RoomStates[roomIndices.X][roomIndices.Y].GetDoorPositionOnWall(wallType);
+    TArray<WallState*> wallStates;
+    wallStates.Empty();
+    auto northNeighbourIndices = GetNeighbouringRoomIndices(roomCoords, EDirectionType::North);
+    auto eastNeighbourIndices = GetNeighbouringRoomIndices(roomCoords, EDirectionType::East);
+    wallStates.Add(&WallStates[northNeighbourIndices.X][northNeighbourIndices.Y].SouthWall);
+    wallStates.Add(&WallStates[eastNeighbourIndices.X][eastNeighbourIndices.Y].WestWall);
+    wallStates.Add(&WallStates[roomIndices.X][roomIndices.Y].SouthWall);
+    wallStates.Add(&WallStates[roomIndices.X][roomIndices.Y].WestWall);
+    return wallStates;
+}
+
+FIntPoint ATPGameDemoGameState::GetNeighbouringRoomIndices(FIntPoint roomCoords, EDirectionType neighbourPosition) const
+{
+    FIntPoint roomIndices = GetRoomXYIndices(roomCoords);
+    ensure(RoomXYIndicesValid(roomIndices));
+
+    switch(neighbourPosition)
+    {
+        case EDirectionType::North: return FIntPoint(roomIndices.X + 1, roomIndices.Y);
+        case EDirectionType::East:  return FIntPoint(roomIndices.X, roomIndices.Y + 1);
+        case EDirectionType::South: return FIntPoint(roomIndices.X - 1, roomIndices.Y);
+        case EDirectionType::West:  return FIntPoint(roomIndices.X, roomIndices.Y - 1);
+        default: ensure(false); return FIntPoint(-1, -1);
+    }
+}
+
+TArray<bool> ATPGameDemoGameState::GetNeighbouringRoomStates(FIntPoint roomCoords) const
+{
+    TArray<bool> neighbouringRoomStates{false, false, false, false};
+    FIntPoint roomIndices = GetRoomXYIndices(roomCoords);
+    ensure(RoomXYIndicesValid(roomIndices));
+    
+    for (int p = 0; p < (int)EDirectionType::NumDirectionTypes; ++p)
+    {
+        FIntPoint neighbour = GetNeighbouringRoomIndices(roomCoords, (EDirectionType)p);
+        if (RoomXYIndicesValid(neighbour) && RoomStates[neighbour.X][neighbour.Y].bRoomExists)
+            neighbouringRoomStates[p] = true;
+    }
+    return neighbouringRoomStates;
 }
 
 TArray<int> ATPGameDemoGameState::GetDoorPositionsForExistingNeighbours(FIntPoint roomCoords)
 {
     TArray<bool> neighbourStates = GetNeighbouringRoomStates(roomCoords);
     TArray<int> doorPositions = {0,0,0,0};
-    for (EWallPosition p = EWallPosition::North; p < EWallPosition::NumWallPositions; p = (EWallPosition)((int)p + 1))
+    for (EDirectionType p = EDirectionType::North; p < EDirectionType::NumDirectionTypes; p = (EDirectionType)((int)p + 1))
     {
         if (neighbourStates[(int)p])
         {
-            FIntPoint neighbourRoom = GetNeighbouringRoomIndices(roomCoords, EWallPosition(p));
-            if(RoomXYIndicesValid(neighbourRoom))
-            {
-                const EWallPosition positionInNeighbouringRoom = GetWallPositionInNeighbouringRoom((EWallPosition)p);//(p + 2) % EWallPosition::NumWallPositions
-                int posOnWall = RoomStates[neighbourRoom.X][neighbourRoom.Y].GetDoorPositionOnWall(positionInNeighbouringRoom);
-                doorPositions[(int)p] = posOnWall;
-            }
+            EDirectionType direction = (EDirectionType)p;
+            WallState& wallState = GetWallState(roomCoords, direction);
+            doorPositions[(int)p] = wallState.DoorPosition;
         }
     }
     return doorPositions;
 }
+
+AActor* ATPGameDemoGameState::GetRoomBuilder(FIntPoint roomCoords)
+{
+    FIntPoint roomIndices = GetRoomXYIndices(roomCoords);
+    ensure(RoomXYIndicesValid(roomIndices));
+    return RoomBuilders[roomIndices.X][roomIndices.Y];
+}
+
+AWallBuilder* ATPGameDemoGameState::GetWallBuilder(FIntPoint roomCoords, EDirectionType direction)
+{
+    FIntPoint roomIndices = GetRoomXYIndices(roomCoords);
+    ensure(RoomXYIndicesValid(roomIndices));
+    if (direction == EDirectionType::South || direction == EDirectionType::West)
+        return WallBuilders[roomIndices.X][roomIndices.Y];
+    FIntPoint neighbourRoom = GetNeighbouringRoomIndices(roomCoords, direction);
+    return WallBuilders[neighbourRoom.X][neighbourRoom.Y];
+}
+
+//============================================================================
+// Modifiers
+//============================================================================
+
+void ATPGameDemoGameState::SetRoomHealth(FIntPoint roomCoords, float health)
+{
+    FIntPoint roomIndices = GetRoomXYIndices(roomCoords);
+    ensure(RoomXYIndicesValid(roomIndices));
+    RoomStates[roomIndices.X][roomIndices.Y].RoomHealth = health;
+    if (RoomStates[roomIndices.X][roomIndices.Y].RoomHealth <= 0.0f && 
+        RoomStates[roomIndices.X][roomIndices.Y].bRoomExists)
+        DisableRoomState(roomCoords);
+}
+
+void ATPGameDemoGameState::UpdateRoomHealth(FIntPoint roomCoords, float healthDelta)
+{
+    FIntPoint roomIndices = GetRoomXYIndices(roomCoords);
+    ensure(RoomXYIndicesValid(roomIndices));
+    RoomStates[roomIndices.X][roomIndices.Y].RoomHealth += healthDelta;
+    if (RoomStates[roomIndices.X][roomIndices.Y].RoomHealth <= 0.0f && 
+        RoomStates[roomIndices.X][roomIndices.Y].bRoomExists)
+        DisableRoomState(roomCoords);
+}
+
+void ATPGameDemoGameState::SetRoomBuilder(FIntPoint roomCoords, ARoomBuilder* roomBuilderActor)
+{
+    FIntPoint roomIndices = GetRoomXYIndices(roomCoords);
+    ensure(RoomXYIndicesValid(roomIndices));
+    RoomBuilders[roomIndices.X][roomIndices.Y] = roomBuilderActor;
+}
+
+void ATPGameDemoGameState::SetWallBuilder(FIntPoint roomCoords, AWallBuilder* builder)
+{
+    FIntPoint roomIndices = GetRoomXYIndices(roomCoords);
+    ensure(RoomXYIndicesValid(roomIndices));
+    WallBuilders[roomIndices.X][roomIndices.Y] = builder;
+}
+
+void ATPGameDemoGameState::EnableRoomState(FIntPoint roomCoords)
+{
+    // initialize random door positions for walls that haven't yet been initialized...
+    auto wallStates = GetWallStatesForRoom(roomCoords);
+
+    ATPGameDemoGameMode* gameMode = (ATPGameDemoGameMode*) GetWorld()->GetAuthGameMode();
+    if (gameMode != nullptr)
+    {
+        for(int p = 0; p < (int)EDirectionType::NumDirectionTypes; ++p)
+        {
+            auto wallState = wallStates[p];
+            if(!wallState->HasDoor())
+            {
+                EDirectionType direction = (EDirectionType)p;
+                int maxDoorPosition = (direction == EDirectionType::North || direction == EDirectionType::South) ? gameMode->NumGridUnitsY
+                                                                                                                 : gameMode->NumGridUnitsX;
+                wallState->GenerateRandomDoorPosition(maxDoorPosition);
+            }
+        }
+    }
+
+    FIntPoint roomIndices = GetRoomXYIndices(roomCoords);
+    ensure(RoomXYIndicesValid(roomIndices));
+    RoomStates[roomIndices.X][roomIndices.Y].InitializeRoom();
+
+    RoomBuilders[roomIndices.X][roomIndices.Y]->BuildRoom({wallStates[(int)EDirectionType::North]->DoorPosition,
+                                                           wallStates[(int)EDirectionType::East]->DoorPosition,
+                                                           wallStates[(int)EDirectionType::South]->DoorPosition,
+                                                           wallStates[(int)EDirectionType::West]->DoorPosition});
+    
+    FlagWallsForUpdate(roomCoords);
+}
+
+void ATPGameDemoGameState::DisableRoomState(FIntPoint roomCoords)
+{
+    FIntPoint roomIndices = GetRoomXYIndices(roomCoords);
+    ensure(RoomXYIndicesValid(roomIndices));
+    RoomStates[roomIndices.X][roomIndices.Y].DisableRoom();
+    RoomBuilders[roomIndices.X][roomIndices.Y]->DestroyRoom();
+    FlagWallsForUpdate(roomCoords);
+}
+
+void ATPGameDemoGameState::EnableWallState(FIntPoint roomCoords, EDirectionType wallType)
+{
+    GetWallState(roomCoords, wallType).InitializeWall();
+    auto wallBuilder = GetWallBuilder(roomCoords, wallType);
+    if (wallBuilder != nullptr)
+    {
+        if (wallType == EDirectionType::North || wallType == EDirectionType::South)
+            wallBuilder->BuildSouthWall();
+        else
+            wallBuilder->BuildWestWall();
+    }
+}
+
+void ATPGameDemoGameState::DisableWallState(FIntPoint roomCoords, EDirectionType wallType)
+{
+    GetWallState(roomCoords, wallType).DisableWall();
+    auto wallBuilder = GetWallBuilder(roomCoords, wallType);
+    if (wallBuilder != nullptr)
+    {
+        if (wallType == EDirectionType::North || wallType == EDirectionType::South)
+            wallBuilder->DestroySouthWall();
+        else
+            wallBuilder->DestroyWestWall();
+    }
+}
+
+void ATPGameDemoGameState::DestroyDoorInRoom(FIntPoint roomCoords, EDirectionType doorWallDirection)
+{
+    FIntPoint roomIndices = GetRoomXYIndices(roomCoords);
+    ensure(RoomXYIndicesValid(roomIndices));
+    if (auto wallBuilder = GetWallBuilder(roomCoords, doorWallDirection))
+    {
+        if (doorWallDirection == EDirectionType::North || doorWallDirection == EDirectionType::South)
+            wallBuilder->DestroySouthDoor();
+        else
+            wallBuilder->DestroyWestDoor();
+    }
+}
+
+void ATPGameDemoGameState::DestroyNeighbouringDoors(FIntPoint roomCoords, TArray<bool> positionsToDestroy)
+{
+    FIntPoint roomIndices = GetRoomXYIndices(roomCoords);
+    ensure(RoomXYIndicesValid(roomIndices));
+
+    for (int p = 0; p < (int)EDirectionType::NumDirectionTypes; ++p)
+    {
+        if (p < positionsToDestroy.Num() && positionsToDestroy[p])
+        {
+            EDirectionType direction = (EDirectionType)p;
+            DestroyDoorInRoom(roomCoords, direction);
+        }
+    }
+}
+
+void ATPGameDemoGameState::DoorOpened(FIntPoint roomCoords, EDirectionType wallDirection)
+{
+    if (!DoesRoomExist(roomCoords))
+    {
+        EnableRoomState(roomCoords);
+    }
+    FIntPoint neighbourRoomCoords = GetRoomCoords(GetNeighbouringRoomIndices(roomCoords, wallDirection));
+    if (!DoesRoomExist(neighbourRoomCoords))
+    {
+        EnableRoomState(neighbourRoomCoords);
+    }
+}
+
+//============================================================================
+//============================================================================
+
+FIntPoint ATPGameDemoGameState::GetRoomXYIndices(FIntPoint roomCoords) const
+{
+    const int x = roomCoords.X + NumGridsXY / 2;
+    const int y = roomCoords.Y + NumGridsXY / 2;
+    FIntPoint roomIndices = FIntPoint(x,y);
+    return roomIndices;
+}
+
+FIntPoint ATPGameDemoGameState::GetRoomCoords(FIntPoint roomIndices) const
+{
+    const int x = roomIndices.X - NumGridsXY / 2;
+    const int y = roomIndices.Y - NumGridsXY / 2;
+    FIntPoint roomCoords = FIntPoint(x,y);
+    return roomCoords;
+}
+
+bool ATPGameDemoGameState::RoomXYIndicesValid(FIntPoint roomIndices) const
+{
+    const int x = roomIndices.X;
+    const int y = roomIndices.Y;
+    return x >= 0 && x < RoomStates.Num() && y >= 0 && y < RoomStates[0].Num();
+}
+
+WallState& ATPGameDemoGameState::GetWallState(FIntPoint roomCoords, EDirectionType direction)
+{
+    FIntPoint roomIndices = GetRoomXYIndices(roomCoords);
+    ensure(RoomXYIndicesValid(roomIndices));
+    switch(direction)
+    {
+        case EDirectionType::North: 
+        {
+            FIntPoint neighbourRoom = GetNeighbouringRoomIndices(roomCoords, direction);
+            return WallStates[neighbourRoom.X][neighbourRoom.Y].SouthWall;
+        }
+        case EDirectionType::East:
+        {
+            FIntPoint neighbourRoom = GetNeighbouringRoomIndices(roomCoords, direction);
+            return WallStates[neighbourRoom.X][neighbourRoom.Y].WestWall;
+        }
+        case EDirectionType::South:
+        {
+            return WallStates[roomIndices.X][roomIndices.Y].SouthWall;
+        }
+        case EDirectionType::West: 
+            return WallStates[roomIndices.X][roomIndices.Y].WestWall;
+        default: ensure(false); return WallStates[0][0].SouthWall;
+    }
+}
+
+bool ATPGameDemoGameState::IsWallInUpdateList(FIntPoint coords, EDirectionType wallType)
+{
+    for(auto wallDescriptor : WallsToUpdate)
+        if(wallDescriptor.WallCoupleCoords == coords && wallDescriptor.WallType == wallType)
+            return true;
+    return false;
+}
+
+void ATPGameDemoGameState::FlagWallsForUpdate(FIntPoint roomCoords)
+{
+    FIntPoint roomIndices = GetRoomXYIndices(roomCoords);
+    ensure(RoomXYIndicesValid(roomIndices));
+    TArray<WallState*> wallStates;
+    wallStates.Empty();
+    auto northNeighbourCoords = GetRoomCoords(GetNeighbouringRoomIndices(roomCoords, EDirectionType::North));
+    auto eastNeighbourCoords = GetRoomCoords(GetNeighbouringRoomIndices(roomCoords, EDirectionType::East));
+
+    if(!IsWallInUpdateList(roomCoords, EDirectionType::South))
+        WallsToUpdate.Add({roomCoords, EDirectionType::South});
+    if(!IsWallInUpdateList(roomCoords, EDirectionType::West))
+        WallsToUpdate.Add({roomCoords, EDirectionType::West});
+    if(!IsWallInUpdateList(northNeighbourCoords, EDirectionType::South))
+        WallsToUpdate.Add({northNeighbourCoords, EDirectionType::South});
+    if(!IsWallInUpdateList(eastNeighbourCoords, EDirectionType::West))
+        WallsToUpdate.Add({eastNeighbourCoords, EDirectionType::West});
+}
+

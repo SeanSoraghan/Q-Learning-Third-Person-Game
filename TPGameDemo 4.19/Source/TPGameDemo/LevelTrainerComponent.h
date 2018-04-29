@@ -58,20 +58,20 @@ public:
     const TArray<float> GetQValues() const;
     const TArray<float> GetRewards() const;
 
-    const float GetOptimalQValueAndActions(TArray<EActionType>* ActionsArrayToSet) const;
+    const float GetOptimalQValueAndActions(TArray<EDirectionType>* ActionsArrayToSet) const;
 
-    void UpdateQValue(EActionType actionType, float deltaQ);
+    void UpdateQValue(EDirectionType actionType, float deltaQ);
     void ResetQValues();
 
     void SetIsGoal(bool isGoal);
     bool IsGoalState() const;
 
-    FIntPoint GetActionTarget(EActionType actionType) const;
+    FIntPoint GetActionTarget(EDirectionType actionType) const;
 
     void SetValid(bool valid);
     bool IsStateValid();
 
-    void SetActionTarget(EActionType actionType, FIntPoint position);
+    void SetActionTarget(EDirectionType actionType, FIntPoint position);
 private:
     bool IsGoal = false;
     bool IsValid = true;
@@ -102,7 +102,7 @@ public:
 
     UFUNCTION(BlueprintCallable, Category = "Level Training")
     void UpdateEnvironmentForLevel(FString levelName);
-
+    
     UFUNCTION(BlueprintCallable, Category = "Level Training")
     void RegisterLevelTrainedCallback(const FOnLevelTrained& Callback);
 
