@@ -5,25 +5,25 @@
 #include "TPGameDemoGameMode.h"
 #include "TPGameDemoGameState.h"
 
-void ARoomBuilder::BuildRoom(const TArray<int> doorPositionsOnWalls){}
+void ARoomBuilder::BuildRoom_Implementation(const TArray<int>& doorPositionsOnWalls){}
 
-void ARoomBuilder::DestroyRoom(){}
+void ARoomBuilder::DestroyRoom_Implementation(){}
 
-void AWallBuilder::BuildSouthWall(){}
+void AWallBuilder::BuildSouthWall_Implementation(){}
 
-void AWallBuilder::BuildWestWall(){}
+void AWallBuilder::BuildWestWall_Implementation(){}
 
-void AWallBuilder::DestroySouthWall(){}
+void AWallBuilder::DestroySouthWall_Implementation(){}
 
-void AWallBuilder::DestroyWestWall(){}
+void AWallBuilder::DestroyWestWall_Implementation(){}
 
-void AWallBuilder::SpawnSouthDoor(){}
+void AWallBuilder::SpawnSouthDoor_Implementation(){}
 
-void AWallBuilder::SpawnWestDoor(){}
+void AWallBuilder::SpawnWestDoor_Implementation(){}
 
-void AWallBuilder::DestroySouthDoor(){}
+void AWallBuilder::DestroySouthDoor_Implementation(){}
 
-void AWallBuilder::DestroyWestDoor(){}
+void AWallBuilder::DestroyWestDoor_Implementation(){}
 
 ATPGameDemoGameState::ATPGameDemoGameState(const FObjectInitializer& ObjectInitializer)
 {

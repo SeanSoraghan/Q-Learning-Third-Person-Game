@@ -102,51 +102,51 @@ struct RoomState
 /**
  * 
  */
-UCLASS()
+UCLASS(Blueprintable)
 class TPGAMEDEMO_API ARoomBuilder : public AActor
 {
 public:
 	GENERATED_BODY()
 
-    UFUNCTION(BlueprintCallable, Category = "World Room Building")
-        virtual void BuildRoom(const TArray<int> doorPositionsOnWalls);
+    UFUNCTION(BlueprintNativeEvent, BlueprintCallable, Category = "World Room Building")
+        void BuildRoom(const TArray<int>& doorPositionsOnWalls);
 
-    UFUNCTION(BlueprintCallable, Category = "World Room Building")
-        virtual void DestroyRoom();
+    UFUNCTION(BlueprintNativeEvent, BlueprintCallable, Category = "World Room Building")
+        void DestroyRoom();
 };
 
 /**
  * 
  */
-UCLASS()
+UCLASS(Blueprintable)
 class TPGAMEDEMO_API AWallBuilder : public AActor
 {
 public:
 	GENERATED_BODY()
 
-    UFUNCTION(BlueprintCallable, Category = "World Wall Building")
-        virtual void BuildSouthWall();
+    UFUNCTION(BlueprintNativeEvent, BlueprintCallable, Category = "World Wall Building")
+        void BuildSouthWall();
 
-    UFUNCTION(BlueprintCallable, Category = "World Wall Building")
-        virtual void BuildWestWall();
+    UFUNCTION(BlueprintNativeEvent, BlueprintCallable, Category = "World Wall Building")
+        void BuildWestWall();
 
-    UFUNCTION(BlueprintCallable, Category = "World Wall Building")
-        virtual void DestroySouthWall();
+    UFUNCTION(BlueprintNativeEvent, BlueprintCallable, Category = "World Wall Building")
+        void DestroySouthWall();
 
-    UFUNCTION(BlueprintCallable, Category = "World Wall Building")
-        virtual void DestroyWestWall();
+    UFUNCTION(BlueprintNativeEvent, BlueprintCallable, Category = "World Wall Building")
+        void DestroyWestWall();
 
-    UFUNCTION(BlueprintCallable, Category = "World Door States")
-        virtual void SpawnSouthDoor();
+    UFUNCTION(BlueprintNativeEvent, BlueprintCallable, Category = "World Door States")
+        void SpawnSouthDoor();
 
-    UFUNCTION(BlueprintCallable, Category = "World Door States")
-        virtual void SpawnWestDoor();
+    UFUNCTION(BlueprintNativeEvent, BlueprintCallable, Category = "World Door States")
+        void SpawnWestDoor();
 
-    UFUNCTION(BlueprintCallable, Category = "World Door States")
-        virtual void DestroySouthDoor();
+    UFUNCTION(BlueprintNativeEvent, BlueprintCallable, Category = "World Door States")
+        void DestroySouthDoor();
 
-    UFUNCTION(BlueprintCallable, Category = "World Door States")
-        virtual void DestroyWestDoor();
+    UFUNCTION(BlueprintNativeEvent, BlueprintCallable, Category = "World Door States")
+        void DestroyWestDoor();
 };
 
 /**
