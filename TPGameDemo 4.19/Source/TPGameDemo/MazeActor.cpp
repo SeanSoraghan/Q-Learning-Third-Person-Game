@@ -117,5 +117,16 @@ void AMazeActor::Tick( float DeltaTime )
     UpdatePosition();
 }
 
+bool AMazeActor::IsOnGridEdge() const
+{
+    if (ATPGameDemoGameMode* gameMode = (ATPGameDemoGameMode*) GetWorld()->GetAuthGameMode())
+    {
+        const int numUnitsX = gameMode->NumGridUnitsX;
+        const int numUnitsY = gameMode->NumGridUnitsY;
+        return GridXPosition == 0 || GridXPosition == numUnitsX - 1 || GridYPosition == 0 || GridYPosition == numUnitsY - 1;
+    }
+    return false;
+}
+
 void AMazeActor::PositionChanged(){}
 void AMazeActor::RoomCoordsChanged(){}

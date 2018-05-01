@@ -124,8 +124,11 @@ void AEnemyActor::RoomCoordsChanged()
 
 void AEnemyActor::UpdateMovement()
 {
-    EDirectionType actionType = SelectNextAction();
-    UpdateMovementForActionType(actionType);
+    if (!IsOnGridEdge())
+    {
+        EDirectionType actionType = SelectNextAction();
+        UpdateMovementForActionType(actionType);
+    }
 }
 
 void AEnemyActor::UpdateMovementForActionType(EDirectionType actionType)

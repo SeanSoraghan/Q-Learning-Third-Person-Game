@@ -165,13 +165,13 @@ EQuadrantType ATPGameDemoGameState::GetQuadrantTypeForRoomCoords(FIntPoint roomC
         {
             return EQuadrantType::NorthEast;
         }
-        return EQuadrantType::SouthEast;
+        return EQuadrantType::NorthWest;
     }
     else if (y < NumGridsXY / 2)
     {
         return EQuadrantType::SouthWest;
     }
-    return EQuadrantType::NorthWest;
+    return EQuadrantType::SouthEast;
 }
 
 TArray<WallState*> ATPGameDemoGameState::GetWallStatesForRoom(FIntPoint roomCoords)
