@@ -37,6 +37,7 @@ struct WallState
     void InitializeWall()
     {
         bWallExists = true;
+        bDoorExists = true;
     }
 
     void DisableWall()
@@ -301,4 +302,5 @@ private:
     FIntPoint GetRoomXYIndices(FIntPoint roomCoords) const;
     FIntPoint GetRoomCoords(FIntPoint roomIndices) const;
     bool RoomXYIndicesValid(FIntPoint roomCoords) const;
+    bool WallXYIndicesValid(FIntPoint wallRoomCoords) const;
 };

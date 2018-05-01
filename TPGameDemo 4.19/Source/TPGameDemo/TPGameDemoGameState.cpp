@@ -71,6 +71,7 @@ void ATPGameDemoGameState::InitialiseArrays()
         }
         // Add one final wall couple (where the west wall will be the east wall of the final room, and the south wall will be ignored).
         wallsRow.Add(WallStateCouple());
+        wallBuilderRow.Add(nullptr);
         RoomStates.Add(roomsRow);
         WallStates.Add(wallsRow);
         RoomBuilders.Add(roomBuilderRow);
@@ -78,11 +79,14 @@ void ATPGameDemoGameState::InitialiseArrays()
     }
     // Add the last row of wall couples (where the south wall will be the north wall of the final room, and the west wall will be ignored).
     TArray<WallStateCouple> wallsRow;
+    TArray<AWallBuilder*> wallBuilderRow;
     for (int y = 0; y < NumGridsXY + 1; ++y)
     {
         wallsRow.Add(WallStateCouple());
+        wallBuilderRow.Add(nullptr);
     }
     WallStates.Add(wallsRow);
+    WallBuilders.Add(wallBuilderRow);
 }
 
 void ATPGameDemoGameState::Tick( float DeltaTime )
@@ -145,8 +149,6 @@ float ATPGameDemoGameState::GetRoomHealth(FIntPoint roomCoords) const
 
 int ATPGameDemoGameState::GetDoorPositionOnWall(FIntPoint roomCoords, EDirectionType wallType)
 {
-    FIntPoint roomIndices = GetRoomXYIndices(roomCoords);
-    ensure(RoomXYIndicesValid(roomIndices));
     WallState& wallState = GetWallState(roomCoords, wallType);
     return wallState.DoorPosition;
 }
@@ -242,10 +244,10 @@ AActor* ATPGameDemoGameState::GetRoomBuilder(FIntPoint roomCoords)
 
 AWallBuilder* ATPGameDemoGameState::GetWallBuilder(FIntPoint roomCoords, EDirectionType direction)
 {
-    FIntPoint roomIndices = GetRoomXYIndices(roomCoords);
-    ensure(RoomXYIndicesValid(roomIndices));
+    FIntPoint wallRoomIndices = GetRoomXYIndices(roomCoords);
+    ensure(WallXYIndicesValid(wallRoomIndices));
     if (direction == EDirectionType::South || direction == EDirectionType::West)
-        return WallBuilders[roomIndices.X][roomIndices.Y];
+        return WallBuilders[wallRoomIndices.X][wallRoomIndices.Y];
     FIntPoint neighbourRoom = GetNeighbouringRoomIndices(roomCoords, direction);
     return WallBuilders[neighbourRoom.X][neighbourRoom.Y];
 }
@@ -284,7 +286,7 @@ void ATPGameDemoGameState::SetRoomBuilder(FIntPoint roomCoords, ARoomBuilder* ro
 void ATPGameDemoGameState::SetWallBuilder(FIntPoint roomCoords, AWallBuilder* builder)
 {
     FIntPoint roomIndices = GetRoomXYIndices(roomCoords);
-    ensure(RoomXYIndicesValid(roomIndices));
+    ensure(WallXYIndicesValid(roomIndices));
     WallBuilders[roomIndices.X][roomIndices.Y] = builder;
 }
 
@@ -302,8 +304,8 @@ void ATPGameDemoGameState::EnableRoomState(FIntPoint roomCoords)
             if(!wallState->HasDoor())
             {
                 EDirectionType direction = (EDirectionType)p;
-                int maxDoorPosition = (direction == EDirectionType::North || direction == EDirectionType::South) ? gameMode->NumGridUnitsY
-                                                                                                                 : gameMode->NumGridUnitsX;
+                int maxDoorPosition = (direction == EDirectionType::North || direction == EDirectionType::South) ? gameMode->NumGridUnitsY - 2
+                                                                                                                 : gameMode->NumGridUnitsX - 2;
                 wallState->GenerateRandomDoorPosition(maxDoorPosition);
             }
         }
@@ -402,8 +404,6 @@ void ATPGameDemoGameState::DisableDoorState(FIntPoint roomCoords, EDirectionType
 
 void ATPGameDemoGameState::DestroyDoorInRoom(FIntPoint roomCoords, EDirectionType doorWallDirection)
 {
-    FIntPoint roomIndices = GetRoomXYIndices(roomCoords);
-    ensure(RoomXYIndicesValid(roomIndices));
     if (auto wallBuilder = GetWallBuilder(roomCoords, doorWallDirection))
     {
         if (doorWallDirection == EDirectionType::North || doorWallDirection == EDirectionType::South)
@@ -415,9 +415,6 @@ void ATPGameDemoGameState::DestroyDoorInRoom(FIntPoint roomCoords, EDirectionTyp
 
 void ATPGameDemoGameState::DestroyNeighbouringDoors(FIntPoint roomCoords, TArray<bool> positionsToDestroy)
 {
-    FIntPoint roomIndices = GetRoomXYIndices(roomCoords);
-    ensure(RoomXYIndicesValid(roomIndices));
-
     for (int p = 0; p < (int)EDirectionType::NumDirectionTypes; ++p)
     {
         if (p < positionsToDestroy.Num() && positionsToDestroy[p])
@@ -467,10 +464,17 @@ bool ATPGameDemoGameState::RoomXYIndicesValid(FIntPoint roomIndices) const
     return x >= 0 && x < RoomStates.Num() && y >= 0 && y < RoomStates[0].Num();
 }
 
+bool ATPGameDemoGameState::WallXYIndicesValid(FIntPoint wallRoomCoords) const
+{
+    const int x = wallRoomCoords.X;
+    const int y = wallRoomCoords.Y;
+    return x >= 0 && x < WallStates.Num() && y >= 0 && y < WallStates[0].Num();
+}
+
 WallState& ATPGameDemoGameState::GetWallState(FIntPoint roomCoords, EDirectionType direction)
 {
     FIntPoint roomIndices = GetRoomXYIndices(roomCoords);
-    ensure(RoomXYIndicesValid(roomIndices));
+    ensure(WallXYIndicesValid(roomIndices));
     switch(direction)
     {
         case EDirectionType::North: 
@@ -504,7 +508,7 @@ bool ATPGameDemoGameState::IsWallInUpdateList(FIntPoint coords, EDirectionType w
 void ATPGameDemoGameState::FlagWallsForUpdate(FIntPoint roomCoords)
 {
     FIntPoint roomIndices = GetRoomXYIndices(roomCoords);
-    ensure(RoomXYIndicesValid(roomIndices));
+    ensure(WallXYIndicesValid(roomIndices));
     TArray<WallState*> wallStates;
     wallStates.Empty();
     auto northNeighbourCoords = GetRoomCoords(GetNeighbouringRoomIndices(roomCoords, EDirectionType::North));
