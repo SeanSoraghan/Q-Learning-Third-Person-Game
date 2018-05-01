@@ -89,6 +89,7 @@ struct RoomState
     void InitializeRoom()
     {
         bRoomExists = true;
+        RoomHealth = 100.0f;
     }
 
     void DisableRoom()
