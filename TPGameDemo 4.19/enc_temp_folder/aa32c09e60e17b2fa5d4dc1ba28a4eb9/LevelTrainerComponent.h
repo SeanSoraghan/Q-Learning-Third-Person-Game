@@ -118,8 +118,14 @@ public:
 private:
     FThreadSafeBool LevelTrained = false;
     FString CurrentLevelName = FString("");
+    /** A non-0 value indicates that UE is exiting. */
+    FThreadSafeCounter AppExitingCounter = 0;
+    /** Thread on which the WAAPI connection is monitored. */
     TSharedPtr<FRunnableThread> TrainerThread;
-
+    /** The connection to WAAPI is monitored by this connection handler.
+    *  It tries to reconnect when connection is lost, and continuously polls WAAPI for the connection status when WAAPI is connected.
+    *  This behaviour can be disabled in AkSettings using the AutoConnectToWaapi boolean option.
+    */
     TSharedPtr<LevelTrainerRunnable> TrainerRunnable;
     FCriticalSection ClientSection;
 
