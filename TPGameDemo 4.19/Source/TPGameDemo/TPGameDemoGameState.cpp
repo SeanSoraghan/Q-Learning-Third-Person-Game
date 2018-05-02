@@ -9,6 +9,8 @@ void ARoomBuilder::BuildRoom_Implementation(const TArray<int>& doorPositionsOnWa
 
 void ARoomBuilder::DestroyRoom_Implementation(){}
 
+void ARoomBuilder::HealthChanged_Implementation(float health){}
+
 void AWallBuilder::BuildSouthWall_Implementation(){}
 
 void AWallBuilder::BuildWestWall_Implementation(){}
@@ -271,6 +273,7 @@ void ATPGameDemoGameState::SetRoomHealth(FIntPoint roomCoords, float health)
     FIntPoint roomIndices = GetRoomXYIndices(roomCoords);
     ensure(RoomXYIndicesValid(roomIndices));
     RoomStates[roomIndices.X][roomIndices.Y].RoomHealth = health;
+    RoomBuilders[roomIndices.X][roomIndices.Y]->HealthChanged(health);
     if (RoomStates[roomIndices.X][roomIndices.Y].RoomHealth <= 0.0f && 
         RoomStates[roomIndices.X][roomIndices.Y].RoomExists())
         DisableRoomState(roomCoords);
@@ -281,6 +284,7 @@ void ATPGameDemoGameState::UpdateRoomHealth(FIntPoint roomCoords, float healthDe
     FIntPoint roomIndices = GetRoomXYIndices(roomCoords);
     ensure(RoomXYIndicesValid(roomIndices));
     RoomStates[roomIndices.X][roomIndices.Y].RoomHealth += healthDelta;
+    RoomBuilders[roomIndices.X][roomIndices.Y]->HealthChanged(RoomStates[roomIndices.X][roomIndices.Y].RoomHealth);
     if (RoomStates[roomIndices.X][roomIndices.Y].RoomHealth <= 0.0f && 
         RoomStates[roomIndices.X][roomIndices.Y].RoomExists())
         DisableRoomState(roomCoords);
@@ -325,7 +329,7 @@ void ATPGameDemoGameState::EnableRoomState(FIntPoint roomCoords)
     ensure(RoomXYIndicesValid(roomIndices));
     if (!DoesRoomExist(roomCoords))
     {
-        RoomStates[roomIndices.X][roomIndices.Y].InitializeRoom();
+        RoomStates[roomIndices.X][roomIndices.Y].InitializeRoom(MaxRoomHealth);
 
         RoomBuilders[roomIndices.X][roomIndices.Y]->BuildRoom({wallStates[(int)EDirectionType::North]->DoorPosition,
                                                                wallStates[(int)EDirectionType::East]->DoorPosition,

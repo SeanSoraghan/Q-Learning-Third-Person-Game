@@ -93,11 +93,11 @@ struct RoomState
         //bRoomExists = false;
     }
 
-    void InitializeRoom()
+    void InitializeRoom(float health)
     {
         //bRoomExists = true;
         RoomStatus = Training;
-        RoomHealth = 100.0f;
+        RoomHealth = health;
     }
 
     void SetRoomTrained(bool bRoomIsTrained)
@@ -138,6 +138,9 @@ public:
 
     UFUNCTION(BlueprintNativeEvent, BlueprintCallable, Category = "World Room Building")
         void DestroyRoom();
+
+    UFUNCTION(BlueprintNativeEvent, BlueprintCallable, Category = "World Room Health")
+        void HealthChanged(float health);
 };
 
 /**
@@ -304,6 +307,9 @@ public:
     //============================================================================
     UPROPERTY (BlueprintReadWrite, EditAnywhere, Category = "World Grid Size")
         int NumGridsXY = 20;
+
+    UPROPERTY(BlueprintReadWrite, EditAnywhere, Category = "World Room Health")
+        float MaxRoomHealth = 100.0f;
 
 private:
     TArray<TArray<ARoomBuilder*>> RoomBuilders;
