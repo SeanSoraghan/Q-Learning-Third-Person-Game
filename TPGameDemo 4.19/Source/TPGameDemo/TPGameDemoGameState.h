@@ -81,24 +81,47 @@ struct WallStateCouple
 
 struct RoomState
 {
+    enum Status : uint8
+    {
+        Dead,
+        Training,
+        Trained
+    };
+
     ~RoomState()
     {
-        bRoomExists = false;
+        //bRoomExists = false;
     }
 
     void InitializeRoom()
     {
-        bRoomExists = true;
+        //bRoomExists = true;
+        RoomStatus = Training;
         RoomHealth = 100.0f;
+    }
+
+    void SetRoomTrained(bool bRoomIsTrained)
+    {
+        RoomStatus = Trained;
+        //bRoomTrained = bRoomIsTrained;
     }
 
     void DisableRoom()
     {
-        bRoomExists = false;
+        RoomStatus = Dead;
+        //bRoomExists = false;
+        //bRoomTrained = false;
+    }
+
+    bool RoomExists() const
+    {
+        return RoomStatus != Dead;
     }
 
     float RoomHealth = 100.0f;
-    bool bRoomExists = false;
+    Status RoomStatus = Dead;
+    //bool bRoomExists = false;
+    //bool bRoomTrained = false;
 };
 
 /**
@@ -183,6 +206,9 @@ public:
         bool DoesRoomExist(FIntPoint roomCoords) const;
 
     UFUNCTION(BlueprintCallable, Category = "World Rooms States")
+        bool IsRoomTrained(FIntPoint roomCoords) const; 
+
+    UFUNCTION(BlueprintCallable, Category = "World Rooms States")
         bool DoesWallExist(FIntPoint roomCoords, EDirectionType wallType);
 
     UFUNCTION(BlueprintCallable, Category = "World Rooms States")
@@ -252,6 +278,9 @@ public:
 
     UFUNCTION(BlueprintCallable, Category = "World Rooms States")
         void DisableRoomState(FIntPoint roomCoords);
+
+    UFUNCTION(BlueprintCallable, Category = "World Rooms States")
+        void SetRoomTrained(FIntPoint roomCoords);
 
     UFUNCTION(BlueprintCallable, Category = "World Rooms States")
         void EnableWallState(FIntPoint roomCoords, EDirectionType wallType);

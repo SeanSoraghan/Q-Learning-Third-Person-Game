@@ -99,18 +99,21 @@ void ATPGameDemoGameState::Tick( float DeltaTime )
         auto neighbourCoords = GetRoomCoords(GetNeighbouringRoomIndices(roomCoords, wallType));
         bool roomExists = DoesRoomExist(roomCoords);
         bool neighbourExists = DoesRoomExist(neighbourCoords); 
-        if (roomExists || neighbourExists)
-        {
-            EnableWallState(roomCoords, wallType);
-            if (roomExists && neighbourExists)
-                DisableDoorState(roomCoords, wallType);
-            else
-                EnableDoorState(roomCoords, wallType);
-        }
-        else
+
+        if (!(roomExists || neighbourExists))
         {
             DisableWallState(roomCoords, wallType);
+            continue;
         }
+
+        bool roomTrained = IsRoomTrained(roomCoords);
+        bool neighbourTrained = IsRoomTrained(neighbourCoords);
+
+        EnableWallState(roomCoords, wallType);
+        if (roomTrained && neighbourTrained)
+            DisableDoorState(roomCoords, wallType);
+        else
+            EnableDoorState(roomCoords, wallType);
     }
     WallsToUpdate.Empty();
 }
@@ -123,7 +126,14 @@ bool ATPGameDemoGameState::DoesRoomExist(FIntPoint roomCoords) const
 {
     FIntPoint roomIndices = GetRoomXYIndices(roomCoords);
     ensure(RoomXYIndicesValid(roomIndices));
-    return RoomStates[roomIndices.X][roomIndices.Y].bRoomExists;
+    return RoomStates[roomIndices.X][roomIndices.Y].RoomExists();
+}
+
+bool ATPGameDemoGameState::IsRoomTrained(FIntPoint roomCoords) const
+{
+    FIntPoint roomIndices = GetRoomXYIndices(roomCoords);
+    ensure(RoomXYIndicesValid(roomIndices));
+    return RoomStates[roomIndices.X][roomIndices.Y].RoomStatus == RoomState::Status::Trained;
 }
 
 bool ATPGameDemoGameState::DoesWallExist(FIntPoint roomCoords, EDirectionType wallType)
@@ -213,7 +223,7 @@ TArray<bool> ATPGameDemoGameState::GetNeighbouringRoomStates(FIntPoint roomCoord
     for (int p = 0; p < (int)EDirectionType::NumDirectionTypes; ++p)
     {
         FIntPoint neighbour = GetNeighbouringRoomIndices(roomCoords, (EDirectionType)p);
-        if (RoomXYIndicesValid(neighbour) && RoomStates[neighbour.X][neighbour.Y].bRoomExists)
+        if (RoomXYIndicesValid(neighbour) && RoomStates[neighbour.X][neighbour.Y].RoomExists())
             neighbouringRoomStates[p] = true;
     }
     return neighbouringRoomStates;
@@ -262,7 +272,7 @@ void ATPGameDemoGameState::SetRoomHealth(FIntPoint roomCoords, float health)
     ensure(RoomXYIndicesValid(roomIndices));
     RoomStates[roomIndices.X][roomIndices.Y].RoomHealth = health;
     if (RoomStates[roomIndices.X][roomIndices.Y].RoomHealth <= 0.0f && 
-        RoomStates[roomIndices.X][roomIndices.Y].bRoomExists)
+        RoomStates[roomIndices.X][roomIndices.Y].RoomExists())
         DisableRoomState(roomCoords);
 }
 
@@ -272,7 +282,7 @@ void ATPGameDemoGameState::UpdateRoomHealth(FIntPoint roomCoords, float healthDe
     ensure(RoomXYIndicesValid(roomIndices));
     RoomStates[roomIndices.X][roomIndices.Y].RoomHealth += healthDelta;
     if (RoomStates[roomIndices.X][roomIndices.Y].RoomHealth <= 0.0f && 
-        RoomStates[roomIndices.X][roomIndices.Y].bRoomExists)
+        RoomStates[roomIndices.X][roomIndices.Y].RoomExists())
         DisableRoomState(roomCoords);
 }
 
@@ -334,6 +344,17 @@ void ATPGameDemoGameState::DisableRoomState(FIntPoint roomCoords)
     {
         RoomStates[roomIndices.X][roomIndices.Y].DisableRoom();
         RoomBuilders[roomIndices.X][roomIndices.Y]->DestroyRoom();
+        FlagWallsForUpdate(roomCoords);
+    }
+}
+
+void ATPGameDemoGameState::SetRoomTrained(FIntPoint roomCoords)
+{
+    FIntPoint roomIndices = GetRoomXYIndices(roomCoords);
+    ensure(RoomXYIndicesValid(roomIndices));
+    if (DoesRoomExist(roomCoords))
+    {
+        RoomStates[roomIndices.X][roomIndices.Y].SetRoomTrained(true);
         FlagWallsForUpdate(roomCoords);
     }
 }
