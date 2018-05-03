@@ -5,8 +5,6 @@
 #include "TPGameDemoGameMode.h"
 #include "LevelBuilderComponent.h"
 
-
-
 ULevelBuilderComponent::ULevelBuilderComponent()
 {
 	PrimaryComponentTick.bCanEverTick = true;
@@ -25,7 +23,7 @@ FIntPoint ULevelBuilderComponent::GetRandomEvenCell()
     return FIntPoint(xPos,yPos);
 }
 
-void ULevelBuilderComponent::GenerateLevel(float normedDensity, float normedComplexity, FString levelName, TArray<int> ExistingDoorPositions)
+TArray<FWallSegmentDescriptor> ULevelBuilderComponent::GenerateLevel(float normedDensity, float normedComplexity, FString levelName, TArray<int> ExistingDoorPositions)
 {
     int sideLength = 3;
     ATPGameDemoGameMode* gameMode = (ATPGameDemoGameMode*) GetWorld()->GetAuthGameMode();
@@ -34,10 +32,10 @@ void ULevelBuilderComponent::GenerateLevel(float normedDensity, float normedComp
         sideLength = gameMode->NumGridUnitsX; 
     }
 
-    GenerateLevelOfSize(sideLength, normedDensity, normedComplexity, levelName, ExistingDoorPositions);
+    return GenerateLevelOfSize(sideLength, normedDensity, normedComplexity, levelName, ExistingDoorPositions);
 }
 
-void ULevelBuilderComponent::GenerateLevelOfSize(int sideLength, float normedDensity, float normedComplexity, FString levelName, TArray<int> ExistingDoorPositions)
+TArray<FWallSegmentDescriptor> ULevelBuilderComponent::GenerateLevelOfSize(int sideLength, float normedDensity, float normedComplexity, FString levelName, TArray<int> ExistingDoorPositions)
 {
     ensure(normedDensity >= 0.0f && normedDensity <= 1.0f && normedComplexity >= 0.0f && normedComplexity <= 1.0f);
     
@@ -82,7 +80,7 @@ void ULevelBuilderComponent::GenerateLevelOfSize(int sideLength, float normedDen
         LevelStructure.Add(row);
     }
 
-    GenerateInnerStructure(sideLength, normedDensity, normedComplexity);
+    TArray<FWallSegmentDescriptor> wallSegments = GenerateInnerStructure(sideLength, normedDensity, normedComplexity);
 
     UE_LOG(LogTemp, Warning, TEXT("Generated Level:"));
     //LevelBuilderHelpers::PrintArray(LevelStructure);
@@ -92,15 +90,30 @@ void ULevelBuilderComponent::GenerateLevelOfSize(int sideLength, float normedDen
         CurrentLevelPath = LevelBuilderHelpers::LevelsDir() + levelName + ".txt";
         LevelBuilderHelpers::WriteArrayToTextFile(LevelStructure, CurrentLevelPath);
     }
+
+    return wallSegments;
 }
 
-void ULevelBuilderComponent::GenerateInnerStructure(int sideLength, float normedDensity, float normedComplexity)
+TArray<FWallSegmentDescriptor> ULevelBuilderComponent::GenerateInnerStructure(int sideLength, float normedDensity, float normedComplexity)
 {
+    TArray<FWallSegmentDescriptor> wallSegments;
+    wallSegments.Empty();
+
     const int complexity = int(normedComplexity * (10 * (sideLength)));
     const int density = int(normedDensity * (FMath::Pow ((sideLength / 2.0f), 2.0f)));
 
+    // Used for creating the wall descriptors.
+    int gridMaxX = LevelStructure.Num() - 1;
+    int gridMaxY = LevelStructure[0].Num() - 1;
+
+    FWallSegmentDescriptor currentWallSegment = {FIntPoint(0,0), FIntPoint(0,0), EDirectionType::North};
+    int totalSegmentsStarted = 0;
+
     for (int island = 0; island < density; ++island)
     {
+        bool wallSegmentInitialized = false;
+        int numWallSegmentsStarted = 0;
+
         FIntPoint currentIslandPoint = GetRandomEvenCell();
         if(LevelStructure[currentIslandPoint.X][currentIslandPoint.Y] == (int)ECellState::Open && 
            !IsCellTouchingDoorCell(currentIslandPoint))
@@ -115,6 +128,22 @@ void ULevelBuilderComponent::GenerateInnerStructure(int sideLength, float normed
                     FIntPoint islandSectionMiddle = LevelBuilderHelpers::GetTargetPointForAction(currentIslandPoint, direction, 1);
                     if (!IsCellTouchingDoorCell(islandSectionEndTarget) && !IsCellTouchingDoorCell(islandSectionMiddle))
                     {
+                        if (!wallSegmentInitialized)
+                        {
+                            currentWallSegment = {currentIslandPoint, islandSectionEndTarget, direction};
+                            wallSegmentInitialized = true;
+                            ++numWallSegmentsStarted;
+                        }
+                        else if (direction == currentWallSegment.Direction)
+                        {
+                            currentWallSegment.End = islandSectionEndTarget;
+                        }
+                        else
+                        {
+                            wallSegments.Add(currentWallSegment);
+                            currentWallSegment = {islandSectionMiddle, islandSectionEndTarget, direction};
+                            ++numWallSegmentsStarted;
+                        }
                         LevelStructure[islandSectionEndTarget.X][islandSectionEndTarget.Y] = (int)ECellState::Closed;
                         LevelStructure[islandSectionMiddle.X][islandSectionMiddle.Y] = (int)ECellState::Closed;
                         LevelStructure[currentIslandPoint.X][currentIslandPoint.Y] = (int)ECellState::Closed;
@@ -122,11 +151,19 @@ void ULevelBuilderComponent::GenerateInnerStructure(int sideLength, float normed
                     }
                 }
             }
+            totalSegmentsStarted += numWallSegmentsStarted;
+            if (wallSegments.Num() != totalSegmentsStarted)
+            {
+                ensure(totalSegmentsStarted == wallSegments.Num() + 1);
+                wallSegments.Add(currentWallSegment);
+            }
         }
     }
+    
+    return wallSegments;
 }
 
-void ULevelBuilderComponent::RegenerateInnerStructure(float normedDensity, float normedComplexity, FString levelName)
+TArray<FWallSegmentDescriptor> ULevelBuilderComponent::RegenerateInnerStructure(float normedDensity, float normedComplexity, FString levelName)
 {
     int sideLength = 3;
     ATPGameDemoGameMode* gameMode = (ATPGameDemoGameMode*) GetWorld()->GetAuthGameMode();
@@ -146,7 +183,7 @@ void ULevelBuilderComponent::RegenerateInnerStructure(float normedDensity, float
         LevelStructure.Add(row);
     }
 
-    GenerateInnerStructure(sideLength, normedDensity, normedComplexity);
+    TArray<FWallSegmentDescriptor> wallSegments = GenerateInnerStructure(sideLength, normedDensity, normedComplexity);
 
     UE_LOG(LogTemp, Warning, TEXT("Regenerated Level:"));
     //LevelBuilderHelpers::PrintArray(LevelStructure);
@@ -156,6 +193,8 @@ void ULevelBuilderComponent::RegenerateInnerStructure(float normedDensity, float
         CurrentLevelPath = LevelBuilderHelpers::LevelsDir() + levelName + ".txt";
         LevelBuilderHelpers::WriteArrayToTextFile(LevelStructure, CurrentLevelPath);
     }
+
+    return wallSegments;
 }
 
 bool ULevelBuilderComponent::IsCellTouchingDoorCell(FIntPoint cellPosition)
