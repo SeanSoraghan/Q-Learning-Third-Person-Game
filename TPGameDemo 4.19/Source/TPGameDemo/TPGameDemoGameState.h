@@ -89,28 +89,23 @@ struct RoomState
     };
 
     ~RoomState()
-    {
-        //bRoomExists = false;
-    }
+    {}
 
     void InitializeRoom(float health)
     {
-        //bRoomExists = true;
         RoomStatus = Training;
+        TrainingProgress = 0.0f;
         RoomHealth = health;
     }
 
     void SetRoomTrained(bool bRoomIsTrained)
     {
         RoomStatus = Trained;
-        //bRoomTrained = bRoomIsTrained;
     }
 
     void DisableRoom()
     {
         RoomStatus = Dead;
-        //bRoomExists = false;
-        //bRoomTrained = false;
     }
 
     bool RoomExists() const
@@ -120,8 +115,7 @@ struct RoomState
 
     float RoomHealth = 100.0f;
     Status RoomStatus = Dead;
-    //bool bRoomExists = false;
-    //bool bRoomTrained = false;
+    float TrainingProgress = 0.0f;
 };
 
 /**
@@ -141,6 +135,9 @@ public:
 
     UFUNCTION(BlueprintNativeEvent, BlueprintCallable, Category = "World Room Health")
         void HealthChanged(float health);
+
+    UFUNCTION(BlueprintNativeEvent, BlueprintCallable, Category = "World Room Health")
+        void TrainingProgressUpdated(float progress);
 };
 
 /**
@@ -175,6 +172,9 @@ public:
 
     UFUNCTION(BlueprintNativeEvent, BlueprintCallable, Category = "World Door States")
         void DestroyWestDoor();
+
+    UFUNCTION(BlueprintNativeEvent, BlueprintCallable, Category = "World Door States")
+        void TrainingProgressUpdatedForDoor(EDirectionType doorWallType, float progress);
 };
 
 /**
@@ -282,7 +282,10 @@ public:
     UFUNCTION(BlueprintCallable, Category = "World Rooms States")
         void DisableRoomState(FIntPoint roomCoords);
 
-    UFUNCTION(BlueprintCallable, Category = "World Rooms States")
+    UFUNCTION(BLueprintCallable, Category = "World Rooms Training")
+        void SetRoomTrainingProgress(FIntPoint roomCoords, float progress);
+
+    UFUNCTION(BlueprintCallable, Category = "World Rooms Training")
         void SetRoomTrained(FIntPoint roomCoords);
 
     UFUNCTION(BlueprintCallable, Category = "World Rooms States")

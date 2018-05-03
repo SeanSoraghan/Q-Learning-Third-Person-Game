@@ -8,7 +8,8 @@
 // LevelTrainerRunnable
 //====================================================================================================
 
-LevelTrainerRunnable::LevelTrainerRunnable(ULevelTrainerComponent& trainerComponent) : TrainerComponent(trainerComponent)
+LevelTrainerRunnable::LevelTrainerRunnable(ULevelTrainerComponent& trainerComponent) 
+    : TrainerComponent(trainerComponent)
 {
     WaitEvent = FPlatformProcess::GetSynchEventFromPool(true);
 }
@@ -171,6 +172,7 @@ ULevelTrainerComponent::ULevelTrainerComponent()
 
 void ULevelTrainerComponent::BeginDestroy()
 {
+
     if (TrainerRunnable.IsValid())
     {
         TrainerRunnable->Exit();
@@ -187,6 +189,7 @@ void ULevelTrainerComponent::BeginDestroy()
     {
         while (TrainerRunnable->IsTraining){}
     }
+    
     Super::BeginDestroy();
 }
 
@@ -194,6 +197,7 @@ void ULevelTrainerComponent::TickComponent( float DeltaTime, ELevelTick TickType
 {
     if (LevelTrained)
     {
+        while(TrainerRunnable.IsValid() && TrainerRunnable->IsTraining){}
         OnLevelTrained.Broadcast();
         LevelTrained = false;
     }
@@ -225,7 +229,7 @@ void ULevelTrainerComponent::InitTrainerThread()
     TrainerRunnable = MakeShareable(new LevelTrainerRunnable(*this));
     FString ThreadName(FString::Printf(TEXT("LevelTrainerThread%i"), ThreadCounter.Increment()));
     TrainerThread = MakeShareable(FRunnableThread::Create(TrainerRunnable.Get(), *ThreadName, 0,
-                                  EThreadPriority::TPri_BelowNormal));
+                                    EThreadPriority::TPri_BelowNormal));
 }
 
 void ULevelTrainerComponent::RegisterLevelTrainedCallback(const FOnLevelTrained& Callback)
@@ -245,6 +249,7 @@ void ULevelTrainerComponent::UpdateEnvironmentForLevel(FString levelName)
     Environment.Empty();
     const int sizeX = LevelStructure.Num();
     const int sizeY = LevelStructure[0].Num();
+    MaxTrainingPosition.Set(sizeX * sizeY - 1.0f);
     for (int x = 0; x < sizeX; ++x)
     {
         Environment.Add(TArray<GridState>());
@@ -403,13 +408,27 @@ void ULevelTrainerComponent::IncrementGoalPosition()
         if (CurrentGoalPosition.X == Environment.Num() - 1)
         {
             LevelTrained = true;
-            return;
+            //return;
         }
-        CurrentGoalPosition.Y = 0;
-        ++CurrentGoalPosition.X;
-        return;
+        else
+        {
+            CurrentGoalPosition.Y = 0;
+            ++CurrentGoalPosition.X;
+        }//return;
     }
-    ++CurrentGoalPosition.Y;
+    else
+    {
+        ++CurrentGoalPosition.Y;
+    }
+    TrainingPosition.Set(CurrentGoalPosition.Y + CurrentGoalPosition.X * Environment[0].Num());
+}
+
+float ULevelTrainerComponent::GetTrainingProgress()
+{
+    float trainingPosition = (float) TrainingPosition.GetValue();
+    ensure(MaxTrainingPosition.GetValue() != 0);
+    UE_LOG(LogTemp, Warning, TEXT("X: %d | Y: %d || Current: %d || Max: %d"),CurrentGoalPosition.X, CurrentGoalPosition.Y, TrainingPosition.GetValue(), MaxTrainingPosition.GetValue());
+    return trainingPosition / MaxTrainingPosition.GetValue();
 }
 
 GridState& ULevelTrainerComponent::GetState(FIntPoint statePosition)

@@ -11,6 +11,8 @@ void ARoomBuilder::DestroyRoom_Implementation(){}
 
 void ARoomBuilder::HealthChanged_Implementation(float health){}
 
+void ARoomBuilder::TrainingProgressUpdated_Implementation(float progress){}
+
 void AWallBuilder::BuildSouthWall_Implementation(){}
 
 void AWallBuilder::BuildWestWall_Implementation(){}
@@ -26,6 +28,8 @@ void AWallBuilder::SpawnWestDoor_Implementation(){}
 void AWallBuilder::DestroySouthDoor_Implementation(){}
 
 void AWallBuilder::DestroyWestDoor_Implementation(){}
+
+void AWallBuilder::TrainingProgressUpdatedForDoor_Implementation(EDirectionType doorWallType, float progress){}
 
 ATPGameDemoGameState::ATPGameDemoGameState(const FObjectInitializer& ObjectInitializer)
 {
@@ -360,6 +364,29 @@ void ATPGameDemoGameState::SetRoomTrained(FIntPoint roomCoords)
     {
         RoomStates[roomIndices.X][roomIndices.Y].SetRoomTrained(true);
         FlagWallsForUpdate(roomCoords);
+    }
+}
+
+void ATPGameDemoGameState::SetRoomTrainingProgress(FIntPoint roomCoords, float progress)
+{
+    FIntPoint roomIndices = GetRoomXYIndices(roomCoords);
+    ensure(RoomXYIndicesValid(roomIndices));
+    if (DoesRoomExist(roomCoords))
+    {
+        RoomStates[roomIndices.X][roomIndices.Y].TrainingProgress = progress;
+        RoomBuilders[roomIndices.X][roomIndices.Y]->TrainingProgressUpdated(progress);
+        TArray<bool> neighbourStates = GetNeighbouringRoomStates(roomCoords);
+        for (int i = 0; i < (int)EDirectionType::NumDirectionTypes; ++i)
+        {
+            EDirectionType direction = (EDirectionType) i;
+            if(neighbourStates[i])
+            {
+                AWallBuilder* wallBuilder = GetWallBuilder(roomCoords, direction);
+                EDirectionType relativeDirection = (direction == EDirectionType::North) ? EDirectionType::South :
+                                                   (direction == EDirectionType::East ) ? EDirectionType::West : direction;
+                wallBuilder->TrainingProgressUpdatedForDoor(relativeDirection, progress);
+            }
+        }
     }
 }
 

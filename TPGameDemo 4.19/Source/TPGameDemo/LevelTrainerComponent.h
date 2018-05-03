@@ -8,6 +8,7 @@
 #include "Runnable.h"
 //#include "MazeActor.h"
 #include "Components/ActorComponent.h"
+#include "TPGameDemoGameState.h"
 #include "LevelTrainerComponent.generated.h"
 
 class ULevelTrainerComponent;
@@ -115,6 +116,13 @@ public:
     UFUNCTION(BlueprintCallable, Category = "Level Training")
     void ResetGoalPosition();
 
+    UFUNCTION(BlueprintCallable, Category = "Level Training")
+    float GetTrainingProgress();
+
+    /* These properties need to be set from blueprint around the time of level setup. */
+    UPROPERTY(BlueprintReadWrite, Category = "Level Trainer Room Position")
+    FIntPoint RoomCoords = FIntPoint(0,0);
+
 private:
     FThreadSafeBool LevelTrained = false;
     FString CurrentLevelName = FString("");
@@ -130,10 +138,13 @@ private:
     void TrainNextGoalPosition(int numSimulationsPerStartingPosition, int maxNumActionsPerSimulation);
     void SimulateRun(FIntPoint startingStatePosition, int maxNumActions);
     void IncrementGoalPosition();
+    FThreadSafeCounter TrainingPosition = 0;
+    FThreadSafeCounter MaxTrainingPosition = 0;
     GridState& GetState(FIntPoint statePosition);
     FIntPoint CurrentGoalPosition {0,0};
 
     LevelTrainedEvent OnLevelTrained;
+    //FThreadSafeCounter NumUnfinishedTasks = 0;
 };
 
 
