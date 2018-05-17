@@ -91,11 +91,13 @@ struct RoomState
     ~RoomState()
     {}
 
-    void InitializeRoom(float health)
+    void InitializeRoom(float health, float complexity = 0.0f, float density = 0.0f)
     {
         RoomStatus = Training;
         TrainingProgress = 0.0f;
         RoomHealth = health;
+        Complexity = complexity;
+        Density = density;
     }
 
     void SetRoomTrained(bool bRoomIsTrained)
@@ -114,6 +116,8 @@ struct RoomState
     }
 
     float RoomHealth = 100.0f;
+    float Complexity = 0.0f;
+    float Density = 0.0f;
     Status RoomStatus = Dead;
     float TrainingProgress = 0.0f;
 };
@@ -128,7 +132,7 @@ public:
 	GENERATED_BODY()
 
     UFUNCTION(BlueprintNativeEvent, BlueprintCallable, Category = "World Room Building")
-        void BuildRoom(const TArray<int>& doorPositionsOnWalls);
+        void BuildRoom(const TArray<int>& doorPositionsOnWalls, float complexity = 0.0f, float density = 0.0f);
 
     UFUNCTION(BlueprintNativeEvent, BlueprintCallable, Category = "World Room Building")
         void DestroyRoom();
@@ -277,7 +281,7 @@ public:
     // --------------------- Room & Wall Initialization / Destruction -------------------------------------\\
 
     UFUNCTION(BlueprintCallable, Category = "World Rooms States")
-        void EnableRoomState(FIntPoint roomCoords);
+        void EnableRoomState(FIntPoint roomCoords, float complexity = 0.0f, float density = 0.0f);
 
     UFUNCTION(BlueprintCallable, Category = "World Rooms States")
         void DisableRoomState(FIntPoint roomCoords);
@@ -303,7 +307,7 @@ public:
     // --------------------- Door Interaction -------------------------------------\\ 
 
     UFUNCTION(BlueprintCallable, Category = "Door Interaction")
-        void DoorOpened(FIntPoint roomCoords, EDirectionType wallDirection); 
+        void DoorOpened(FIntPoint roomCoords, EDirectionType wallDirection, float complexity = 0.0f, float density = 0.0f); 
 
     //============================================================================
     // Properties

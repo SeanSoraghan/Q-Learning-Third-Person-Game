@@ -5,7 +5,7 @@
 #include "TPGameDemoGameMode.h"
 #include "TPGameDemoGameState.h"
 
-void ARoomBuilder::BuildRoom_Implementation(const TArray<int>& doorPositionsOnWalls){}
+void ARoomBuilder::BuildRoom_Implementation(const TArray<int>& doorPositionsOnWalls, float complexity, float density){}
 
 void ARoomBuilder::DestroyRoom_Implementation(){}
 
@@ -308,7 +308,7 @@ void ATPGameDemoGameState::SetWallBuilder(FIntPoint roomCoords, AWallBuilder* bu
     WallBuilders[roomIndices.X][roomIndices.Y] = builder;
 }
 
-void ATPGameDemoGameState::EnableRoomState(FIntPoint roomCoords)
+void ATPGameDemoGameState::EnableRoomState(FIntPoint roomCoords, float complexity, float density)
 {
     // initialize random door positions for walls that haven't yet generated their door positions....
     auto wallStates = GetWallStatesForRoom(roomCoords);
@@ -333,12 +333,13 @@ void ATPGameDemoGameState::EnableRoomState(FIntPoint roomCoords)
     ensure(RoomXYIndicesValid(roomIndices));
     if (!DoesRoomExist(roomCoords))
     {
-        RoomStates[roomIndices.X][roomIndices.Y].InitializeRoom(MaxRoomHealth);
+        RoomStates[roomIndices.X][roomIndices.Y].InitializeRoom(MaxRoomHealth, complexity, density);
 
         RoomBuilders[roomIndices.X][roomIndices.Y]->BuildRoom({wallStates[(int)EDirectionType::North]->DoorPosition,
                                                                wallStates[(int)EDirectionType::East]->DoorPosition,
                                                                wallStates[(int)EDirectionType::South]->DoorPosition,
-                                                               wallStates[(int)EDirectionType::West]->DoorPosition});
+                                                               wallStates[(int)EDirectionType::West]->DoorPosition},
+                                                               complexity, density);
     
         FlagWallsForUpdate(roomCoords);
     }
@@ -477,16 +478,16 @@ void ATPGameDemoGameState::DestroyNeighbouringDoors(FIntPoint roomCoords, TArray
     }
 }
 
-void ATPGameDemoGameState::DoorOpened(FIntPoint roomCoords, EDirectionType wallDirection)
+void ATPGameDemoGameState::DoorOpened(FIntPoint roomCoords, EDirectionType wallDirection, float complexity, float density)
 {
     if (!DoesRoomExist(roomCoords))
     {
-        EnableRoomState(roomCoords);
+        EnableRoomState(roomCoords, complexity, density);
     }
     FIntPoint neighbourRoomCoords = GetRoomCoords(GetNeighbouringRoomIndices(roomCoords, wallDirection));
     if (!DoesRoomExist(neighbourRoomCoords))
     {
-        EnableRoomState(neighbourRoomCoords);
+        EnableRoomState(neighbourRoomCoords, complexity, density);
     }
 }
 

@@ -427,7 +427,7 @@ float ULevelTrainerComponent::GetTrainingProgress()
 {
     float trainingPosition = (float) TrainingPosition.GetValue();
     ensure(MaxTrainingPosition.GetValue() != 0);
-    UE_LOG(LogTemp, Warning, TEXT("X: %d | Y: %d || Current: %d || Max: %d"),CurrentGoalPosition.X, CurrentGoalPosition.Y, TrainingPosition.GetValue(), MaxTrainingPosition.GetValue());
+    //UE_LOG(LogTemp, Warning, TEXT("X: %d | Y: %d || Current: %d || Max: %d"),CurrentGoalPosition.X, CurrentGoalPosition.Y, TrainingPosition.GetValue(), MaxTrainingPosition.GetValue());
     return trainingPosition / MaxTrainingPosition.GetValue();
 }
 
