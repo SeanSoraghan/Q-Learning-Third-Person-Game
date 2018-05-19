@@ -3,42 +3,17 @@ Demo third person maze game made with the Unreal engine that makes use of action
 # Dependencies 
 ### Unreal Engine 4
 The Unreal project has been developed on windows and is untested in other platforms.
-### Python (for enemy training)
-In order to use the enemy policy training script you'll need Python and the PyBrain machine learning library installed. 
 
 # Overview
 ### Gameplay
-At the moment the game consists of very simple mechanics. There is a main player character and an enemy sphere object. They both exist within a square-grid maze structure. The main player must avoid getting close to the sphere while trying to shoot and kill it. The sphere will continuously navigate the maze towards the player. If it reaches the player, it will stop and the player will begin to take damage. 
+At the moment the game consists of very simple mechanics. There is a main player character and enemy sphere objects. They both exist within square-grid maze structures. The default camera is a top-down camera. The right mouse button can be used to enter combat mode, which transitions to an over-the-shoulder camera with shooting mechanics. The player can approach doors (white blocks) to generate rooms. This will spawn a new room with a ceiling. As the enemy behaviour is trained for the room, the door will gradually decrease in size (placeholder). Once an enemy policy has been trained for the room, enemies will begin to spawn. In order to stop enemies spawning, the player must reach the spawn point (a box trigger). When the player walks through the spawn point, the enemies will stop spawning and the ceiling will be removed. The presence of enemies within a room will cause the room's health to decrease, indicated by the walls turning from green to red. If the health drops to 0 the room is destroyed. (Everything inside it should also be destroyed -- not implemented yet).
 ### Repository Structure
-The repository includes the Unreal project folder (TPGameDemo) and an accompanying Python script (LevelPolicyTraining.py) that can be used to create levels and train enemy behaviour for those levels. Levels are square-grid mazes in which cells can be blocked (1) or open (0).
-### Level Creation & Enemy Training
-In order to create a level, edit the LevelPolicyTraining.py script directly. Set the desired level name at line 63:
-~~~~
-levelName = 'LevelName'
-~~~~
-And then edit the structure array defined at line 65, using 1 = wall, 0 = free space. For example:
-~~~~
-structure = array([[1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
-                   [1, 0, 1, 1, 0, 0, 0, 0, 0, 1],
-                   [1, 0, 0, 1, 0, 0, 1, 0, 0, 1],
-                   [1, 0, 0, 1, 0, 0, 1, 0, 0, 1],
-                   [1, 0, 0, 1, 0, 1, 1, 0, 0, 1],
-                   [1, 0, 0, 0, 0, 0, 1, 0, 1, 1],
-                   [1, 0, 1, 1, 1, 0, 1, 0, 0, 1],
-                   [1, 0, 0, 0, 0, 0, 0, 0, 0, 1],
-                   [1, 0, 0, 0, 1, 0, 0, 1, 0, 1],
-                   [1, 1, 1, 1, 1, 1, 1, 1, 1, 1]])
-~~~~
+The repository includes the Unreal project folder for different versions of the engine (TPGameDemo X.XX). There is also a Blender folder containing all Blender projects and assets.
 
-Once you've made these changes, you can run the script and it will train enemy behaviour policies for this grid using the Q-Learning algorithm provided in the PyBrain library. Once you have run the script, you can load the level in the Unreal project by editing the EmptyLevel level blueprint. Open the level blueprint and change the SetupLevel node such that the Level Name argument matches the name of your newly created level. Note that the player and enemy are currently not guaranteed to spawn in free spaces (this needs to be fixed).
 #Tools Used
 ###Unreal Engine
 https://www.unrealengine.com/what-is-unreal-engine-4
 The project is built from scratch, without the use of any templates or starter content. C++ classes are implemented for base functionality, which are then inherited by blueprint classes in the editor.
-###PyBrain
-http://pybrain.org/
-A nice machine learning library for Python. This project makes use of the reinforcement learning example, specifically the Q-Learning algorithm.
-Useful tutorial: http://simontechblog.blogspot.co.uk/2010/08/pybrain-reinforcement-learning-tutorial_15.html
 ###Make Human
 http://www.makehuman.org/
 A great tool for developers without knowledge or skills in artistic 3D modelling. It allows you to create humanoid meshes and rigs using a slider-based interface.
