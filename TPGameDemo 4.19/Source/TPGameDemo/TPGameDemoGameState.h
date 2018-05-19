@@ -85,7 +85,8 @@ struct RoomState
     {
         Dead,
         Training,
-        Trained
+        Trained,
+        Connected
     };
 
     ~RoomState()
@@ -100,7 +101,7 @@ struct RoomState
         Density = density;
     }
 
-    void SetRoomTrained(bool bRoomIsTrained)
+    void SetRoomTrained()
     {
         RoomStatus = Trained;
     }
@@ -110,9 +111,19 @@ struct RoomState
         RoomStatus = Dead;
     }
 
+    void SetRoomConnected()
+    {
+        RoomStatus = Connected;
+    }
+
     bool RoomExists() const
     {
         return RoomStatus != Dead;
+    }
+
+    bool IsRoomConnected() const
+    {
+        return RoomStatus == Connected;
     }
 
     float RoomHealth = 100.0f;
@@ -142,6 +153,9 @@ public:
 
     UFUNCTION(BlueprintNativeEvent, BlueprintCallable, Category = "World Room Health")
         void TrainingProgressUpdated(float progress);
+
+    UFUNCTION(BlueprintNativeEvent, BlueprintCallable, Category = "World Room Health")
+        void RoomWasConnected();
 };
 
 /**
@@ -246,7 +260,7 @@ public:
     // --------------------- Builders -------------------------------------\\
 
     UFUNCTION(BlueprintCallable, Category = "World Room Builders")
-        AActor* GetRoomBuilder(FIntPoint roomCoords);
+        ARoomBuilder* GetRoomBuilder(FIntPoint roomCoords);
 
     UFUNCTION(BlueprintCallable, Category = "World Room Building")
         AWallBuilder* GetWallBuilder(FIntPoint roomCoords, EDirectionType direction);
@@ -282,6 +296,9 @@ public:
 
     UFUNCTION(BlueprintCallable, Category = "World Rooms States")
         void EnableRoomState(FIntPoint roomCoords, float complexity = 0.0f, float density = 0.0f);
+
+    UFUNCTION(BlueprintCallable, Category = "World Rooms States")
+        void SetRoomConnected(FIntPoint roomCoords);
 
     UFUNCTION(BlueprintCallable, Category = "World Rooms States")
         void DisableRoomState(FIntPoint roomCoords);

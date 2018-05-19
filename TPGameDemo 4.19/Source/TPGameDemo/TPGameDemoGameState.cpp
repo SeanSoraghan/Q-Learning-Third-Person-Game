@@ -13,6 +13,8 @@ void ARoomBuilder::HealthChanged_Implementation(float health){}
 
 void ARoomBuilder::TrainingProgressUpdated_Implementation(float progress){}
 
+void ARoomBuilder::RoomWasConnected_Implementation(){}
+
 void AWallBuilder::BuildSouthWall_Implementation(){}
 
 void AWallBuilder::BuildWestWall_Implementation(){}
@@ -30,6 +32,7 @@ void AWallBuilder::DestroySouthDoor_Implementation(){}
 void AWallBuilder::DestroyWestDoor_Implementation(){}
 
 void AWallBuilder::TrainingProgressUpdatedForDoor_Implementation(EDirectionType doorWallType, float progress){}
+
 
 ATPGameDemoGameState::ATPGameDemoGameState(const FObjectInitializer& ObjectInitializer)
 {
@@ -251,7 +254,7 @@ TArray<int> ATPGameDemoGameState::GetDoorPositionsForExistingNeighbours(FIntPoin
     return doorPositions;
 }
 
-AActor* ATPGameDemoGameState::GetRoomBuilder(FIntPoint roomCoords)
+ARoomBuilder* ATPGameDemoGameState::GetRoomBuilder(FIntPoint roomCoords)
 {
     FIntPoint roomIndices = GetRoomXYIndices(roomCoords);
     ensure(RoomXYIndicesValid(roomIndices));
@@ -306,6 +309,17 @@ void ATPGameDemoGameState::SetWallBuilder(FIntPoint roomCoords, AWallBuilder* bu
     FIntPoint roomIndices = GetRoomXYIndices(roomCoords);
     ensure(WallXYIndicesValid(roomIndices));
     WallBuilders[roomIndices.X][roomIndices.Y] = builder;
+}
+
+void ATPGameDemoGameState::SetRoomConnected(FIntPoint roomCoords)
+{
+    FIntPoint roomIndices = GetRoomXYIndices(roomCoords);
+    ensure(RoomXYIndicesValid(roomIndices));
+    if (DoesRoomExist(roomCoords))
+    {
+        RoomStates[roomIndices.X][roomIndices.Y].SetRoomConnected();
+        GetRoomBuilder(roomCoords)->RoomWasConnected();
+    }
 }
 
 void ATPGameDemoGameState::EnableRoomState(FIntPoint roomCoords, float complexity, float density)
@@ -363,7 +377,7 @@ void ATPGameDemoGameState::SetRoomTrained(FIntPoint roomCoords)
     ensure(RoomXYIndicesValid(roomIndices));
     if (DoesRoomExist(roomCoords))
     {
-        RoomStates[roomIndices.X][roomIndices.Y].SetRoomTrained(true);
+        RoomStates[roomIndices.X][roomIndices.Y].SetRoomTrained();
         FlagWallsForUpdate(roomCoords);
     }
 }
