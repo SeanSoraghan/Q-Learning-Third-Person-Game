@@ -8,6 +8,7 @@
 #include "Runnable.h"
 //#include "MazeActor.h"
 #include "Components/ActorComponent.h"
+#include "TPGameDemoGameState.h"
 #include "LevelTrainerComponent.generated.h"
 
 class ULevelTrainerComponent;
@@ -58,20 +59,20 @@ public:
     const TArray<float> GetQValues() const;
     const TArray<float> GetRewards() const;
 
-    const float GetOptimalQValueAndActions(TArray<EActionType>* ActionsArrayToSet) const;
+    const float GetOptimalQValueAndActions(TArray<EDirectionType>* ActionsArrayToSet) const;
 
-    void UpdateQValue(EActionType actionType, float deltaQ);
+    void UpdateQValue(EDirectionType actionType, float deltaQ);
     void ResetQValues();
 
     void SetIsGoal(bool isGoal);
     bool IsGoalState() const;
 
-    FIntPoint GetActionTarget(EActionType actionType) const;
+    FIntPoint GetActionTarget(EDirectionType actionType) const;
 
     void SetValid(bool valid);
     bool IsStateValid();
 
-    void SetActionTarget(EActionType actionType, FIntPoint position);
+    void SetActionTarget(EDirectionType actionType, FIntPoint position);
 private:
     bool IsGoal = false;
     bool IsValid = true;
@@ -102,7 +103,7 @@ public:
 
     UFUNCTION(BlueprintCallable, Category = "Level Training")
     void UpdateEnvironmentForLevel(FString levelName);
-
+    
     UFUNCTION(BlueprintCallable, Category = "Level Training")
     void RegisterLevelTrainedCallback(const FOnLevelTrained& Callback);
 
@@ -115,17 +116,18 @@ public:
     UFUNCTION(BlueprintCallable, Category = "Level Training")
     void ResetGoalPosition();
 
+    UFUNCTION(BlueprintCallable, Category = "Level Training")
+    float GetTrainingProgress();
+
+    /* These properties need to be set from blueprint around the time of level setup. */
+    UPROPERTY(BlueprintReadWrite, Category = "Level Trainer Room Position")
+    FIntPoint RoomCoords = FIntPoint(0,0);
+
 private:
     FThreadSafeBool LevelTrained = false;
     FString CurrentLevelName = FString("");
-    /** A non-0 value indicates that UE is exiting. */
-    FThreadSafeCounter AppExitingCounter = 0;
-    /** Thread on which the WAAPI connection is monitored. */
     TSharedPtr<FRunnableThread> TrainerThread;
-    /** The connection to WAAPI is monitored by this connection handler.
-    *  It tries to reconnect when connection is lost, and continuously polls WAAPI for the connection status when WAAPI is connected.
-    *  This behaviour can be disabled in AkSettings using the AutoConnectToWaapi boolean option.
-    */
+
     TSharedPtr<LevelTrainerRunnable> TrainerRunnable;
     FCriticalSection ClientSection;
 
@@ -136,10 +138,13 @@ private:
     void TrainNextGoalPosition(int numSimulationsPerStartingPosition, int maxNumActionsPerSimulation);
     void SimulateRun(FIntPoint startingStatePosition, int maxNumActions);
     void IncrementGoalPosition();
+    FThreadSafeCounter TrainingPosition = 0;
+    FThreadSafeCounter MaxTrainingPosition = 0;
     GridState& GetState(FIntPoint statePosition);
     FIntPoint CurrentGoalPosition {0,0};
 
     LevelTrainedEvent OnLevelTrained;
+    //FThreadSafeCounter NumUnfinishedTasks = 0;
 };
 
 

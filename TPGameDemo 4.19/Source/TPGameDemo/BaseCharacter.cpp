@@ -250,35 +250,35 @@ void ABaseCharacter::UpdateControlRotation()
     OnPlayerControlRotationUpdated.Broadcast();
 }
 
-void ABaseCharacter::CombatDirectionPressed (EDirectionType direction)
+void ABaseCharacter::CombatDirectionPressed (EMovementDirectionType direction)
 {
     MovementKeysPressedState.DirectionStates[(int) direction] = true;
     UpdateMovementForcesForDirectionKey (direction, true);
 }
 
-void ABaseCharacter::CombatDirectionReleased (EDirectionType direction)
+void ABaseCharacter::CombatDirectionReleased (EMovementDirectionType direction)
 {
     MovementKeysPressedState.DirectionStates[(int) direction] = false;
     UpdateMovementForcesForDirectionKey (direction, false);
 }
 
-void ABaseCharacter::CombatForwardPressed()     { CombatDirectionPressed  (EDirectionType::Forward); }
-void ABaseCharacter::CombatForwardReleased()    { CombatDirectionReleased (EDirectionType::Forward); }
-void ABaseCharacter::CombatBackwardsPressed()   { CombatDirectionPressed  (EDirectionType::Backwards); }
-void ABaseCharacter::CombatBackwardsReleased()  { CombatDirectionReleased (EDirectionType::Backwards); }
-void ABaseCharacter::CombatRightPressed()       { CombatDirectionPressed  (EDirectionType::Right); }
-void ABaseCharacter::CombatRightReleased()      { CombatDirectionReleased (EDirectionType::Right); }
-void ABaseCharacter::CombatLeftPressed()        { CombatDirectionPressed  (EDirectionType::Left); }
-void ABaseCharacter::CombatLeftReleased()       { CombatDirectionReleased (EDirectionType::Left); }
+void ABaseCharacter::CombatForwardPressed()     { CombatDirectionPressed  (EMovementDirectionType::Forward); }
+void ABaseCharacter::CombatForwardReleased()    { CombatDirectionReleased (EMovementDirectionType::Forward); }
+void ABaseCharacter::CombatBackwardsPressed()   { CombatDirectionPressed  (EMovementDirectionType::Backwards); }
+void ABaseCharacter::CombatBackwardsReleased()  { CombatDirectionReleased (EMovementDirectionType::Backwards); }
+void ABaseCharacter::CombatRightPressed()       { CombatDirectionPressed  (EMovementDirectionType::Right); }
+void ABaseCharacter::CombatRightReleased()      { CombatDirectionReleased (EMovementDirectionType::Right); }
+void ABaseCharacter::CombatLeftPressed()        { CombatDirectionPressed  (EMovementDirectionType::Left); }
+void ABaseCharacter::CombatLeftReleased()       { CombatDirectionReleased (EMovementDirectionType::Left); }
 
-void ABaseCharacter::ExploreDirectionPressed (EDirectionType direction)
+void ABaseCharacter::ExploreDirectionPressed (EMovementDirectionType direction)
 {
     MovementKeysPressedState.DirectionStates[(int) direction] = true;
     UpdateMovementForcesForDirectionKey (direction, true);
     UpdateMeshRotationForExploreDirection();
 }
 
-void ABaseCharacter::ExploreDirectionReleased (EDirectionType direction)
+void ABaseCharacter::ExploreDirectionReleased (EMovementDirectionType direction)
 {
     MovementKeysPressedState.DirectionStates[(int) direction] = false;
     UpdateMovementForcesForDirectionKey (direction, false);
@@ -294,28 +294,28 @@ void ABaseCharacter::UpdateMeshRotationForExploreDirection()
     GetMesh()->SetRelativeRotation (newNormalizedMeshRotation);
 }
 
-void ABaseCharacter::UpdateMovementForcesForDirectionKey (EDirectionType direction, bool pressed)
+void ABaseCharacter::UpdateMovementForcesForDirectionKey (EMovementDirectionType direction, bool pressed)
 {
     switch (direction)
     {
-        case EDirectionType::Forward:
+        case EMovementDirectionType::Forward:
         {
-            FrontBackMovementForce = pressed ? 1.0f : IsDirectionPressed (EDirectionType::Backwards) ? -1.0f : 0.0f; 
+            FrontBackMovementForce = pressed ? 1.0f : IsDirectionPressed (EMovementDirectionType::Backwards) ? -1.0f : 0.0f; 
             break;
         }
-        case EDirectionType::Backwards: 
+        case EMovementDirectionType::Backwards: 
         { 
-            FrontBackMovementForce = pressed ? -1.0f : IsDirectionPressed (EDirectionType::Forward) ? 1.0f : 0.0f; 
+            FrontBackMovementForce = pressed ? -1.0f : IsDirectionPressed (EMovementDirectionType::Forward) ? 1.0f : 0.0f; 
             break; 
         }
-        case EDirectionType::Right:     
+        case EMovementDirectionType::Right:     
         { 
-            RightLeftMovementForce = pressed ? 1.0f  : IsDirectionPressed (EDirectionType::Left) ? -1.0f : 0.0f; 
+            RightLeftMovementForce = pressed ? 1.0f  : IsDirectionPressed (EMovementDirectionType::Left) ? -1.0f : 0.0f; 
             break; 
         }
-        case EDirectionType::Left:      
+        case EMovementDirectionType::Left:      
         { 
-            RightLeftMovementForce = pressed ? -1.0f : IsDirectionPressed (EDirectionType::Right) ? 1.0f : 0.0f; 
+            RightLeftMovementForce = pressed ? -1.0f : IsDirectionPressed (EMovementDirectionType::Right) ? 1.0f : 0.0f; 
             break; 
         }
     }
@@ -323,24 +323,24 @@ void ABaseCharacter::UpdateMovementForcesForDirectionKey (EDirectionType directi
 
 void ABaseCharacter::CheckForPressedKeys()
 {
-    for (int d = 0; d < (int) EDirectionType::NumDirections; d++)
+    for (int d = 0; d < (int) EMovementDirectionType::NumMovementDirections; d++)
     {
         if (MovementKeysPressedState.DirectionStates[d])
         {
-            ExploreDirectionPressed ((EDirectionType) d);
+            ExploreDirectionPressed ((EMovementDirectionType) d);
             return;
         }
     }
 }
 
-void ABaseCharacter::ExploreForwardPressed()    { ExploreDirectionPressed  (EDirectionType::Forward); }
-void ABaseCharacter::ExploreForwardReleased()   { ExploreDirectionReleased (EDirectionType::Forward); }
-void ABaseCharacter::ExploreBackwardsPressed()  { ExploreDirectionPressed  (EDirectionType::Backwards); }
-void ABaseCharacter::ExploreBackwardsReleased() { ExploreDirectionReleased (EDirectionType::Backwards); }
-void ABaseCharacter::ExploreRightPressed()      { ExploreDirectionPressed  (EDirectionType::Right); }
-void ABaseCharacter::ExploreRightReleased()     { ExploreDirectionReleased (EDirectionType::Right); }
-void ABaseCharacter::ExploreLeftPressed()       { ExploreDirectionPressed  (EDirectionType::Left); }
-void ABaseCharacter::ExploreLeftReleased()      { ExploreDirectionReleased (EDirectionType::Left); }
+void ABaseCharacter::ExploreForwardPressed()    { ExploreDirectionPressed  (EMovementDirectionType::Forward); }
+void ABaseCharacter::ExploreForwardReleased()   { ExploreDirectionReleased (EMovementDirectionType::Forward); }
+void ABaseCharacter::ExploreBackwardsPressed()  { ExploreDirectionPressed  (EMovementDirectionType::Backwards); }
+void ABaseCharacter::ExploreBackwardsReleased() { ExploreDirectionReleased (EMovementDirectionType::Backwards); }
+void ABaseCharacter::ExploreRightPressed()      { ExploreDirectionPressed  (EMovementDirectionType::Right); }
+void ABaseCharacter::ExploreRightReleased()     { ExploreDirectionReleased (EMovementDirectionType::Right); }
+void ABaseCharacter::ExploreLeftPressed()       { ExploreDirectionPressed  (EMovementDirectionType::Left); }
+void ABaseCharacter::ExploreLeftReleased()      { ExploreDirectionReleased (EMovementDirectionType::Left); }
 
 void ABaseCharacter::PlayerFired() { OnPlayerFired.Broadcast(); }
 //=========================================================================================
@@ -359,7 +359,7 @@ void ABaseCharacter::TimelineFinished()
 //=========================================================================================
 // Helper Functions
 //=========================================================================================
-bool ABaseCharacter::IsDirectionPressed (EDirectionType direction)
+bool ABaseCharacter::IsDirectionPressed (EMovementDirectionType direction)
 {
     return MovementKeysPressedState.DirectionStates[(int) direction]; 
 }

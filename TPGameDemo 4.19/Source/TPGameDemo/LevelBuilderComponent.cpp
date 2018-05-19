@@ -5,8 +5,6 @@
 #include "TPGameDemoGameMode.h"
 #include "LevelBuilderComponent.h"
 
-
-
 ULevelBuilderComponent::ULevelBuilderComponent()
 {
 	PrimaryComponentTick.bCanEverTick = true;
@@ -25,7 +23,7 @@ FIntPoint ULevelBuilderComponent::GetRandomEvenCell()
     return FIntPoint(xPos,yPos);
 }
 
-void ULevelBuilderComponent::GenerateLevel(float normedDensity, float normedComplexity, FString levelName, TArray<int> ExistingDoorPositions)
+TArray<FWallSegmentDescriptor> ULevelBuilderComponent::GenerateLevel(float normedDensity, float normedComplexity, FString levelName, TArray<int> ExistingDoorPositions)
 {
     int sideLength = 3;
     ATPGameDemoGameMode* gameMode = (ATPGameDemoGameMode*) GetWorld()->GetAuthGameMode();
@@ -34,19 +32,19 @@ void ULevelBuilderComponent::GenerateLevel(float normedDensity, float normedComp
         sideLength = gameMode->NumGridUnitsX; 
     }
 
-    GenerateLevelOfSize(sideLength, normedDensity, normedComplexity, levelName, ExistingDoorPositions);
+    return GenerateLevelOfSize(sideLength, normedDensity, normedComplexity, levelName, ExistingDoorPositions);
 }
 
-void ULevelBuilderComponent::GenerateLevelOfSize(int sideLength, float normedDensity, float normedComplexity, FString levelName, TArray<int> ExistingDoorPositions)
+TArray<FWallSegmentDescriptor> ULevelBuilderComponent::GenerateLevelOfSize(int sideLength, float normedDensity, float normedComplexity, FString levelName, TArray<int> ExistingDoorPositions)
 {
     ensure(normedDensity >= 0.0f && normedDensity <= 1.0f && normedComplexity >= 0.0f && normedComplexity <= 1.0f);
     
     LevelStructure.Empty();
     // Generate random doors on perimiter, unless doors already exist.
-    int existingDoorNorth = ExistingDoorPositions[(int)EActionType::North];
-    int existingDoorEast  = ExistingDoorPositions[(int)EActionType::East];
-    int existingDoorSouth = ExistingDoorPositions[(int)EActionType::South];
-    int existingDoorWest  = ExistingDoorPositions[(int)EActionType::West];
+    int existingDoorNorth = ExistingDoorPositions[(int)EDirectionType::North];
+    int existingDoorEast  = ExistingDoorPositions[(int)EDirectionType::East];
+    int existingDoorSouth = ExistingDoorPositions[(int)EDirectionType::South];
+    int existingDoorWest  = ExistingDoorPositions[(int)EDirectionType::West];
 
     int doorPositionNorth = (existingDoorNorth > 0 && existingDoorNorth < sideLength - 1) ? existingDoorNorth 
                                                                                         : FMath::RandRange(1, sideLength - 2);
@@ -82,7 +80,7 @@ void ULevelBuilderComponent::GenerateLevelOfSize(int sideLength, float normedDen
         LevelStructure.Add(row);
     }
 
-    GenerateInnerStructure(sideLength, normedDensity, normedComplexity);
+    TArray<FWallSegmentDescriptor> wallSegments = GenerateInnerStructure(sideLength, normedDensity, normedComplexity);
 
     UE_LOG(LogTemp, Warning, TEXT("Generated Level:"));
     //LevelBuilderHelpers::PrintArray(LevelStructure);
@@ -92,22 +90,37 @@ void ULevelBuilderComponent::GenerateLevelOfSize(int sideLength, float normedDen
         CurrentLevelPath = LevelBuilderHelpers::LevelsDir() + levelName + ".txt";
         LevelBuilderHelpers::WriteArrayToTextFile(LevelStructure, CurrentLevelPath);
     }
+
+    return wallSegments;
 }
 
-void ULevelBuilderComponent::GenerateInnerStructure(int sideLength, float normedDensity, float normedComplexity)
+TArray<FWallSegmentDescriptor> ULevelBuilderComponent::GenerateInnerStructure(int sideLength, float normedDensity, float normedComplexity)
 {
+    TArray<FWallSegmentDescriptor> wallSegments;
+    wallSegments.Empty();
+
     const int complexity = int(normedComplexity * (10 * (sideLength)));
     const int density = int(normedDensity * (FMath::Pow ((sideLength / 2.0f), 2.0f)));
 
+    // Used for creating the wall descriptors.
+    int gridMaxX = LevelStructure.Num() - 1;
+    int gridMaxY = LevelStructure[0].Num() - 1;
+
+    FWallSegmentDescriptor currentWallSegment = {FIntPoint(0,0), FIntPoint(0,0), EDirectionType::North};
+    int totalSegmentsStarted = 0;
+
     for (int island = 0; island < density; ++island)
     {
+        bool wallSegmentInitialized = false;
+        int numWallSegmentsStarted = 0;
+
         FIntPoint currentIslandPoint = GetRandomEvenCell();
         if(LevelStructure[currentIslandPoint.X][currentIslandPoint.Y] == (int)ECellState::Open && 
            !IsCellTouchingDoorCell(currentIslandPoint))
         {
             for (int islandSection = 0; islandSection < complexity; ++islandSection)
             {
-                EActionType direction = (EActionType)FMath::RandRange(0, (int)EActionType::NumActionTypes - 1);
+                EDirectionType direction = (EDirectionType)FMath::RandRange(0, (int)EDirectionType::NumDirectionTypes - 1);
                 FIntPoint islandSectionEndTarget = LevelBuilderHelpers::GetTargetPointForAction(currentIslandPoint, direction, 2);
                 if (LevelBuilderHelpers::GridPositionIsValid(islandSectionEndTarget, sideLength, sideLength) &&
                     LevelStructure[islandSectionEndTarget.X][islandSectionEndTarget.Y] == (int)ECellState::Open)
@@ -115,6 +128,22 @@ void ULevelBuilderComponent::GenerateInnerStructure(int sideLength, float normed
                     FIntPoint islandSectionMiddle = LevelBuilderHelpers::GetTargetPointForAction(currentIslandPoint, direction, 1);
                     if (!IsCellTouchingDoorCell(islandSectionEndTarget) && !IsCellTouchingDoorCell(islandSectionMiddle))
                     {
+                        if (!wallSegmentInitialized)
+                        {
+                            currentWallSegment = {currentIslandPoint, islandSectionEndTarget, direction};
+                            wallSegmentInitialized = true;
+                            ++numWallSegmentsStarted;
+                        }
+                        else if (direction == currentWallSegment.Direction)
+                        {
+                            currentWallSegment.End = islandSectionEndTarget;
+                        }
+                        else
+                        {
+                            wallSegments.Add(currentWallSegment);
+                            currentWallSegment = {islandSectionMiddle, islandSectionEndTarget, direction};
+                            ++numWallSegmentsStarted;
+                        }
                         LevelStructure[islandSectionEndTarget.X][islandSectionEndTarget.Y] = (int)ECellState::Closed;
                         LevelStructure[islandSectionMiddle.X][islandSectionMiddle.Y] = (int)ECellState::Closed;
                         LevelStructure[currentIslandPoint.X][currentIslandPoint.Y] = (int)ECellState::Closed;
@@ -122,11 +151,19 @@ void ULevelBuilderComponent::GenerateInnerStructure(int sideLength, float normed
                     }
                 }
             }
+            totalSegmentsStarted += numWallSegmentsStarted;
+            if (wallSegments.Num() != totalSegmentsStarted)
+            {
+                ensure(totalSegmentsStarted == wallSegments.Num() + 1);
+                wallSegments.Add(currentWallSegment);
+            }
         }
     }
+    
+    return wallSegments;
 }
 
-void ULevelBuilderComponent::RegenerateInnerStructure(float normedDensity, float normedComplexity, FString levelName)
+TArray<FWallSegmentDescriptor> ULevelBuilderComponent::RegenerateInnerStructure(float normedDensity, float normedComplexity, FString levelName)
 {
     int sideLength = 3;
     ATPGameDemoGameMode* gameMode = (ATPGameDemoGameMode*) GetWorld()->GetAuthGameMode();
@@ -146,7 +183,7 @@ void ULevelBuilderComponent::RegenerateInnerStructure(float normedDensity, float
         LevelStructure.Add(row);
     }
 
-    GenerateInnerStructure(sideLength, normedDensity, normedComplexity);
+    TArray<FWallSegmentDescriptor> wallSegments = GenerateInnerStructure(sideLength, normedDensity, normedComplexity);
 
     UE_LOG(LogTemp, Warning, TEXT("Regenerated Level:"));
     //LevelBuilderHelpers::PrintArray(LevelStructure);
@@ -156,6 +193,8 @@ void ULevelBuilderComponent::RegenerateInnerStructure(float normedDensity, float
         CurrentLevelPath = LevelBuilderHelpers::LevelsDir() + levelName + ".txt";
         LevelBuilderHelpers::WriteArrayToTextFile(LevelStructure, CurrentLevelPath);
     }
+
+    return wallSegments;
 }
 
 bool ULevelBuilderComponent::IsCellTouchingDoorCell(FIntPoint cellPosition)
@@ -163,9 +202,9 @@ bool ULevelBuilderComponent::IsCellTouchingDoorCell(FIntPoint cellPosition)
     const int sizeX = LevelStructure.Num();
     ensure(LevelStructure.Num() > 0);
     const int sizeY = LevelStructure[0].Num();
-    for (int action = 0; action < (int)EActionType::NumActionTypes; ++action)
+    for (int action = 0; action < (int)EDirectionType::NumDirectionTypes; ++action)
     {
-        FIntPoint actionTarget = LevelBuilderHelpers::GetTargetPointForAction(cellPosition, (EActionType)action);
+        FIntPoint actionTarget = LevelBuilderHelpers::GetTargetPointForAction(cellPosition, (EDirectionType)action);
         if (LevelBuilderHelpers::GridPositionIsValid(actionTarget, sizeX, sizeY) && 
             LevelStructure[actionTarget.X][actionTarget.Y] == (int)ECellState::Door)
             return true;
@@ -218,34 +257,34 @@ ECellState ULevelBuilderComponent::GetCellState (int x, int y)
     return (ECellState)0;
 }
 
-EActionType ULevelBuilderComponent::GetWallTypeForDoorPosition(int x, int y)
+EDirectionType ULevelBuilderComponent::GetWallTypeForDoorPosition(int x, int y)
 {
     const int sizeX = LevelStructure.Num();
     const int sizeY = LevelStructure[0].Num();
     if (x == 0 && y > 0 && y < sizeY - 1)
-        return EActionType::South;
+        return EDirectionType::South;
     if (y == sizeY - 1 && x > 0 && x < sizeY - 1)
-        return EActionType::East;
+        return EDirectionType::East;
     if (x == sizeX - 1 && y > 0 && y < sizeY - 1)
-        return EActionType::North;
+        return EDirectionType::North;
     if (y == 0 && x > 0 && x < sizeX - 1)
-        return EActionType::West;
-    return EActionType::NumActionTypes;
+        return EDirectionType::West;
+    return EDirectionType::NumDirectionTypes;
 }
 
-EActionType ULevelBuilderComponent::GetWallTypeForBlockPosition(int x, int y)
+EDirectionType ULevelBuilderComponent::GetWallTypeForBlockPosition(int x, int y)
 {
     const int sizeX = LevelStructure.Num();
     const int sizeY = LevelStructure[0].Num();
     if (x == 0 && y >= 0 && y < sizeY)
-        return EActionType::South;
+        return EDirectionType::South;
     if (y == sizeY - 1 && x >= 0 && x < sizeY)
-        return EActionType::East;
+        return EDirectionType::East;
     if (x == sizeX - 1 && y >= 0 && y < sizeY)
-        return EActionType::North;
+        return EDirectionType::North;
     if (y == 0 && x >= 0 && x < sizeX)
-        return EActionType::West;
-    return EActionType::NumActionTypes;
+        return EDirectionType::West;
+    return EDirectionType::NumDirectionTypes;
 }
 
 FVector2D ULevelBuilderComponent::GetClosestEmptyCell (int x, int y)
@@ -254,7 +293,7 @@ FVector2D ULevelBuilderComponent::GetClosestEmptyCell (int x, int y)
     int yPos = y;
     const int totalCells = GetNumGridUnitsX() * GetNumGridUnitsY();
     int numCellsVisited = 0;
-    EActionType actionType = EActionType::North;
+    EDirectionType actionType = EDirectionType::North;
     int numActionsToTake = 1;
     int numActionsTaken = 0;
     while(numCellsVisited < totalCells)
@@ -263,16 +302,16 @@ FVector2D ULevelBuilderComponent::GetClosestEmptyCell (int x, int y)
             return FVector2D(xPos, yPos);
         switch (actionType)
         {
-            case EActionType::North: 
+            case EDirectionType::North: 
                 ++xPos;
                 break;
-            case EActionType::East: 
+            case EDirectionType::East: 
                 ++yPos;
                 break;
-            case EActionType::South: 
+            case EDirectionType::South: 
                 --xPos;
                 break;
-            case EActionType::West: 
+            case EDirectionType::West: 
                 --yPos;
                 break;
             default: break;
@@ -281,8 +320,8 @@ FVector2D ULevelBuilderComponent::GetClosestEmptyCell (int x, int y)
         if (numActionsTaken == numActionsToTake)
         {
             // change action to the next clockwise action (north goes to east, east to south etc.)
-            actionType = (EActionType)(((int)actionType + 1) % (int)EActionType::NumActionTypes);
-            if (actionType == EActionType::North || actionType == EActionType::South)
+            actionType = (EDirectionType)(((int)actionType + 1) % (int)EDirectionType::NumDirectionTypes);
+            if (actionType == EDirectionType::North || actionType == EDirectionType::South)
                 ++numActionsToTake;
             numActionsTaken = 0;
         }

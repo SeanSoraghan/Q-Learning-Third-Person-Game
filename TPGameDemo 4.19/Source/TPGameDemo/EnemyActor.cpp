@@ -11,7 +11,7 @@
 AEnemyActor::AEnemyActor (const FObjectInitializer& ObjectInitializer) : Super (ObjectInitializer)
 {
 	PrimaryActorTick.bCanEverTick = true;
-    LevelPoliciesDir = FPaths::GameDir();
+    LevelPoliciesDir = FPaths::ProjectDir();
     LevelPoliciesDir += "Content/Levels/GeneratedRooms/";
     LevelPoliciesDirFound = FPlatformFileManager::Get().GetPlatformFile().DirectoryExists (*LevelPoliciesDir);
 }
@@ -68,7 +68,7 @@ void AEnemyActor::PositionChanged()
 {
     if (GridXPosition == TargetRoomPosition.Position.X && GridYPosition == TargetRoomPosition.Position.Y)
     {
-        if (TargetRoomPosition.DoorAction != EActionType::NumActionTypes && 
+        if (TargetRoomPosition.DoorAction != EDirectionType::NumDirectionTypes && 
             BehaviourState == EEnemyBehaviourState::Exploring)
         {
             BehaviourState = EEnemyBehaviourState::ChangingRooms;
@@ -86,22 +86,22 @@ void AEnemyActor::PositionChanged()
         {
             switch(TargetRoomPosition.DoorAction)
             {
-                case EActionType::North:
+                case EDirectionType::North:
                 {
                     MovementTarget.X += gameMode->GridUnitLengthXCM;
                     break;
                 }
-                case EActionType::East:
+                case EDirectionType::East:
                 {
                     MovementTarget.Y += gameMode->GridUnitLengthYCM;
                     break;
                 }
-                case EActionType::South:
+                case EDirectionType::South:
                 {
                     MovementTarget.X -= gameMode->GridUnitLengthXCM;
                     break;
                 }
-                case EActionType::West:
+                case EDirectionType::West:
                 {
                     MovementTarget.Y -= gameMode->GridUnitLengthYCM;
                     break;
@@ -124,11 +124,14 @@ void AEnemyActor::RoomCoordsChanged()
 
 void AEnemyActor::UpdateMovement()
 {
-    EActionType actionType = SelectNextAction();
-    UpdateMovementForActionType(actionType);
+    if (!IsOnGridEdge())
+    {
+        EDirectionType actionType = SelectNextAction();
+        UpdateMovementForActionType(actionType);
+    }
 }
 
-void AEnemyActor::UpdateMovementForActionType(EActionType actionType)
+void AEnemyActor::UpdateMovementForActionType(EDirectionType actionType)
 {
     ATPGameDemoGameMode* gameMode = (ATPGameDemoGameMode*) GetWorld()->GetAuthGameMode();
 
@@ -137,7 +140,7 @@ void AEnemyActor::UpdateMovementForActionType(EActionType actionType)
         FVector currentLocation = GetActorLocation();
         switch (actionType)
         {
-            case EActionType::North: 
+            case EDirectionType::North: 
             {
             
                 //SetActorLocation (FVector (currentLocation.X + CurrentLevelGridUnitLengthXCM, currentLocation.Y, currentLocation.Z));
@@ -146,7 +149,7 @@ void AEnemyActor::UpdateMovementForActionType(EActionType actionType)
                 MovementTarget = FVector (targetWorldPos.X, targetWorldPos.Y, currentLocation.Z);
                 break;
             }
-            case EActionType::East: 
+            case EDirectionType::East: 
             {
                 //SetActorLocation (FVector (currentLocation.X, currentLocation.Y + CurrentLevelGridUnitLengthYCM, currentLocation.Z));
                 FVector2D targetWorldPos = gameMode->GetCellWorldPosition(this, GridXPosition, GridYPosition + 1, 
@@ -154,7 +157,7 @@ void AEnemyActor::UpdateMovementForActionType(EActionType actionType)
                 MovementTarget = FVector (targetWorldPos.X, targetWorldPos.Y, currentLocation.Z);
                 break;
             }
-            case EActionType::South: 
+            case EDirectionType::South: 
             {
                 //SetActorLocation (FVector (currentLocation.X - CurrentLevelGridUnitLengthXCM, currentLocation.Y, currentLocation.Z));
                 FVector2D targetWorldPos = gameMode->GetCellWorldPosition(this, GridXPosition - 1, GridYPosition, 
@@ -162,7 +165,7 @@ void AEnemyActor::UpdateMovementForActionType(EActionType actionType)
                 MovementTarget = FVector (targetWorldPos.X, targetWorldPos.Y, currentLocation.Z);
                 break;
             }
-            case EActionType::West: 
+            case EDirectionType::West: 
             {
                 //SetActorLocation (FVector (currentLocation.X, currentLocation.Y - CurrentLevelGridUnitLengthYCM, currentLocation.Z));
                 FVector2D targetWorldPos = gameMode->GetCellWorldPosition(this, GridXPosition, GridYPosition - 1, 
@@ -175,13 +178,13 @@ void AEnemyActor::UpdateMovementForActionType(EActionType actionType)
     }
 }
 
-EActionType AEnemyActor::SelectNextAction()
+EDirectionType AEnemyActor::SelectNextAction()
 {
     if (CurrentLevelPolicy.Num() > GridXPosition && GridXPosition > 0)
         if (CurrentLevelPolicy.Num() > 0 && CurrentLevelPolicy[GridXPosition].Num() > GridYPosition && GridYPosition > 0)
-            return (EActionType)CurrentLevelPolicy[GridXPosition][GridYPosition];
+            return (EDirectionType)CurrentLevelPolicy[GridXPosition][GridYPosition];
 
-    return EActionType::NumActionTypes;
+    return EDirectionType::NumDirectionTypes;
 }
 
 //======================================================================================================
@@ -231,11 +234,11 @@ void AEnemyActor::UpdatePolicyForPlayerPosition (int targetX, int targetY)
 {
     TargetRoomPosition.Position.X = targetX;
     TargetRoomPosition.Position.Y = targetY;
-    TargetRoomPosition.DoorAction = EActionType::NumActionTypes;
+    TargetRoomPosition.DoorAction = EDirectionType::NumDirectionTypes;
     UpdatePolicyForTargetPosition();
 }
 
-void AEnemyActor::UpdatePolicyForDoorType (EActionType doorType, int doorPositionOnWall)
+void AEnemyActor::UpdatePolicyForDoorType (EDirectionType doorType, int doorPositionOnWall)
 {
     ATPGameDemoGameMode* gameMode = (ATPGameDemoGameMode*) GetWorld()->GetAuthGameMode();
     if (gameMode != nullptr)
@@ -243,25 +246,25 @@ void AEnemyActor::UpdatePolicyForDoorType (EActionType doorType, int doorPositio
         TargetRoomPosition.DoorAction = doorType;
         switch (doorType)
         {
-            case EActionType::North:
+            case EDirectionType::North:
             {
                 TargetRoomPosition.Position.X = gameMode->NumGridUnitsX - 2;
                 TargetRoomPosition.Position.Y = doorPositionOnWall;
                 break;
             }
-            case EActionType::East:
+            case EDirectionType::East:
             {
                 TargetRoomPosition.Position.X = doorPositionOnWall;
                 TargetRoomPosition.Position.Y = gameMode->NumGridUnitsY - 2;
                 break;
             }
-            case EActionType::South:
+            case EDirectionType::South:
             {
                 TargetRoomPosition.Position.X = 1;
                 TargetRoomPosition.Position.Y = doorPositionOnWall;
                 break;
             }
-            case EActionType::West:
+            case EDirectionType::West:
             {
                 TargetRoomPosition.Position.X = doorPositionOnWall;
                 TargetRoomPosition.Position.Y = 1;
@@ -297,7 +300,7 @@ void AEnemyActor::ChooseDoorTarget()
     {
         TArray<int> neighbourPositions = gameState->GetDoorPositionsForExistingNeighbours(CurrentRoomCoords);
         EQuadrantType quadrant = gameState->GetQuadrantTypeForRoomCoords(CurrentRoomCoords);
-        TArray<EActionType> possibleDoors;
+        TArray<EDirectionType> possibleDoors;
         // for certain quadrants, we want to check certain doors first (doors that lead towards the centre).
         // We check these first, and if they are both closed, we check the other directions.
         TArray<bool> DoorPriorities = {false,false,false,false};
@@ -305,41 +308,41 @@ void AEnemyActor::ChooseDoorTarget()
         {
             case EQuadrantType::NorthEast:
             {
-                DoorPriorities[(int)EActionType::West] = true;
-                DoorPriorities[(int)EActionType::South] = true;
+                DoorPriorities[(int)EDirectionType::West] = true;
+                DoorPriorities[(int)EDirectionType::South] = true;
                 break;
             }
             case EQuadrantType::SouthEast:
             {
-                DoorPriorities[(int)EActionType::West] = true;
-                DoorPriorities[(int)EActionType::North] = true;
+                DoorPriorities[(int)EDirectionType::West] = true;
+                DoorPriorities[(int)EDirectionType::North] = true;
                 break;
             }
             case EQuadrantType::SouthWest:
             {
-                DoorPriorities[(int)EActionType::East] = true;
-                DoorPriorities[(int)EActionType::North] = true;
+                DoorPriorities[(int)EDirectionType::East] = true;
+                DoorPriorities[(int)EDirectionType::North] = true;
                 break;
             }
             case EQuadrantType::NorthWest:
             {
-                DoorPriorities[(int)EActionType::East] = true;
-                DoorPriorities[(int)EActionType::South] = true;
+                DoorPriorities[(int)EDirectionType::East] = true;
+                DoorPriorities[(int)EDirectionType::South] = true;
                 break;
             }
             default: break;
         }
-        for (int i = 0; i < (int)EActionType::NumActionTypes; ++i)
+        for (int i = 0; i < (int)EDirectionType::NumDirectionTypes; ++i)
             if(DoorPriorities[i])
                 if (neighbourPositions[i] != 0)
-                    possibleDoors.Add((EActionType)i);
+                    possibleDoors.Add((EDirectionType)i);
         if (possibleDoors.Num() <= 0)
-            for (int i = 0; i < (int)EActionType::NumActionTypes; ++i)
+            for (int i = 0; i < (int)EDirectionType::NumDirectionTypes; ++i)
                 if(DoorPriorities[i])
                     if (neighbourPositions[i] == 0)
-                        possibleDoors.Add((EActionType)i);
+                        possibleDoors.Add((EDirectionType)i);
         int doorIndex = FMath::RandRange(0, possibleDoors.Num() - 1);
-        EActionType doorAction = possibleDoors[doorIndex];        
+        EDirectionType doorAction = possibleDoors[doorIndex];        
         int doorPositionOnWall = neighbourPositions[(int)possibleDoors[doorIndex]];
         UpdatePolicyForDoorType(doorAction, doorPositionOnWall);
     }

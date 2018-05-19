@@ -6,28 +6,28 @@ IMPLEMENT_PRIMARY_GAME_MODULE( FDefaultGameModuleImpl, TPGameDemo, "TPGameDemo" 
 
 const FString LevelBuilderHelpers::LevelsDir() { return FPaths::/*GameDir*/ProjectDir() + "Content/Levels/"; }
 
-FIntPoint LevelBuilderHelpers::GetTargetPointForAction(FIntPoint startingPoint, EActionType actionType, int numSpaces /*= 1*/)
+FIntPoint LevelBuilderHelpers::GetTargetPointForAction(FIntPoint startingPoint, EDirectionType actionType, int numSpaces /*= 1*/)
 {
     FIntPoint endPoint = startingPoint;
 
     switch(actionType)
     {
-        case EActionType::North:
+        case EDirectionType::North:
         {
             endPoint.X += numSpaces;
             break;
         }
-        case EActionType::East:
+        case EDirectionType::East:
         {
             endPoint.Y += numSpaces;
             break;
         }
-        case EActionType::South:
+        case EDirectionType::South:
         {
             endPoint.X -= numSpaces;
             break;
         }
-        case EActionType::West:
+        case EDirectionType::West:
         {
             endPoint.Y -= numSpaces;
             break;

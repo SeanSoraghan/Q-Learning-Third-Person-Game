@@ -77,6 +77,9 @@ public:
     UFUNCTION (BlueprintCallable, Category = "Maze Actor Maze Model")
         void UpdateMazeDimensions();
 
+    UFUNCTION (BlueprintCallable, Category = "Maze Actor Position")
+        bool IsOnGridEdge() const;
+
 private:
     void UpdatePosition (bool broadcastChange = true);
 

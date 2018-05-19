@@ -24,13 +24,13 @@ enum class EControlState : uint8
     NumStates
 };
 
-enum class EDirectionType : uint8
+enum class EMovementDirectionType : uint8
 {
     Forward   UMETA (DisplayName = "Forward") = 0,
     Right     UMETA (DisplayName = "Right"),
     Backwards UMETA (DisplayName = "Backwards"),
     Left      UMETA (DisplayName = "Left"),
-    NumDirections
+    NumMovementDirections
 };
 
 //===========================================================================================
@@ -40,13 +40,13 @@ struct SMovementKeysPressedState
 {
     SMovementKeysPressedState ()
     {
-        for (int d = 0; d < (int) EDirectionType::NumDirections; d++)
+        for (int d = 0; d < (int) EMovementDirectionType::NumMovementDirections; d++)
             DirectionStates[d] = false;
     }
 
     bool AreAnyKeysPressed() 
     {
-        for (uint8 d = 0; d < (uint8) EDirectionType::NumDirections; d++)
+        for (uint8 d = 0; d < (uint8) EMovementDirectionType::NumMovementDirections; d++)
             if (DirectionStates[(int) d])
                 return true;
 
@@ -167,10 +167,10 @@ private:
     void SetupCombatMovementControls();
     void SetupExploreMovementControls();
 
-    void UpdateMovementForcesForDirectionKey (EDirectionType direction, bool pressed);
+    void UpdateMovementForcesForDirectionKey (EMovementDirectionType direction, bool pressed);
 
-    void CombatDirectionPressed  (EDirectionType direction);
-    void CombatDirectionReleased (EDirectionType direction);
+    void CombatDirectionPressed  (EMovementDirectionType direction);
+    void CombatDirectionReleased (EMovementDirectionType direction);
 
     void CombatForwardPressed();
     void CombatForwardReleased();
@@ -181,8 +181,8 @@ private:
     void CombatLeftPressed();
     void CombatLeftReleased();
 
-    void ExploreDirectionPressed  (EDirectionType direction);
-    void ExploreDirectionReleased (EDirectionType direction);
+    void ExploreDirectionPressed  (EMovementDirectionType direction);
+    void ExploreDirectionReleased (EMovementDirectionType direction);
     void CheckForPressedKeys();
 
     void ExploreForwardPressed();
@@ -240,7 +240,7 @@ private:
     void     UpdateTimelineTargetRotations();
     void     InterpolateControlRotationToMeshRotation (float deltaTime);
     void     PrintToScreen                            (const FString message);
-    bool     IsDirectionPressed                       (EDirectionType direction);
+    bool     IsDirectionPressed                       (EMovementDirectionType direction);
     //Debugging
     
 };

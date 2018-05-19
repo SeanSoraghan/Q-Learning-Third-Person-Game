@@ -7,6 +7,18 @@
 //#include "MazeActor.h"
 #include "LevelBuilderComponent.generated.h"
 
+USTRUCT(Blueprintable)
+struct FWallSegmentDescriptor
+{
+    GENERATED_BODY()
+    UPROPERTY(EditAnywhere,BlueprintReadWrite,Category = "Room Inner Walls")
+    FIntPoint Start;
+    UPROPERTY(EditAnywhere,BlueprintReadWrite,Category = "Room Inner Walls")
+    FIntPoint End;
+    UPROPERTY(EditAnywhere,BlueprintReadWrite,Category = "Room Inner Walls")
+    EDirectionType Direction;
+};
+
 /*
 The levels in this project are based on grid mazes with equally-spaced cells, as found in many examples of Q-Learning problems
 https://webdocs.cs.ualberta.ca/~sutton/book/ebook/node1.html
@@ -32,16 +44,16 @@ public:
 	virtual void TickComponent( float DeltaTime, ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction ) override;
 
     UFUNCTION (BlueprintCallable, Category = "Level Building")
-        virtual void GenerateLevelOfSize(int sideLength, float normedDensity, float normedComplexity, FString levelName, TArray<int> ExistingDoorPositions);
+        virtual TArray<FWallSegmentDescriptor> GenerateLevelOfSize(int sideLength, float normedDensity, float normedComplexity, FString levelName, TArray<int> ExistingDoorPositions);
 
     UFUNCTION (BlueprintCallable, Category = "Level Building")
-        virtual void GenerateLevel(float normedDensity, float normedComplexity, FString levelName, TArray<int> ExistingDoorPositions);
+        virtual TArray<FWallSegmentDescriptor> GenerateLevel(float normedDensity, float normedComplexity, FString levelName, TArray<int> ExistingDoorPositions);
 
     UFUNCTION (BlueprintCallable, Category = "Level Building")
-        virtual void GenerateInnerStructure(int sideLength, float normedDensity, float normedComplexity);
+        virtual TArray<FWallSegmentDescriptor> GenerateInnerStructure(int sideLength, float normedDensity, float normedComplexity);
 
     UFUNCTION (BlueprintCallable, Category = "Level Building")
-        virtual void RegenerateInnerStructure(float normedDensity, float normedComplexity, FString levelName);
+        virtual TArray<FWallSegmentDescriptor> RegenerateInnerStructure(float normedDensity, float normedComplexity, FString levelName);
 
     UFUNCTION (BlueprintCallable, Category = "Level Building")
         virtual void LoadLevel (FString levelName);
@@ -59,10 +71,10 @@ public:
         virtual ECellState GetCellState (int x, int y);
 
     UFUNCTION (BlueprintCallable, Category = "Level Building")
-        virtual EActionType GetWallTypeForDoorPosition(int x, int y);
+        virtual EDirectionType GetWallTypeForDoorPosition(int x, int y);
     
     UFUNCTION (BlueprintCallable, Category = "Level Building")
-        virtual EActionType GetWallTypeForBlockPosition(int x, int y);
+        virtual EDirectionType GetWallTypeForBlockPosition(int x, int y);
     
     UFUNCTION (BlueprintCallable, Category = "Level Building")
         FVector2D GetClosestEmptyCell (int x, int y);
