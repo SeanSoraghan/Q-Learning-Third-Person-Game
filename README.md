@@ -10,14 +10,14 @@ At the moment the game consists of very simple mechanics. There is a main player
 ### Repository Structure
 The repository includes the Unreal project folder for different versions of the engine (TPGameDemo X.XX). There is also a Blender folder containing all Blender projects and assets.
 
-#Tools Used
-###Unreal Engine
+# Tools Used
+### Unreal Engine
 https://www.unrealengine.com/what-is-unreal-engine-4
 The project is built from scratch, without the use of any templates or starter content. C++ classes are implemented for base functionality, which are then inherited by blueprint classes in the editor.
-###Make Human
+### Make Human
 http://www.makehuman.org/
 A great tool for developers without knowledge or skills in artistic 3D modelling. It allows you to create humanoid meshes and rigs using a slider-based interface.
 Useful tutorials:  https://www.youtube.com/user/vscorpianc
-###Blender
+### Blender
 https://www.blender.org/
 The characters created in Make Human were imported into Blender in order to create animations, which were then imported into Unreal.
