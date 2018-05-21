@@ -131,6 +131,7 @@ struct RoomState
     float Density = 0.0f;
     Status RoomStatus = Dead;
     float TrainingProgress = 0.0f;
+    FIntPoint SignalPoint = FIntPoint(-1,-1);
 };
 
 /**
@@ -195,6 +196,9 @@ public:
         void TrainingProgressUpdatedForDoor(EDirectionType doorWallType, float progress);
 };
 
+DECLARE_EVENT(ATPGameDemoGameState, SignalLostEvent);
+DECLARE_DYNAMIC_DELEGATE(FOnSignalLost);
+
 /**
  * 
  */
@@ -221,7 +225,7 @@ public:
     // Acessors
     //============================================================================
 
-    // --------------------- room properties -------------------------------------\\
+    // --------------------- room properties -------------------------------------
 
     UFUNCTION(BlueprintCallable, Category = "World Rooms States")
         bool DoesRoomExist(FIntPoint roomCoords) const;
@@ -244,7 +248,10 @@ public:
     UFUNCTION(BlueprintCallable, Category = "World Room States")
         int GetDoorPositionOnWall(FIntPoint roomCoords, EDirectionType wallType); 
 
-    // --------------------- neighbouring rooms -------------------------------------\\
+    UFUNCTION(BlueprintCallable, Category = "World Room States")
+        FIntPoint GetSignalPointPositionInRoom(FIntPoint roomCoords);
+
+    // --------------------- neighbouring rooms -------------------------------------
 
     UFUNCTION(BlueprintCallable, Category = "World Rooms States")
         FIntPoint GetNeighbouringRoomIndices(FIntPoint roomCoords, EDirectionType neighbourPosition) const;
@@ -257,7 +264,7 @@ public:
     UFUNCTION(BlueprintCallable, Category = "World Room States")
         TArray<int> GetDoorPositionsForExistingNeighbours(FIntPoint roomCoords);
 
-    // --------------------- Builders -------------------------------------\\
+    // --------------------- Builders -------------------------------------
 
     UFUNCTION(BlueprintCallable, Category = "World Room Builders")
         ARoomBuilder* GetRoomBuilder(FIntPoint roomCoords);
@@ -272,13 +279,13 @@ public:
     UFUNCTION(BlueprintCallable, Category = "World Rooms States")
         void DestroyDoorInRoom(FIntPoint roomCoords, EDirectionType doorWallPosition);
 
-    // --------------------- neighbouring rooms -------------------------------------\\
+    // --------------------- neighbouring rooms -------------------------------------
 
     /** Destroys the door on each adjoining wall in the neighbouring rooms (North through West, clockwise). */
     UFUNCTION(BlueprintCallable, Category = "World Rooms States")
         void DestroyNeighbouringDoors(FIntPoint roomCoords, TArray<bool> positionsToDestroy);
 
-    // --------------------- Setters -------------------------------------\\
+    // --------------------- Setters -------------------------------------
     
     UFUNCTION(BlueprintCallable, Category = "World Room States")
         void SetRoomHealth(FIntPoint roomCoords, float health);
@@ -292,13 +299,19 @@ public:
     UFUNCTION(BlueprintCallable, Category = "World Rooms States")
         void UpdateRoomHealth(FIntPoint roomCoords, float healthDelta);
 
-    // --------------------- Room & Wall Initialization / Destruction -------------------------------------\\
+    UFUNCTION(BlueprintCallable, Category = "World Rooms States")
+        void UpdateSignalStrength(float delta);
+
+    // --------------------- Room & Wall Initialization / Destruction -------------------------------------
 
     UFUNCTION(BlueprintCallable, Category = "World Rooms States")
         void EnableRoomState(FIntPoint roomCoords, float complexity = 0.0f, float density = 0.0f);
 
     UFUNCTION(BlueprintCallable, Category = "World Rooms States")
         void SetRoomConnected(FIntPoint roomCoords);
+
+    UFUNCTION(BlueprintCallable, Category = "World Rooms States")
+        void SetSignalPointInRoom(FIntPoint roomCoords, FIntPoint signalPointInRoom);
 
     UFUNCTION(BlueprintCallable, Category = "World Rooms States")
         void DisableRoomState(FIntPoint roomCoords);
@@ -321,10 +334,15 @@ public:
     UFUNCTION(BlueprintCallable, Category = "World Rooms States")
         void DisableDoorState(FIntPoint roomCoords, EDirectionType wallType);
 
-    // --------------------- Door Interaction -------------------------------------\\ 
+    // --------------------- Door Interaction -------------------------------------
 
     UFUNCTION(BlueprintCallable, Category = "Door Interaction")
         void DoorOpened(FIntPoint roomCoords, EDirectionType wallDirection, float complexity = 0.0f, float density = 0.0f); 
+
+    // ----------------------- Delegates -------------------------------------------
+
+    UFUNCTION(BlueprintCallable, Category = "World Signal State")
+        void RegisterSignalLostCallback(const FOnSignalLost& Callback);
 
     //============================================================================
     // Properties
@@ -334,6 +352,9 @@ public:
 
     UPROPERTY(BlueprintReadWrite, EditAnywhere, Category = "World Room Health")
         float MaxRoomHealth = 100.0f;
+
+    UPROPERTY(BlueprintReadWrite, EditAnywhere, Category = "World Room Health")
+        float SignalStrength = 100.0f;
 
 private:
     TArray<TArray<ARoomBuilder*>> RoomBuilders;
@@ -363,4 +384,6 @@ private:
     FIntPoint GetRoomCoords(FIntPoint roomIndices) const;
     bool RoomXYIndicesValid(FIntPoint roomCoords) const;
     bool WallXYIndicesValid(FIntPoint wallRoomCoords) const;
+
+    SignalLostEvent OnSignalLost;
 };

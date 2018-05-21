@@ -45,6 +45,9 @@ public:
     UPROPERTY (BlueprintReadOnly, VisibleAnywhere, Category = "Game Mode Room Health")
         float DefaultRoomHealth = 100.0f;
 
+    UPROPERTY (BlueprintReadOnly, VisibleAnywhere, Category = "Game Mode Room Health")
+        float DefaultSignalStrength = 100.0f;
+
     FMazeDimensionsChanged OnMazeDimensionsChanged;
 
     UPROPERTY (BlueprintReadWrite, EditAnywhere, Category = "Maze Actor Properties")

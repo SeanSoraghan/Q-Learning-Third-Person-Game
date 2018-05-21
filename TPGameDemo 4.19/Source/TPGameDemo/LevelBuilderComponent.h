@@ -89,7 +89,13 @@ public:
 
     /** Starts in centre of grid and winds out clockise looking for empty grid cells. */
     UFUNCTION (BlueprintCallable, Category = "Level Building")
+        FVector2D FindMostCentralEmptyCell();
+
+    /** Starts in centre of grid and winds out clockise looking for empty grid cells. */
+    UFUNCTION (BlueprintCallable, Category = "Level Building")
         FVector2D FindMostCentralSpawnPosition(int RoomOffsetX, int RoomOffsetY);
+
+    
 
 private:
     FIntPoint           GetRandomEvenCell();

@@ -342,6 +342,11 @@ FVector2D ULevelBuilderComponent::GetCellWorldPosition (int x, int y, int RoomOf
     return ATPGameDemoGameMode::GetCellWorldPosition(this, x, y, RoomOffsetX, RoomOffsetY, getCentre);
 }
 
+FVector2D ULevelBuilderComponent::FindMostCentralEmptyCell()
+{
+    return GetClosestEmptyCell(GetNumGridUnitsX() / 2, GetNumGridUnitsY() / 2);
+}
+
 FVector2D ULevelBuilderComponent::FindMostCentralSpawnPosition(int RoomOffsetX, int RoomOffsetY)
 {
     FVector2D cellPosition = GetClosestEmptyCell(GetNumGridUnitsX() / 2, GetNumGridUnitsY() / 2);

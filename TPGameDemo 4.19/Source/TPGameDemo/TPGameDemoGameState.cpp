@@ -172,6 +172,13 @@ int ATPGameDemoGameState::GetDoorPositionOnWall(FIntPoint roomCoords, EDirection
     return wallState.DoorPosition;
 }
 
+FIntPoint ATPGameDemoGameState::GetSignalPointPositionInRoom(FIntPoint roomCoords)
+{
+    FIntPoint roomIndices = GetRoomXYIndices(roomCoords);
+    ensure(RoomXYIndicesValid(roomIndices));
+    return RoomStates[roomIndices.X][roomIndices.Y].SignalPoint;
+}
+
 EQuadrantType ATPGameDemoGameState::GetQuadrantTypeForRoomCoords(FIntPoint roomCoords) const
 {
     FIntPoint roomIndices = GetRoomXYIndices(roomCoords);
@@ -297,6 +304,15 @@ void ATPGameDemoGameState::UpdateRoomHealth(FIntPoint roomCoords, float healthDe
         DisableRoomState(roomCoords);
 }
 
+void ATPGameDemoGameState::UpdateSignalStrength(float delta)
+{
+    SignalStrength = FMath::Max(0.0f, SignalStrength + delta);
+    if (SignalStrength <= 0.0f)
+    {
+
+    }
+}
+
 void ATPGameDemoGameState::SetRoomBuilder(FIntPoint roomCoords, ARoomBuilder* roomBuilderActor)
 {
     FIntPoint roomIndices = GetRoomXYIndices(roomCoords);
@@ -320,6 +336,13 @@ void ATPGameDemoGameState::SetRoomConnected(FIntPoint roomCoords)
         RoomStates[roomIndices.X][roomIndices.Y].SetRoomConnected();
         GetRoomBuilder(roomCoords)->RoomWasConnected();
     }
+}
+
+void ATPGameDemoGameState::SetSignalPointInRoom(FIntPoint roomCoords, FIntPoint signalPointInRoom)
+{
+    FIntPoint roomIndices = GetRoomXYIndices(roomCoords);
+    ensure(RoomXYIndicesValid(roomIndices));
+    RoomStates[roomIndices.X][roomIndices.Y].SignalPoint = signalPointInRoom;
 }
 
 void ATPGameDemoGameState::EnableRoomState(FIntPoint roomCoords, float complexity, float density)
@@ -503,6 +526,14 @@ void ATPGameDemoGameState::DoorOpened(FIntPoint roomCoords, EDirectionType wallD
     {
         EnableRoomState(neighbourRoomCoords, complexity, density);
     }
+}
+
+void ATPGameDemoGameState::RegisterSignalLostCallback(const FOnSignalLost& Callback)
+{
+    OnSignalLost.AddLambda([Callback]()
+    {
+        Callback.ExecuteIfBound();
+    });
 }
 
 //============================================================================
