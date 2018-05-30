@@ -1,6 +1,6 @@
 // Fill out your copyright notice in the Description page of Project Settings.
 #include "TPGameDemo.h"
-#include "TPGameDemoGameMode.h"
+#include "TPGameDemoGameState.h"
 #include "MazeActor.h"
 
 
@@ -97,6 +97,13 @@ void AMazeActor::UpdatePosition (bool broadcastChange)
 
     if (broadcastChange && (GridYPosition != PreviousGridYPosition || GridXPosition != PreviousGridXPosition))
     {
+        ATPGameDemoGameState* gameState = (ATPGameDemoGameState*) GetWorld()->GetGameState();
+        if (gameState != nullptr)
+        {
+            gameState->ActorExitedTilePosition(PreviousRoomCoords, FIntPoint(PreviousGridXPosition, PreviousGridYPosition));
+            gameState->ActorEnteredTilePosition(CurrentRoomCoords, FIntPoint(GridXPosition, GridYPosition));
+        }
+
         PositionChanged();
         GridPositionChangedEvent.Broadcast();
         PreviousGridXPosition = GridXPosition;

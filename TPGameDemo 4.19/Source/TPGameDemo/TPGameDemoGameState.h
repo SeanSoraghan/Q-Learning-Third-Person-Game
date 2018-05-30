@@ -4,6 +4,7 @@
 
 #include "TPGameDemo.h"
 #include "CoreMinimal.h"
+#include "TPGameDemoGameMode.h"
 #include "GameFramework/GameStateBase.h"
 #include <memory>
 #include "TPGameDemoGameState.generated.h"
@@ -89,6 +90,18 @@ struct RoomState
         Connected
     };
 
+    RoomState(){}
+
+    RoomState(const ATPGameDemoGameMode& GameMode)
+    {
+        for (int x = 0; x < GameMode.NumGridUnitsX; ++x)
+        {
+            TArray<FThreadSafeCounter> states;
+            states.AddDefaulted(GameMode.NumGridUnitsY);
+            TileActorCounters.Add(states);
+        }
+    }
+
     ~RoomState()
     {}
 
@@ -126,12 +139,29 @@ struct RoomState
         return RoomStatus == Connected;
     }
 
+    bool TileIsEmpty(FIntPoint TilePosition) const
+    {
+        return TileActorCounters[TilePosition.X][TilePosition.Y].GetValue() == 0;
+    }
+
+    void ActorEnteredTilePosition(FIntPoint TilePosition)
+    {
+        TileActorCounters[TilePosition.X][TilePosition.Y].Increment();
+    }
+
+    void ActorExitedTilePosition(FIntPoint TilePosition)
+    {
+        TileActorCounters[TilePosition.X][TilePosition.Y].Decrement();
+    }
+
     float RoomHealth = 100.0f;
     float Complexity = 0.0f;
     float Density = 0.0f;
     Status RoomStatus = Dead;
     float TrainingProgress = 0.0f;
     FIntPoint SignalPoint = FIntPoint(-1,-1);
+    /** Count of the number of actors occupying each grid position in the room. */
+    TArray<TArray<FThreadSafeCounter>> TileActorCounters;
 };
 
 /**
@@ -249,7 +279,10 @@ public:
         int GetDoorPositionOnWall(FIntPoint roomCoords, EDirectionType wallType); 
 
     UFUNCTION(BlueprintCallable, Category = "World Room States")
-        FIntPoint GetSignalPointPositionInRoom(FIntPoint roomCoords);
+        FIntPoint GetSignalPointPositionInRoom(FIntPoint roomCoords) const;
+
+    UFUNCTION(BlueprintCallable, Category = "World Rooms States")
+        bool TilePositionIsEmpty(FIntPoint roomCoords, FIntPoint tilePosition) const;
 
     // --------------------- neighbouring rooms -------------------------------------
 
@@ -278,6 +311,12 @@ public:
 
     UFUNCTION(BlueprintCallable, Category = "World Rooms States")
         void DestroyDoorInRoom(FIntPoint roomCoords, EDirectionType doorWallPosition);
+
+    UFUNCTION(BlueprintCallable, Category = "World Rooms States")
+        void ActorEnteredTilePosition(FIntPoint roomCoords, FIntPoint tilePosition);
+
+    UFUNCTION(BlueprintCallable, Category = "World Rooms States")
+        void ActorExitedTilePosition(FIntPoint roomCoords, FIntPoint tilePosition);
 
     // --------------------- neighbouring rooms -------------------------------------
 
@@ -380,7 +419,8 @@ private:
     TArray<WallState*> GetWallStatesForRoom(FIntPoint roomCoords);
     
     /** Converts coords from centred at 0 to centred at max num grids / 2. */
-    FIntPoint GetRoomXYIndices(FIntPoint roomCoords) const;
+    FIntPoint GetRoomXYIndicesChecked(FIntPoint roomCoords) const;
+    const RoomState& GetRoomStateChecked(FIntPoint roomCoords) const;
     FIntPoint GetRoomCoords(FIntPoint roomIndices) const;
     bool RoomXYIndicesValid(FIntPoint roomCoords) const;
     bool WallXYIndicesValid(FIntPoint wallRoomCoords) const;
