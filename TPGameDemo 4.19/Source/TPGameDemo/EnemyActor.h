@@ -120,6 +120,9 @@ private:
     // Movement
     //====================================================================================================== 
     void UpdateMovement();
+    // Returns the room coords and position in room indicated by the given movement direction, determined by the actors current position.
+    // If the movement action would cause them to change rooms, roomCoords will indicate which room they would enter.
+    FRoomPositionPair GetTargetRoomAndPositionForDirectionType(EDirectionType actionType);
 
     //======================================================================================================
     // From AMazeActor

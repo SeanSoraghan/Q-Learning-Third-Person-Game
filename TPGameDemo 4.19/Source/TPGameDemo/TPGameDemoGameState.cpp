@@ -75,11 +75,7 @@ void ATPGameDemoGameState::InitialiseArrays()
         for (int y = 0; y < NumGridsXY; ++y)
         {
             wallsRow.Add(WallStateCouple());
-            
-            if (gameMode != nullptr)
-                roomsRow.Add(RoomState(*gameMode));
-            else
-                roomsRow.Add(RoomState());
+            roomsRow.Add(RoomState(FIntPoint(NumGridUnitsX, NumGridUnitsY)));
 
             roomBuilderRow.Add(nullptr);
             wallBuilderRow.Add(nullptr);
@@ -340,19 +336,15 @@ void ATPGameDemoGameState::EnableRoomState(FIntPoint roomCoords, float complexit
     // initialize random door positions for walls that haven't yet generated their door positions....
     auto wallStates = GetWallStatesForRoom(roomCoords);
 
-    ATPGameDemoGameMode* gameMode = (ATPGameDemoGameMode*) GetWorld()->GetAuthGameMode();
-    if (gameMode != nullptr)
+    for(int p = 0; p < (int)EDirectionType::NumDirectionTypes; ++p)
     {
-        for(int p = 0; p < (int)EDirectionType::NumDirectionTypes; ++p)
+        auto wallState = wallStates[p];
+        if(!wallState->HasDoor())
         {
-            auto wallState = wallStates[p];
-            if(!wallState->HasDoor())
-            {
-                EDirectionType direction = (EDirectionType)p;
-                int maxDoorPosition = (direction == EDirectionType::North || direction == EDirectionType::South) ? gameMode->NumGridUnitsY - 2
-                                                                                                                 : gameMode->NumGridUnitsX - 2;
-                wallState->GenerateRandomDoorPosition(maxDoorPosition);
-            }
+            EDirectionType direction = (EDirectionType)p;
+            int maxDoorPosition = (direction == EDirectionType::North || direction == EDirectionType::South) ? NumGridUnitsY - 2
+                                                                                                                : NumGridUnitsX - 2;
+            wallState->GenerateRandomDoorPosition(maxDoorPosition);
         }
     }
 
@@ -574,6 +566,32 @@ bool ATPGameDemoGameState::WallXYIndicesValid(FIntPoint wallRoomCoords) const
     return x >= 0 && x < WallStates.Num() && y >= 0 && y < WallStates[0].Num();
 }
 
+bool ATPGameDemoGameState::InnerRoomPositionValid(FIntPoint positionInRoom) const
+{
+    const int x = positionInRoom.X;
+    const int y = positionInRoom.Y;
+    return x >= 0 && x < NumGridUnitsX && y >= 0 && y < NumGridUnitsY;
+}
+
+void ATPGameDemoGameState::WrapRoomPositionPair (FRoomPositionPair& roomPositionPair)
+{
+    const FIntPoint pos = roomPositionPair.PositionInRoom;
+    FIntPoint roomCoords = roomPositionPair.RoomCoords;
+    const int roomOffsetX = pos.X / (NumGridUnitsX - 1) - (pos.X < 0 ? 1 : 0);  
+    const int roomOffsetY = pos.Y / (NumGridUnitsY - 1) - (pos.Y < 0 ? 1 : 0);
+    roomCoords = {roomCoords.X + roomOffsetX, roomCoords.Y + roomOffsetY};
+    const int x = FMath::Fmod(pos.X, NumGridUnitsX - 1) + (pos.X < 0 ? NumGridUnitsX - 1 : 0);
+    const int y = FMath::Fmod(pos.Y, NumGridUnitsY - 1) + (pos.Y < 0 ? NumGridUnitsY - 1 : 0);
+    roomPositionPair = {roomCoords, {x,y}};
+}
+
+FVector2D ATPGameDemoGameState::GetWorldXYForRoomAndPosition(FRoomPositionPair roomPositionPair)
+{
+    const FIntPoint roomCoords = roomPositionPair.RoomCoords;
+    const FIntPoint pos = roomPositionPair.PositionInRoom;
+    return GetGridCellWorldPosition(pos.X, pos.Y, roomCoords.X, roomCoords.Y);
+}
+
 WallState& ATPGameDemoGameState::GetWallState(FIntPoint roomCoords, EDirectionType direction)
 {
     FIntPoint roomIndices = GetRoomXYIndicesChecked(roomCoords);
@@ -623,5 +641,51 @@ void ATPGameDemoGameState::FlagWallsForUpdate(FIntPoint roomCoords)
         WallsToUpdate.Add({northNeighbourCoords, EDirectionType::South});
     if(!IsWallInUpdateList(eastNeighbourCoords, EDirectionType::West))
         WallsToUpdate.Add({eastNeighbourCoords, EDirectionType::West});
+}
+
+// ----------------------- Inner Grid Properties -------------------------------------
+
+void ATPGameDemoGameState::SetGridUnitLengthXCM (int x)
+{
+    GridUnitLengthXCM = x;
+    OnMazeDimensionsChanged.Broadcast();
+}
+
+void ATPGameDemoGameState::SetGridUnitLengthYCM (int y)
+{
+    GridUnitLengthYCM = y;
+    OnMazeDimensionsChanged.Broadcast();
+}
+
+void ATPGameDemoGameState::SetNumGridUnitsX (int numUnitsX)
+{
+    NumGridUnitsX = numUnitsX;
+    OnMazeDimensionsChanged.Broadcast();
+}
+
+void ATPGameDemoGameState::SetNumGridUnitsY (int numUnitsY)
+{
+    NumGridUnitsY = numUnitsY;
+    OnMazeDimensionsChanged.Broadcast();
+}
+
+FVector2D ATPGameDemoGameState::GetCellWorldPosition(UObject* worldContextObject, int x, int y, int RoomOffsetX, int RoomOffsetY, bool getCentre /* = true */)
+{
+    ATPGameDemoGameState* gameState = (ATPGameDemoGameState*) worldContextObject->GetWorld()->GetGameState();
+
+    if (gameState == nullptr)
+        return FVector2D (0.0f, 0.0f);
+
+    return gameState->GetGridCellWorldPosition(x, y, RoomOffsetX, RoomOffsetY, getCentre);
+}
+
+FVector2D ATPGameDemoGameState::GetGridCellWorldPosition (int x, int y, int RoomOffsetX, int RoomOffsetY, bool getCentre /* = true */)
+{
+    float centreOffset = getCentre ? 0.5f : 0.0f;
+    float positionX = ((x - NumGridUnitsX / 2) + centreOffset) * GridUnitLengthXCM;
+    float positionY = ((y - NumGridUnitsY / 2) + centreOffset) * GridUnitLengthYCM;
+    positionX += RoomOffsetX * NumGridUnitsX * GridUnitLengthXCM - RoomOffsetX * GridUnitLengthXCM;
+    positionY += RoomOffsetY * NumGridUnitsY * GridUnitLengthYCM - RoomOffsetY * GridUnitLengthYCM;
+    return FVector2D (positionX, positionY);
 }
 

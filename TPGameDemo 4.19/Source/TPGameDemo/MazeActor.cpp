@@ -19,17 +19,18 @@ void AMazeActor::BeginPlay()
     
     MaxHealth = 100.0f;
 
+    ATPGameDemoGameState* gameState = (ATPGameDemoGameState*) GetWorld()->GetGameState();
     ATPGameDemoGameMode* gameMode = (ATPGameDemoGameMode*) GetWorld()->GetAuthGameMode();
-    if (gameMode != nullptr)
+    if (gameMode != nullptr && gameState != nullptr)
     {
-        gameMode->OnMazeDimensionsChanged.AddLambda([this]()
+        gameState->OnMazeDimensionsChanged.AddLambda([this]()
         {
             UpdateMazeDimensions();
         });
-        CurrentLevelNumGridUnitsX   = gameMode->NumGridUnitsX;
-        CurrentLevelNumGridUnitsY   = gameMode->NumGridUnitsY;
-        CurrentLevelGridUnitLengthXCM = gameMode->GridUnitLengthXCM;
-        CurrentLevelGridUnitLengthYCM = gameMode->GridUnitLengthYCM;
+        CurrentLevelNumGridUnitsX   = gameState->NumGridUnitsX;
+        CurrentLevelNumGridUnitsY   = gameState->NumGridUnitsY;
+        CurrentLevelGridUnitLengthXCM = gameState->GridUnitLengthXCM;
+        CurrentLevelGridUnitLengthYCM = gameState->GridUnitLengthYCM;
         MaxHealth = gameMode->DefaultMaxHealth;
     }
     
@@ -61,13 +62,13 @@ void AMazeActor::CheckDeath()
 
 void AMazeActor::UpdateMazeDimensions()
 {
-    ATPGameDemoGameMode* gameMode = (ATPGameDemoGameMode*) GetWorld()->GetAuthGameMode();
-    if (gameMode != nullptr)
+    ATPGameDemoGameState* gameState = (ATPGameDemoGameState*) GetWorld()->GetGameState();
+    if (gameState != nullptr)
     {
-        CurrentLevelNumGridUnitsX   = gameMode->NumGridUnitsX;
-        CurrentLevelNumGridUnitsY   = gameMode->NumGridUnitsY;
-        CurrentLevelGridUnitLengthXCM = gameMode->GridUnitLengthXCM;
-        CurrentLevelGridUnitLengthYCM = gameMode->GridUnitLengthYCM;
+        CurrentLevelNumGridUnitsX   = gameState->NumGridUnitsX;
+        CurrentLevelNumGridUnitsY   = gameState->NumGridUnitsY;
+        CurrentLevelGridUnitLengthXCM = gameState->GridUnitLengthXCM;
+        CurrentLevelGridUnitLengthYCM = gameState->GridUnitLengthYCM;
     }
 }
 
@@ -126,10 +127,10 @@ void AMazeActor::Tick( float DeltaTime )
 
 bool AMazeActor::IsOnGridEdge() const
 {
-    if (ATPGameDemoGameMode* gameMode = (ATPGameDemoGameMode*) GetWorld()->GetAuthGameMode())
+    if (ATPGameDemoGameState* gameState = (ATPGameDemoGameState*) GetWorld()->GetGameState())
     {
-        const int numUnitsX = gameMode->NumGridUnitsX;
-        const int numUnitsY = gameMode->NumGridUnitsY;
+        const int numUnitsX = gameState->NumGridUnitsX;
+        const int numUnitsY = gameState->NumGridUnitsY;
         return GridXPosition == 0 || GridXPosition == numUnitsX - 1 || GridYPosition == 0 || GridYPosition == numUnitsY - 1;
     }
     return false;

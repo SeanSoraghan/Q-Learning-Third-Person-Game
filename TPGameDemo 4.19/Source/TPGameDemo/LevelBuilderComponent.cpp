@@ -2,7 +2,7 @@
 
 #include "TPGameDemo.h"
 #include "TextParserComponent.h"
-#include "TPGameDemoGameMode.h"
+#include "TPGameDemoGameState.h"
 #include "LevelBuilderComponent.h"
 
 ULevelBuilderComponent::ULevelBuilderComponent()
@@ -26,10 +26,10 @@ FIntPoint ULevelBuilderComponent::GetRandomEvenCell()
 TArray<FWallSegmentDescriptor> ULevelBuilderComponent::GenerateLevel(float normedDensity, float normedComplexity, FString levelName, TArray<int> ExistingDoorPositions)
 {
     int sideLength = 3;
-    ATPGameDemoGameMode* gameMode = (ATPGameDemoGameMode*) GetWorld()->GetAuthGameMode();
-    if (gameMode != nullptr)
+    ATPGameDemoGameState* gameState = (ATPGameDemoGameState*) GetWorld()->GetGameState();
+    if (gameState != nullptr)
     {
-        sideLength = gameMode->NumGridUnitsX; 
+        sideLength = gameState->NumGridUnitsX; 
     }
 
     return GenerateLevelOfSize(sideLength, normedDensity, normedComplexity, levelName, ExistingDoorPositions);
@@ -166,10 +166,10 @@ TArray<FWallSegmentDescriptor> ULevelBuilderComponent::GenerateInnerStructure(in
 TArray<FWallSegmentDescriptor> ULevelBuilderComponent::RegenerateInnerStructure(float normedDensity, float normedComplexity, FString levelName)
 {
     int sideLength = 3;
-    ATPGameDemoGameMode* gameMode = (ATPGameDemoGameMode*) GetWorld()->GetAuthGameMode();
-    if (gameMode != nullptr)
+    ATPGameDemoGameState* gameState = (ATPGameDemoGameState*) GetWorld()->GetGameState();
+    if (gameState != nullptr)
     {
-        sideLength = gameMode->NumGridUnitsX; 
+        sideLength = gameState->NumGridUnitsX; 
     }
 
     //Clear existing inner structure
@@ -224,13 +224,13 @@ void ULevelBuilderComponent::LoadLevel (FString levelName)
       #endif
         LevelStructure.Empty();
         LevelBuilderHelpers::FillArrayFromTextFile (CurrentLevelPath, LevelStructure);
-        ATPGameDemoGameMode* gameMode = (ATPGameDemoGameMode*) GetWorld()->GetAuthGameMode();
+        ATPGameDemoGameState* gameState = (ATPGameDemoGameState*) GetWorld()->GetGameState();
 
-        if (gameMode != nullptr)
+        if (gameState != nullptr)
         {
-            gameMode->NumGridUnitsX = LevelStructure.Num();
+            gameState->NumGridUnitsX = LevelStructure.Num();
             if (LevelStructure.Num() > 0)
-                gameMode->NumGridUnitsY = LevelStructure[0].Num();
+                gameState->NumGridUnitsY = LevelStructure[0].Num();
         }
     }
 }
@@ -339,7 +339,7 @@ FVector2D ULevelBuilderComponent::GetCellWorldPosition (int x, int y, int RoomOf
     //    return FVector2D (0.0f, 0.0f);
 
     //return gameMode->GetCellWorldPosition(x, y, RoomOffsetX, RoomOffsetY, getCentre);
-    return ATPGameDemoGameMode::GetCellWorldPosition(this, x, y, RoomOffsetX, RoomOffsetY, getCentre);
+    return ATPGameDemoGameState::GetCellWorldPosition(this, x, y, RoomOffsetX, RoomOffsetY, getCentre);
 }
 
 FVector2D ULevelBuilderComponent::FindMostCentralEmptyCell()

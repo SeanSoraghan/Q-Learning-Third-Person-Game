@@ -92,12 +92,12 @@ struct RoomState
 
     RoomState(){}
 
-    RoomState(const ATPGameDemoGameMode& GameMode)
+    RoomState(FIntPoint roomDimensions)
     {
-        for (int x = 0; x < GameMode.NumGridUnitsX; ++x)
+        for (int x = 0; x < roomDimensions.X; ++x)
         {
             TArray<FThreadSafeCounter> states;
-            states.AddDefaulted(GameMode.NumGridUnitsY);
+            states.AddDefaulted(roomDimensions.Y);
             TileActorCounters.Add(states);
         }
     }
@@ -226,6 +226,7 @@ public:
         void TrainingProgressUpdatedForDoor(EDirectionType doorWallType, float progress);
 };
 
+DECLARE_MULTICAST_DELEGATE (FMazeDimensionsChanged);
 DECLARE_EVENT(ATPGameDemoGameState, SignalLostEvent);
 DECLARE_DYNAMIC_DELEGATE(FOnSignalLost);
 
@@ -254,6 +255,31 @@ public:
     //============================================================================
     // Acessors
     //============================================================================
+    
+    // --------------------- room grid properties -------------------------------------
+
+    /** Returns the world position of cell x|y mapped from positive indexing (0,0 -> n,n) to world positions centered at 0,0 (-n/2 * gridUnitX, -n/2 * gridUnitY -> n/2 * gridUnitX, n/2 * gridUnityY). 
+        The x position is offset by RoomOffsetX * grid (room) width. Similar for the y position.
+        If getCentre is true, the returned position will be centred within the grid cell. 
+        If getCentre is false, the returned position will be the back left corner of the cell.
+    */
+    UFUNCTION (BlueprintCallable, Category = "Room Grid Positions")
+        FVector2D GetGridCellWorldPosition (int x, int y, int RoomOffsetX, int RoomOffsetY, bool getCentre = true);
+    /** Static version of GetCellWorldPosition that can be called from any UObject by passing in a pointer to self.
+     */
+    UFUNCTION(BlueprintCallable, Category = "World Layout")
+        static FVector2D GetCellWorldPosition(UObject* worldContextObject, int x, int y, int RoomOffsetX, int RoomOffsetY, bool getCentre = true);
+
+    UFUNCTION(BlueprintCallable, Category = "World Rooms States")
+        bool InnerRoomPositionValid(FIntPoint positionInRoom) const;
+
+    /** Checks if position is valid. If not, wraps the position modulo room size, and updates the room coords. */
+    UFUNCTION(BlueprintCallable, Category = "World Rooms States")
+        void WrapRoomPositionPair (FRoomPositionPair& roomPositionPair);
+
+    /** Returns the world position for a given room and position in room. */
+    UFUNCTION (BlueprintCallable, Category = "Room Grid Positions")
+        FVector2D GetWorldXYForRoomAndPosition(FRoomPositionPair roomPositionPair);
 
     // --------------------- room properties -------------------------------------
 
@@ -308,6 +334,22 @@ public:
     //============================================================================
     // Modifiers
     //============================================================================
+
+    //----------------- inner grid properties ----------------------------------------
+
+    UFUNCTION (BlueprintCallable, Category = "Inner Grid Size")
+        void SetGridUnitLengthXCM (int x);
+
+    UFUNCTION (BlueprintCallable, Category = "Inner Grid Size")
+        void SetGridUnitLengthYCM (int y);
+
+    UFUNCTION (BlueprintCallable, Category = "Inner Grid Size")
+        void SetNumGridUnitsX (int numUnitsX);
+
+    UFUNCTION (BlueprintCallable, Category = "Inner Grid Size")
+        void SetNumGridUnitsY (int numUnitsY);
+    
+    // --------------------------------------------------------------------------------
 
     UFUNCTION(BlueprintCallable, Category = "World Rooms States")
         void DestroyDoorInRoom(FIntPoint roomCoords, EDirectionType doorWallPosition);
@@ -386,6 +428,20 @@ public:
     //============================================================================
     // Properties
     //============================================================================
+    FMazeDimensionsChanged OnMazeDimensionsChanged;
+
+    UPROPERTY (BlueprintReadOnly, VisibleAnywhere, Category = "Inner Grid Size")
+        int GridUnitLengthXCM = 200;
+
+    UPROPERTY (BlueprintReadOnly, VisibleAnywhere, Category = "Inner Grid Size")
+        int GridUnitLengthYCM = 200;
+
+    UPROPERTY (BlueprintReadOnly, VisibleAnywhere, Category = "Inner Grid Size")
+        int NumGridUnitsX = 10;
+
+    UPROPERTY (BlueprintReadOnly, VisibleAnywhere, Category = "Inner Grid Size")
+        int NumGridUnitsY = 10;
+
     UPROPERTY (BlueprintReadWrite, EditAnywhere, Category = "World Grid Size")
         int NumGridsXY = 20;
 
@@ -422,7 +478,7 @@ private:
     FIntPoint GetRoomXYIndicesChecked(FIntPoint roomCoords) const;
     const RoomState& GetRoomStateChecked(FIntPoint roomCoords) const;
     FIntPoint GetRoomCoords(FIntPoint roomIndices) const;
-    bool RoomXYIndicesValid(FIntPoint roomCoords) const;
+    bool RoomXYIndicesValid(FIntPoint roomInidces) const;
     bool WallXYIndicesValid(FIntPoint wallRoomCoords) const;
 
     SignalLostEvent OnSignalLost;

@@ -3,6 +3,7 @@
 #pragma once
 
 #include "Engine.h"
+#include "TPGameDemo.generated.h"
 
 #define ON_SCREEN_DEBUGGING 0
 
@@ -23,6 +24,14 @@ enum class ECellState : uint8
     Closed  UMETA (DisplayName = "Closed"),
     Door UMETA (DisplayName = "Door"),
     NumStates
+};
+
+USTRUCT(Blueprintable)
+struct FRoomPositionPair
+{
+    GENERATED_USTRUCT_BODY()
+    FIntPoint RoomCoords;
+    FIntPoint PositionInRoom;
 };
 
 namespace LevelBuilderHelpers
