@@ -30,13 +30,17 @@ void AEnemyActor::BeginPlay()
     //    world->GetTimerManager().SetTimer (MoveTimerHandle, [this](){ UpdateMovement(); }, 0.5f, true);
 }
 
+//void AEnemyActor::BeginDestroy()
+//{
+//    ClearAvoidanceTimer();
+//}
+
 void AEnemyActor::EndPlay (const EEndPlayReason::Type EndPlayReason)
 {
-    Super::EndPlay(EndPlayReason);
+    Super::EndPlay(EndPlayReason); 
 
-    UWorld* world = GetWorld();
-    if (world != nullptr)
-        GetWorld()->GetTimerManager().ClearAllTimersForObject (this);
+    ClearAvoidanceTimer();
+    // Clear Movement Timer
 }
 
 
@@ -46,19 +50,51 @@ void AEnemyActor::EndPlay (const EEndPlayReason::Type EndPlayReason)
 void AEnemyActor::Tick( float DeltaTime )
 {
 	Super::Tick( DeltaTime );
-    //UpdateMovement();
+    TimeSinceLastPositionChange += DeltaTime;
+    if (TimeSinceLastPositionChange >= MovementStuckThresholdSeconds && BehaviourState != EEnemyBehaviourState::Avoiding)
+    {
+        TimeSpentAvoiding = 0.0f;
+        BehaviourState = EEnemyBehaviourState::Avoiding;
+        AvoidingBehaviourTimeout = FMath::RandRange(1.5f, 2.5f);
+        TargetRoomPosition.DoorAction = EDirectionType::NumDirectionTypes;
+        UWorld* world = GetWorld();
+        //if (world != nullptr)
+        //{
+        //    world->GetTimerManager().SetTimer (StopAvoidanceTimerHandle, [this]()
+        //    { 
+        //        AsyncTask(ENamedThreads::GameThread, [this]()
+        //        {
+        //            ChooseDoorTarget();
+        //            BehaviourState = EEnemyBehaviourState::Exploring;
+        //            //ClearAvoidanceTimer();
+        //            UpdateMovement();
+        //        });
+        //    }, FMath::RandRange(1.5f, 3.5f), false);
+        //}
+        TargetNearbyEmptyCell();
+    }
+    if (BehaviourState == EEnemyBehaviourState::Avoiding)
+    {
+        TimeSpentAvoiding += DeltaTime;
+        if (TimeSpentAvoiding >= AvoidingBehaviourTimeout)
+        {
+            ChooseDoorTarget();
+            BehaviourState = EEnemyBehaviourState::Exploring;
+            UpdateMovement();
+        }
+    }
+    //if (BehaviourState == EEnemyBehaviourState::Avoiding)
+    //{
+    //    if (GridXPosition == AvoidanceTarget.PositionInRoom.X && GridYPosition == AvoidanceTarget.PositionInRoom.Y && 
+    //        CurrentRoomCoords == AvoidanceTarget.RoomCoords)
+    //        TargetNearbyEmptyCell();
+    //}
     FVector MovementVector = MovementTarget - GetActorLocation();
     MovementVector.Normalize();
     FRotator CurrentRotation = GetActorForwardVector().Rotation();
     FRotator ToTarget = UKismetMathLibrary::NormalizedDeltaRotator(CurrentRotation, MovementVector.Rotation());
     SetActorRotation (UKismetMathLibrary::RLerp(CurrentRotation, MovementVector.Rotation(), RotationSpeed/*Linear*/, true));
-   // UE_LOG(LogTemp, Warning, TEXT("Position Before: %f | %f | %f"), GetActorLocation().X, GetActorLocation().Y, GetActorLocation().Z);
-    //SetActorLocation(GetActorLocation() + MovementVector * MovementSpeed, true);
     AddMovementInput(MovementVector * MovementSpeed);
-    //UE_LOG(LogTemp, Warning, TEXT("Position After: %f | %f | %f"), GetActorLocation().X, GetActorLocation().Y, GetActorLocation().Z);
-    //SetActorLocation(GetActorLocation() + MovementVector * MovementSpeed, false);
-    //UE_LOG(LogTemp, Warning, TEXT("Position After No Sweep: %f | %f | %f"), GetActorLocation().X, GetActorLocation().Y, GetActorLocation().Z);
-     //GetActorForwardVector().Rotation()
 }
 
 //======================================================================================================
@@ -66,6 +102,7 @@ void AEnemyActor::Tick( float DeltaTime )
 //======================================================================================================
 void AEnemyActor::PositionChanged()
 {
+    TimeSinceLastPositionChange = 0.0f;
     if (GridXPosition == TargetRoomPosition.Position.X && GridYPosition == TargetRoomPosition.Position.Y)
     {
         if (TargetRoomPosition.DoorAction != EDirectionType::NumDirectionTypes && 
@@ -90,17 +127,28 @@ void AEnemyActor::PositionChanged()
             MovementTarget = FVector(targetXY.X, targetXY.Y, z);
         }
     }
+    else if (BehaviourState == EEnemyBehaviourState::Avoiding)
+    {
+        if (GridXPosition == AvoidanceTarget.PositionInRoom.X && GridYPosition == AvoidanceTarget.PositionInRoom.Y && 
+            CurrentRoomCoords == AvoidanceTarget.RoomCoords)
+            TargetNearbyEmptyCell();
+    }
 }
 
 void AEnemyActor::RoomCoordsChanged()
 {
+    ClearPreviousDoorTarget();
     LoadLevelPolicyForRoomCoordinates(CurrentRoomCoords);
     if (BehaviourState == EEnemyBehaviourState::ChangingRooms)
     {
         BehaviourState = EEnemyBehaviourState::Exploring;
-        if (!(CurrentRoomCoords.X == 0 && CurrentRoomCoords.Y == 0))
-            ChooseDoorTarget();
+        ChooseDoorTarget();
     }
+}
+
+void AEnemyActor::ClearPreviousDoorTarget()
+{
+    PreviousDoorTarget = EDirectionType::NumDirectionTypes;
 }
 
 void AEnemyActor::UpdateMovement()
@@ -119,9 +167,61 @@ void AEnemyActor::UpdateMovementForActionType(EDirectionType actionType)
     {
         const float z = GetActorLocation().Z;
         FRoomPositionPair roomAndPosition = GetTargetRoomAndPositionForDirectionType(actionType);
+        //if (!gameState->RoomTilePositionIsEmpty(roomAndPosition) && BehaviourState != EEnemyBehaviourState::Avoiding)
+        //{
+        //    BehaviourState = EEnemyBehaviourState::Avoiding;
+        //    TargetRoomPosition.DoorAction = EDirectionType::NumDirectionTypes;
+        //    UWorld* world = GetWorld();
+        //    if (world != nullptr)
+        //    {
+        //        world->GetTimerManager().SetTimer (StopAvoidanceTimerHandle, [this]()
+        //        { 
+        //            ChooseDoorTarget();
+        //            BehaviourState = EEnemyBehaviourState::Exploring;
+        //            //ClearAvoidanceTimer();
+        //            UpdateMovement();
+        //        }, FMath::RandRange(2.5f, 4.5f), false);
+        //    }
+        //    TargetNearbyEmptyCell();
+        //    return;
+        //}
         FVector2D targetXY = gameState->GetWorldXYForRoomAndPosition(roomAndPosition);
         MovementTarget = FVector(targetXY.X, targetXY.Y, z);
     }
+}
+
+bool AEnemyActor::TargetNearbyEmptyCell()
+{
+    ATPGameDemoGameState* gameState = (ATPGameDemoGameState*) GetWorld()->GetGameState();
+    if (gameState != nullptr)
+    {
+        // Target neighbour cells to see if they are empty.
+        // When an empty one is found, update the MovementTarget.
+        // If the neighbour cell is not empty, continue testing the others in a clockwise motion.
+        // Randomize the starting neighbour so that lots of avoiding enemies dont tend to head in the same direction.
+        const int randomStartingDirection = FMath::RandRange(0, (int)EDirectionType::NumDirectionTypes - 1);
+        for (int i = 0; i < (int)EDirectionType::NumDirectionTypes; ++i)
+        {
+            int clampedDirection = FMath::Fmod (i + randomStartingDirection, (int)EDirectionType::NumDirectionTypes);
+            EDirectionType direction = (EDirectionType) (clampedDirection);
+            FRoomPositionPair avoidanceTarget = GetTargetRoomAndPositionForDirectionType(direction);
+            if (gameState->RoomTilePositionIsEmpty(avoidanceTarget))
+            {
+                AvoidanceTarget = avoidanceTarget;
+                FVector2D targetXY = gameState->GetWorldXYForRoomAndPosition(avoidanceTarget);
+                MovementTarget = FVector(targetXY.X, targetXY.Y, GetActorLocation().Z);
+                return true;
+            }
+        }
+    }
+    return false;
+}
+
+void AEnemyActor::ClearAvoidanceTimer()
+{
+    UWorld* world = GetWorld();
+    if (world != nullptr)
+        world->GetTimerManager().ClearTimer(StopAvoidanceTimerHandle);
 }
 
 EDirectionType AEnemyActor::SelectNextAction()
@@ -218,28 +318,31 @@ void AEnemyActor::LoadLevelPolicy (FString levelName)
 
 void AEnemyActor::UpdatePolicyForPlayerPosition (int targetX, int targetY)
 {
-    TargetRoomPosition.Position.X = targetX;
-    TargetRoomPosition.Position.Y = targetY;
-    TargetRoomPosition.DoorAction = EDirectionType::NumDirectionTypes;
-    ATPGameDemoGameState* gameState = (ATPGameDemoGameState*) GetWorld()->GetGameState();
-    if (gameState != nullptr)
+    if (BehaviourState != EEnemyBehaviourState::Avoiding)
     {
-        // If the player is in a doorway, we set the target according to the doorway they are in.
-        // Due to the way rooms overlpap, enemies will never recieve a player position changed notification
-        // when the player is in the north or east door, as these are part of the neighbouring rooms.
-        if (targetX == 0)
+        TargetRoomPosition.Position.X = targetX;
+        TargetRoomPosition.Position.Y = targetY;
+        TargetRoomPosition.DoorAction = EDirectionType::NumDirectionTypes;
+        ATPGameDemoGameState* gameState = (ATPGameDemoGameState*) GetWorld()->GetGameState();
+        if (gameState != nullptr)
         {
-            UpdatePolicyForDoorType(EDirectionType::South, targetY);
-            return;
+            // If the player is in a doorway, we set the target according to the doorway they are in.
+            // Due to the way rooms overlpap, enemies will never recieve a player position changed notification
+            // when the player is in the north or east door, as these are part of the neighbouring rooms.
+            if (targetX == 0)
+            {
+                UpdatePolicyForDoorType(EDirectionType::South, targetY);
+                return;
+            }
+            if (targetY == 0)
+            {
+                UpdatePolicyForDoorType(EDirectionType::West, targetX);
+                return;
+            }
         }
-        if (targetY == 0)
-        {
-            UpdatePolicyForDoorType(EDirectionType::West, targetX);
-            return;
-        }
+        BehaviourState = EEnemyBehaviourState::Exploring;
+        UpdatePolicyForTargetPosition();
     }
-    BehaviourState = EEnemyBehaviourState::Exploring;
-    UpdatePolicyForTargetPosition();
 }
 
 void AEnemyActor::UpdatePolicyForDoorType (EDirectionType doorType, int doorPositionOnWall)
@@ -296,7 +399,7 @@ void AEnemyActor::UpdatePolicyForTargetPosition()
 void AEnemyActor::ChooseDoorTarget()
 {
     ATPGameDemoGameState* gameState = (ATPGameDemoGameState*) GetWorld()->GetGameState();
-    if (gameState != nullptr)
+    if (gameState != nullptr && !(CurrentRoomCoords.X == 0 && CurrentRoomCoords.Y == 0))
     {
         TArray<int> neighbourPositions = gameState->GetDoorPositionsForExistingNeighbours(CurrentRoomCoords);
         EQuadrantType quadrant = gameState->GetQuadrantTypeForRoomCoords(CurrentRoomCoords);
@@ -341,9 +444,12 @@ void AEnemyActor::ChooseDoorTarget()
                 if(DoorPriorities[i])
                     if (neighbourPositions[i] == 0)
                         possibleDoors.Add((EDirectionType)i);
+        if (possibleDoors.Num() > 1 && possibleDoors.Contains(PreviousDoorTarget))
+            possibleDoors.Remove(PreviousDoorTarget);
         int doorIndex = FMath::RandRange(0, possibleDoors.Num() - 1);
         EDirectionType doorAction = possibleDoors[doorIndex];        
         int doorPositionOnWall = neighbourPositions[(int)possibleDoors[doorIndex]];
+        PreviousDoorTarget = doorAction;
         UpdatePolicyForDoorType(doorAction, doorPositionOnWall);
     }
 }

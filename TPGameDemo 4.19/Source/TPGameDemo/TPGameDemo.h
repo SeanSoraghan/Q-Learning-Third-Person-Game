@@ -30,7 +30,9 @@ USTRUCT(Blueprintable)
 struct FRoomPositionPair
 {
     GENERATED_USTRUCT_BODY()
+    UPROPERTY (BlueprintReadWrite, EditAnywhere, Category = "Rooms And Positions")
     FIntPoint RoomCoords;
+    UPROPERTY (BlueprintReadWrite, EditAnywhere, Category = "Rooms And Positions")
     FIntPoint PositionInRoom;
 };
 

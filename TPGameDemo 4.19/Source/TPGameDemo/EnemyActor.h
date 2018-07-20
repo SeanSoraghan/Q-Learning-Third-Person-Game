@@ -26,6 +26,7 @@ UENUM(BlueprintType)
 enum class EEnemyBehaviourState : uint8
 {
     Exploring,
+    Avoiding,
     ChangingRooms,
     NumBehaviourStates
 };
@@ -91,6 +92,9 @@ public:
 
     UFUNCTION (BlueprintCallable, Category = "Enemy Policy")
         void LoadLevelPolicy (FString levelName);
+
+    UFUNCTION (BlueprintCallable, Category = "Enemy Movement")
+        bool TargetNearbyEmptyCell();
     //======================================================================================================
     // Movement
     //====================================================================================================== 
@@ -99,10 +103,15 @@ public:
     UPROPERTY(BlueprintReadWrite, EditAnywhere, Category = "Enemy Movement")
         float MovementSpeed = 1.0f;
     UPROPERTY(BlueprintReadWrite, EditAnywhere, Category = "Enemy Movement")
-        float RotationSpeed = 0.1f;        
+        float RotationSpeed = 0.1f; 
+    /** If the actor doesn't move within this time period, their behaviour will be changed to 'avoid' for a short time. */
+    UPROPERTY(BlueprintReadWrite, EditAnywhere, Category = "Enemy Movement")
+        float MovementStuckThresholdSeconds = 1.5f;
+        
 private:
     EEnemyBehaviourState  BehaviourState = EEnemyBehaviourState::Exploring;
-    FTargetPosition        TargetRoomPosition;
+    FTargetPosition       TargetRoomPosition;
+    FRoomPositionPair     AvoidanceTarget;
     //FIntPoint             CurrentRoomCoords = FIntPoint::ZeroValue;
     FString               LevelPoliciesDir;
     FString               CurrentLevelPolicyDir;
@@ -123,7 +132,18 @@ private:
     // Returns the room coords and position in room indicated by the given movement direction, determined by the actors current position.
     // If the movement action would cause them to change rooms, roomCoords will indicate which room they would enter.
     FRoomPositionPair GetTargetRoomAndPositionForDirectionType(EDirectionType actionType);
+    
+    FTimerHandle StopAvoidanceTimerHandle;
+    void ClearAvoidanceTimer();
+    float TimeSinceLastPositionChange = 0.0f;
+    float AvoidingBehaviourTimeout = 1.0f;
+    float TimeSpentAvoiding = 0.0f;
+    //float CurrentDistanceTravelled = 0.0f;
+    //FVector LastDistanceTrackerStartPosition = FVector::ZeroVector;
+    //float DistanceTrackerTime = 0.0f;
 
+    EDirectionType PreviousDoorTarget = EDirectionType::NumDirectionTypes;
+    void ClearPreviousDoorTarget();
     //======================================================================================================
     // From AMazeActor
     //====================================================================================================== 

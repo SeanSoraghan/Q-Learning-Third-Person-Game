@@ -9,6 +9,7 @@
 //====================================================================================================== 
 ABaseCharacter::ABaseCharacter (const FObjectInitializer& ObjectInitializer) : Super (ObjectInitializer)
 {
+    SetOccupyCells(false);
 	PrimaryActorTick.bCanEverTick = true;
     TimelineContainer = ObjectInitializer.CreateDefaultSubobject<UTimelineContainerComponent> (this, TEXT("TimelineContainer"));
     TimelineContainer->TimelineInterpFunction.BindUFunction   (this, FName { TEXT ("TimelineUpdated") });

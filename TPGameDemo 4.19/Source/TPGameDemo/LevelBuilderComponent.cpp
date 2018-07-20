@@ -363,3 +363,28 @@ void ULevelBuilderComponent::TickComponent( float DeltaTime, ELevelTick TickType
 	Super::TickComponent( DeltaTime, TickType, ThisTickFunction );
 }
 
+void ULevelBuilderComponent::UpdateInnerWallCellActorCounts(FIntPoint roomCoords, bool Increment)
+{
+    ATPGameDemoGameState* gameState = (ATPGameDemoGameState*) GetWorld()->GetGameState();
+    if (gameState != nullptr)
+    {
+        for (int row = 1; row < LevelStructure.Num() - 2; ++row)
+        {
+            for (int col = 1; col < LevelStructure[0].Num() - 2; ++col)
+            {
+                if (LevelStructure[row][col] == (int)ECellState::Closed)
+                {
+                    if (Increment)
+                    {
+                        gameState->ActorEnteredTilePosition(roomCoords, FIntPoint(row, col));
+                    }
+                    else
+                    {
+                        gameState->ActorExitedTilePosition(roomCoords, FIntPoint(row, col));
+                    }
+                }
+            }
+        }
+    }
+}
+

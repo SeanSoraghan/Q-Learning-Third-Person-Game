@@ -95,7 +95,8 @@ public:
     UFUNCTION (BlueprintCallable, Category = "Level Building")
         FVector2D FindMostCentralSpawnPosition(int RoomOffsetX, int RoomOffsetY);
 
-    
+    UFUNCTION (BlueprintCallable, Category = "Level Building")
+        void UpdateInnerWallCellActorCounts(FIntPoint roomCoords, bool Increment);
 
 private:
     FIntPoint           GetRandomEvenCell();

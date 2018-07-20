@@ -307,8 +307,12 @@ public:
     UFUNCTION(BlueprintCallable, Category = "World Room States")
         FIntPoint GetSignalPointPositionInRoom(FIntPoint roomCoords) const;
 
+    /** Counts MazeActors only (so doesnt count walls) */
     UFUNCTION(BlueprintCallable, Category = "World Rooms States")
         bool TilePositionIsEmpty(FIntPoint roomCoords, FIntPoint tilePosition) const;
+    /** Counts MazeActors only (so doesnt count walls) */
+    UFUNCTION(BlueprintCallable, Category = "World Rooms States")
+        bool RoomTilePositionIsEmpty(FRoomPositionPair roomAndPosition) const;
 
     // --------------------- neighbouring rooms -------------------------------------
 
@@ -450,6 +454,10 @@ public:
 
     UPROPERTY(BlueprintReadWrite, EditAnywhere, Category = "World Room Health")
         float SignalStrength = 100.0f;
+
+    UPROPERTY(BlueprintReadWrite, EditAnywhere, Category = "World Room Health")
+        float MaxSignalStrength = 100.0f;
+
 
 private:
     TArray<TArray<ARoomBuilder*>> RoomBuilders;

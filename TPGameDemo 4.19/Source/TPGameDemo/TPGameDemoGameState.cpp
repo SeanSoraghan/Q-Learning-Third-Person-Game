@@ -178,6 +178,11 @@ bool ATPGameDemoGameState::TilePositionIsEmpty(FIntPoint roomCoords, FIntPoint t
     return GetRoomStateChecked(roomCoords).TileIsEmpty(tilePosition);
 }
 
+bool ATPGameDemoGameState::RoomTilePositionIsEmpty(FRoomPositionPair roomAndPosition) const
+{
+    return TilePositionIsEmpty(roomAndPosition.RoomCoords, roomAndPosition.PositionInRoom);
+}
+
 EQuadrantType ATPGameDemoGameState::GetQuadrantTypeForRoomCoords(FIntPoint roomCoords) const
 {
     FIntPoint roomIndices = GetRoomXYIndicesChecked(roomCoords);
@@ -296,7 +301,7 @@ void ATPGameDemoGameState::UpdateRoomHealth(FIntPoint roomCoords, float healthDe
 
 void ATPGameDemoGameState::UpdateSignalStrength(float delta)
 {
-    SignalStrength = FMath::Max(0.0f, SignalStrength + delta);
+    SignalStrength = FMath::Min(FMath::Max(0.0f, SignalStrength + delta), MaxSignalStrength);
     if (SignalStrength <= 0.0f)
     {
         // signal depleted
@@ -633,14 +638,18 @@ void ATPGameDemoGameState::FlagWallsForUpdate(FIntPoint roomCoords)
     auto northNeighbourCoords = GetRoomCoords(GetNeighbouringRoomIndices(roomCoords, EDirectionType::North));
     auto eastNeighbourCoords = GetRoomCoords(GetNeighbouringRoomIndices(roomCoords, EDirectionType::East));
 
-    if(!IsWallInUpdateList(roomCoords, EDirectionType::South))
-        WallsToUpdate.Add({roomCoords, EDirectionType::South});
-    if(!IsWallInUpdateList(roomCoords, EDirectionType::West))
-        WallsToUpdate.Add({roomCoords, EDirectionType::West});
-    if(!IsWallInUpdateList(northNeighbourCoords, EDirectionType::South))
-        WallsToUpdate.Add({northNeighbourCoords, EDirectionType::South});
-    if(!IsWallInUpdateList(eastNeighbourCoords, EDirectionType::West))
-        WallsToUpdate.Add({eastNeighbourCoords, EDirectionType::West});
+    AsyncTask(ENamedThreads::GameThread, [this, roomCoords, northNeighbourCoords, eastNeighbourCoords]()
+    {
+        if(!IsWallInUpdateList(roomCoords, EDirectionType::South))
+            WallsToUpdate.Add({roomCoords, EDirectionType::South});
+        if(!IsWallInUpdateList(roomCoords, EDirectionType::West))
+            WallsToUpdate.Add({roomCoords, EDirectionType::West});
+        if(!IsWallInUpdateList(northNeighbourCoords, EDirectionType::South))
+            WallsToUpdate.Add({northNeighbourCoords, EDirectionType::South});
+        if(!IsWallInUpdateList(eastNeighbourCoords, EDirectionType::West))
+            WallsToUpdate.Add({eastNeighbourCoords, EDirectionType::West});
+    });
+    
 }
 
 // ----------------------- Inner Grid Properties -------------------------------------

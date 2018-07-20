@@ -39,6 +39,11 @@ void AMazeActor::BeginPlay()
     UpdatePosition (false);
 }
 
+void AMazeActor::SetOccupyCells(bool bShouldOccupy)
+{
+    bOccupyCells = bShouldOccupy;
+}
+
 float AMazeActor::GetHealthPercentage()
 {
     return Health / MaxHealth;
@@ -56,6 +61,11 @@ void AMazeActor::CheckDeath()
     {
         Health = 0.0f;
         IsAlive = false;
+        ATPGameDemoGameState* gameState = (ATPGameDemoGameState*) GetWorld()->GetGameState();
+        if (gameState != nullptr && bOccupyCells)
+        {
+            gameState->ActorExitedTilePosition(CurrentRoomCoords, FIntPoint(GridXPosition, GridYPosition));
+        }
         OnActorDied.Broadcast();
     }
 }
@@ -99,7 +109,7 @@ void AMazeActor::UpdatePosition (bool broadcastChange)
     if (broadcastChange && (GridYPosition != PreviousGridYPosition || GridXPosition != PreviousGridXPosition))
     {
         ATPGameDemoGameState* gameState = (ATPGameDemoGameState*) GetWorld()->GetGameState();
-        if (gameState != nullptr)
+        if (gameState != nullptr && bOccupyCells)
         {
             gameState->ActorExitedTilePosition(PreviousRoomCoords, FIntPoint(PreviousGridXPosition, PreviousGridYPosition));
             gameState->ActorEnteredTilePosition(CurrentRoomCoords, FIntPoint(GridXPosition, GridYPosition));

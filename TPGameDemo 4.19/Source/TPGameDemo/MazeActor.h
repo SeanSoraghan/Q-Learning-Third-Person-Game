@@ -37,6 +37,9 @@ public:
 	// Called every frame
 	virtual void Tick( float DeltaSeconds ) override;
 
+    /** Use this to change whether a specific implementation of MazeActor should count towards a positions actor count. */
+    UFUNCTION(BlueprintCallable, Category = "Maze Actor Positions")
+        void SetOccupyCells(bool bShouldOccupy);
 	//=========================================================================================
     // Maze Position
     //=========================================================================================
@@ -93,4 +96,5 @@ private:
     int PreviousGridXPosition         = 0;
     int PreviousGridYPosition         = 0;
     FIntPoint PreviousRoomCoords      = FIntPoint(0,0);
+    bool bOccupyCells = true;
 };
