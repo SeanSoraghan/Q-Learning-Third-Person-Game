@@ -304,7 +304,7 @@ void ATPGameDemoGameState::UpdateSignalStrength(float delta)
     SignalStrength = FMath::Min(FMath::Max(0.0f, SignalStrength + delta), MaxSignalStrength);
     if (SignalStrength <= 0.0f)
     {
-        // signal depleted
+        OnSignalLost.Broadcast();
     }
 }
 
