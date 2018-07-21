@@ -217,7 +217,7 @@ private:
     void ExploreLeftPressed();
     void ExploreLeftReleased();
     void ItemHotkeyPressed(int itemNumber);
-    void BuildItemPlaced()
+    void BuildItemPlaced();
     void UpdateMeshRotationForExploreDirection();
 
     SMovementKeysPressedState MovementKeysPressedState;
