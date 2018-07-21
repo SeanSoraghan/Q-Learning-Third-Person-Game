@@ -231,6 +231,29 @@ FIntPoint ATPGameDemoGameState::GetNeighbouringRoomIndices(FIntPoint roomCoords,
     }
 }
 
+FRoomPositionPair ATPGameDemoGameState::GetNeighbouringCell(FRoomPositionPair roomAndPosition, EDirectionType direction)
+{
+    FRoomPositionPair neighbourRoomAndPosition = roomAndPosition;
+    switch(direction)
+    {
+    case EDirectionType::North:
+        neighbourRoomAndPosition.PositionInRoom.X += 1;
+        break;
+    case EDirectionType::East:
+        neighbourRoomAndPosition.PositionInRoom.Y += 1;
+        break;
+    case EDirectionType::South:
+        neighbourRoomAndPosition.PositionInRoom.X -= 1;
+        break;
+    case EDirectionType::West:
+        neighbourRoomAndPosition.PositionInRoom.Y -= 1;
+        break;
+    default: ensure(!"Urecognized direction!"); break;
+    }
+    WrapRoomPositionPair(neighbourRoomAndPosition);
+    return neighbourRoomAndPosition;
+}
+
 TArray<bool> ATPGameDemoGameState::GetNeighbouringRoomStates(FIntPoint roomCoords) const
 {
     TArray<bool> neighbouringRoomStates{false, false, false, false};

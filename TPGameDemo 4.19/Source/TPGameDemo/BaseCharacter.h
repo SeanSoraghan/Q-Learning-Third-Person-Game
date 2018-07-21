@@ -68,9 +68,7 @@ struct SMovementKeysPressedState
 //===========================================================================================
 
 DECLARE_DYNAMIC_MULTICAST_DELEGATE (FPlayerFired);
-DECLARE_DYNAMIC_MULTICAST_DELEGATE (FPlayerControlRotationChanged);
-DECLARE_DYNAMIC_MULTICAST_DELEGATE (FPlayerBuildItemChanged);
-DECLARE_DYNAMIC_MULTICAST_DELEGATE (FPlayerBuildItemPlaced);
+
 DECLARE_DELEGATE_OneParam          (FHotkeyDelegate, int);
 
 /*
@@ -155,8 +153,8 @@ public:
 
     UFUNCTION (BlueprintCallable, Category = "Base Character Movement")
         void UpdateControlRotation();
-    UPROPERTY (BlueprintAssignable, Category = "Base Character Movement")
-        FPlayerControlRotationChanged OnPlayerControlRotationUpdated;
+    UFUNCTION (BlueprintImplementableEvent, Category = "Base Character Movement")
+        void OnPlayerControlRotationUpdated();
 
     UPROPERTY(BlueprintReadOnly, VisibleAnywhere, Category="Base Character Movement")
         EControlState ControlState = EControlState::Explore;
@@ -166,16 +164,16 @@ public:
     //=========================================================================================
     UPROPERTY (BlueprintAssignable, Category = "Base Character Shooting")
         FPlayerFired OnPlayerFired;
-
+    
     //=========================================================================================
     // Building
     //=========================================================================================
     UPROPERTY (BlueprintReadWrite, Category = "Base Character Building")
         EBuildableActorType BuildableItem;
-    UPROPERTY (BlueprintAssignable, Category = "Base Character Building")
-        FPlayerBuildItemChanged OnPlayerBuildItemChanged;
-    UPROPERTY (BlueprintAssignable, Category = "Base Character Building")
-        FPlayerBuildItemPlaced OnPlayerBuildItemPlaced;
+    UFUNCTION (BlueprintImplementableEvent, Category = "Base Character Building")
+        void OnPlayerBuildItemChanged();
+    UFUNCTION (BlueprintImplementableEvent, Category = "Base Character Building")
+        void OnPlayerBuildItemPlaced();
     
 private:
     //=========================================================================================
@@ -240,6 +238,7 @@ private:
     // Shooting
     //=========================================================================================
     void PlayerFired();
+    //PlayerFiredEvent OnPlayerFired;
 
     //=========================================================================================
     // Timeline
@@ -254,6 +253,11 @@ private:
 
     FRotator TimelineTargetLookRotation;
     FRotator TimelineTargetMeshRotation;
+
+    //=========================================================================================
+    // Build Items
+    //=========================================================================================
+    
 
     //=========================================================================================
     // Helper Functions

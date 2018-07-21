@@ -128,6 +128,11 @@ void AMazeActor::UpdatePosition (bool broadcastChange)
     }
 }
 
+FRoomPositionPair AMazeActor::GetRoomAndPosition()
+{
+    return {CurrentRoomCoords, {GridXPosition, GridYPosition}};
+}
+
 // Called every frame
 void AMazeActor::Tick( float DeltaTime )
 {

@@ -319,6 +319,10 @@ public:
     UFUNCTION(BlueprintCallable, Category = "World Rooms States")
         FIntPoint GetNeighbouringRoomIndices(FIntPoint roomCoords, EDirectionType neighbourPosition) const;
 
+    /** Returns a neighbourng cell determined by direction, wrapped if neccessary*/
+    UFUNCTION(BlueprintCallable, Category = "World Rooms States")
+        FRoomPositionPair GetNeighbouringCell(FRoomPositionPair roomAndPosition, EDirectionType direction);
+
     /** Returns a bool array indicating whether the neihgbouring rooms in each direction (North through West, clockwise) exist. */
     UFUNCTION(BlueprintCallable, Category = "World Rooms States")
         TArray<bool> GetNeighbouringRoomStates(FIntPoint doorPosition) const;

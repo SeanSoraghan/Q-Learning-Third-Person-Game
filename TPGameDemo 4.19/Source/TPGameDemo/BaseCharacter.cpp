@@ -255,7 +255,7 @@ void ABaseCharacter::UpdateControlRotation()
     newLookRotation.Normalize();
     if (GetController() != nullptr)
         GetController()->SetControlRotation (newLookRotation);
-    OnPlayerControlRotationUpdated.Broadcast();
+    OnPlayerControlRotationUpdated();
 }
 
 void ABaseCharacter::CombatDirectionPressed (EMovementDirectionType direction)
@@ -298,14 +298,14 @@ void ABaseCharacter::ExploreDirectionReleased (EMovementDirectionType direction)
 void ABaseCharacter::ItemHotkeyPressed(int itemNumber)
 {
     BuildableItem = (EBuildableActorType)itemNumber;
-    OnPlayerBuildItemChanged.Broadcast();
+    OnPlayerBuildItemChanged();
 }
 
 void ABaseCharacter::BuildItemPlaced()
 {
     int item = (int)BuildableItem; 
     if (item > (int)EBuildableActorType::None && item < (int)EBuildableActorType::NumBuildables)
-        OnPlayerBuildItemPlaced.Broadcast();
+        OnPlayerBuildItemPlaced();
 }
 
 void ABaseCharacter::UpdateMeshRotationForExploreDirection()

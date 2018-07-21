@@ -2,6 +2,7 @@
 
 #pragma once
 #include "GameFramework/Character.h"
+#include "TPGameDemo.h"
 //#include "TextParserComponent.h"
 #include "MazeActor.generated.h"
 
@@ -49,6 +50,8 @@ public:
         int GridXPosition                 = 0;
     UPROPERTY (BlueprintReadOnly, Category = "Actor Grid Positions")
         int GridYPosition                 = 0;
+    UFUNCTION(BlueprintCallable, Category = "Actor Grid Positions")
+        FRoomPositionPair GetRoomAndPosition();
 
     UPROPERTY (BlueprintAssignable, Category = "Actor Grid Positions")
         FGridPositionChanged GridPositionChangedEvent;
