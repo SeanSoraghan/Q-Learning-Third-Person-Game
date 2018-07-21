@@ -24,6 +24,15 @@ enum class EControlState : uint8
     NumStates
 };
 
+UENUM(BlueprintType)
+enum class EBuildableActorType : uint8
+{
+    None    UMETA (DisplayName = "None"),
+    Turret  UMETA (DisplayName = "Turret"),
+    Mine    UMETA (DisplayName = "Mine"),
+    NumBuildables
+};
+
 enum class EMovementDirectionType : uint8
 {
     Forward   UMETA (DisplayName = "Forward") = 0,
@@ -60,6 +69,9 @@ struct SMovementKeysPressedState
 
 DECLARE_DYNAMIC_MULTICAST_DELEGATE (FPlayerFired);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE (FPlayerControlRotationChanged);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE (FPlayerBuildItemChanged);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE (FPlayerBuildItemPlaced);
+DECLARE_DELEGATE_OneParam          (FHotkeyDelegate, int);
 
 /*
 The base class for the main player character. Includes functionality for input handling, movement, and animating between viewpoints.
@@ -154,6 +166,17 @@ public:
     //=========================================================================================
     UPROPERTY (BlueprintAssignable, Category = "Base Character Shooting")
         FPlayerFired OnPlayerFired;
+
+    //=========================================================================================
+    // Building
+    //=========================================================================================
+    UPROPERTY (BlueprintReadWrite, Category = "Base Character Building")
+        EBuildableActorType BuildableItem;
+    UPROPERTY (BlueprintAssignable, Category = "Base Character Building")
+        FPlayerBuildItemChanged OnPlayerBuildItemChanged;
+    UPROPERTY (BlueprintAssignable, Category = "Base Character Building")
+        FPlayerBuildItemPlaced OnPlayerBuildItemPlaced;
+    
 private:
     //=========================================================================================
     // Input Responders
@@ -193,6 +216,8 @@ private:
     void ExploreRightReleased();
     void ExploreLeftPressed();
     void ExploreLeftReleased();
+    void ItemHotkeyPressed(int itemNumber);
+    void BuildItemPlaced()
     void UpdateMeshRotationForExploreDirection();
 
     SMovementKeysPressedState MovementKeysPressedState;

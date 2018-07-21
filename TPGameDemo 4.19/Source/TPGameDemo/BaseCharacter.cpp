@@ -215,6 +215,13 @@ void ABaseCharacter::SetupExploreMovementControls()
         InputComponent->BindAction ("move-left",      IE_Released, this, &ABaseCharacter::ExploreLeftReleased);
 
         InputComponent->BindAxis   ("look-right", this, &ABaseCharacter::UpdateHorizontalLookRotation);
+
+        for (int i = (int)EBuildableActorType::None; i < (int)EBuildableActorType::NumBuildables; ++i)
+        {
+            InputComponent->BindAction<FHotkeyDelegate> (*(FString("item-hotkey-") + FString::FromInt(i)), IE_Pressed, this, &ABaseCharacter::ItemHotkeyPressed, i);
+        }
+
+        InputComponent->BindAction ("fire", IE_Pressed, this, &ABaseCharacter::BuildItemPlaced);
     }
 }
 
@@ -286,6 +293,19 @@ void ABaseCharacter::ExploreDirectionReleased (EMovementDirectionType direction)
 
     if (MovementKeysPressedState.AreAnyKeysPressed())
         UpdateMeshRotationForExploreDirection();
+}
+
+void ABaseCharacter::ItemHotkeyPressed(int itemNumber)
+{
+    BuildableItem = (EBuildableActorType)itemNumber;
+    OnPlayerBuildItemChanged.Broadcast();
+}
+
+void ABaseCharacter::BuildItemPlaced()
+{
+    int item = (int)BuildableItem; 
+    if (item > (int)EBuildableActorType::None && item < (int)EBuildableActorType::NumBuildables)
+        OnPlayerBuildItemPlaced.Broadcast();
 }
 
 void ABaseCharacter::UpdateMeshRotationForExploreDirection()
