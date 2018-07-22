@@ -172,8 +172,6 @@ public:
         EBuildableActorType BuildableItem;
     UFUNCTION (BlueprintImplementableEvent, Category = "Base Character Building")
         void OnPlayerBuildItemChanged();
-    UFUNCTION (BlueprintImplementableEvent, Category = "Base Character Building")
-        void OnPlayerBuildItemPlaced();
     
 private:
     //=========================================================================================
@@ -215,7 +213,6 @@ private:
     void ExploreLeftPressed();
     void ExploreLeftReleased();
     void ItemHotkeyPressed(int itemNumber);
-    void BuildItemPlaced();
     void UpdateMeshRotationForExploreDirection();
 
     SMovementKeysPressedState MovementKeysPressedState;

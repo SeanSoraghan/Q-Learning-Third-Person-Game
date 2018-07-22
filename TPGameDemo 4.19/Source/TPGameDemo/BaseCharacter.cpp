@@ -219,8 +219,6 @@ void ABaseCharacter::SetupExploreMovementControls()
         InputComponent->BindAction ("move-left",      IE_Released, this, &ABaseCharacter::ExploreLeftReleased);
 
         InputComponent->BindAxis   ("look-right", this, &ABaseCharacter::UpdateHorizontalLookRotation);
-
-        InputComponent->BindAction ("fire", IE_Pressed, this, &ABaseCharacter::BuildItemPlaced);
     }
 }
 
@@ -298,13 +296,6 @@ void ABaseCharacter::ItemHotkeyPressed(int itemNumber)
 {
     BuildableItem = (EBuildableActorType)itemNumber;
     OnPlayerBuildItemChanged();
-}
-
-void ABaseCharacter::BuildItemPlaced()
-{
-    int item = (int)BuildableItem; 
-    if (item > (int)EBuildableActorType::None && item < (int)EBuildableActorType::NumBuildables)
-        OnPlayerBuildItemPlaced();
 }
 
 void ABaseCharacter::UpdateMeshRotationForExploreDirection()
