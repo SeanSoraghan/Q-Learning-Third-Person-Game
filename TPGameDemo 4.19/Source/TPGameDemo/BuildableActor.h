@@ -15,9 +15,15 @@ class TPGAMEDEMO_API ABuildableActor : public AMazeActor
 	GENERATED_BODY()
 	
 public:
-    UPROPERTY(BlueprintReadWrite, Category = "Buildable Items")
-        bool IsBuilt = false;
+    UFUNCTION(BlueprintCallable, Category = "Buildable Items")
+        bool IsItemBuilt() const;
+
+    UFUNCTION(BlueprintCallable, Category = "Buildable Items Placement")
+        void PlaceItem();
+
+    UFUNCTION(BlueprintImplementableEvent, Category = "Buildable Items Placement")
+        void ItemWasPlaced();
 
 private:
-	
+	bool IsBuilt = false;
 };
