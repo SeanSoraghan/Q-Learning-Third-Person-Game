@@ -14,4 +14,17 @@ void ABuildableActor::PlaceItem()
     ItemWasPlaced();
 }
 
+bool ABuildableActor::CanItemBePlaced() const
+{
+    return CanBePlaced;
+}
+
+void ABuildableActor::SetCanBePlaced(bool itemCanBePlaced)
+{
+    bool placementStatusChanged = itemCanBePlaced != CanBePlaced;
+    CanBePlaced = itemCanBePlaced;
+    if (placementStatusChanged)
+        PlacementStatusChanged();
+}
+
 

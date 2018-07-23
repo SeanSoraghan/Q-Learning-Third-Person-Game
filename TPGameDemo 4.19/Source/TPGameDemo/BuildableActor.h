@@ -24,6 +24,16 @@ public:
     UFUNCTION(BlueprintImplementableEvent, Category = "Buildable Items Placement")
         void ItemWasPlaced();
 
+    UFUNCTION(BlueprintCallable, Category = "Buildable Items Placement")
+        bool CanItemBePlaced() const;
+
+    UFUNCTION(BlueprintCallable, Category = "Buildable Items Placement")
+        void SetCanBePlaced(bool itemCanBePlaced);
+
+    UFUNCTION(BlueprintImplementableEvent, Category = "Buildable Items Placement")
+        void PlacementStatusChanged();
+
 private:
 	bool IsBuilt = false;
+    bool CanBePlaced = true;
 };
