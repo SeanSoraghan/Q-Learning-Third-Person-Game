@@ -33,6 +33,9 @@ public:
     UFUNCTION(BlueprintImplementableEvent, Category = "Buildable Items Placement")
         void PlacementStatusChanged();
 
+    UPROPERTY(BlueprintReadWrite, Category = "Buildable Items Resources Cost")
+        int ResourceCost;
+
 private:
 	bool IsBuilt = false;
     bool CanBePlaced = true;
