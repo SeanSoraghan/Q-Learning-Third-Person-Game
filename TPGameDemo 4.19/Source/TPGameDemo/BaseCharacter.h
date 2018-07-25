@@ -124,6 +124,8 @@ public:
     // Input
     //=========================================================================================
 	virtual void SetupPlayerInputComponent (class UInputComponent* inputComponent) override;
+    UFUNCTION(BlueprintImplementableEvent, Category = "Base Character Interaction")
+        void InteractPressed();
 
     //=========================================================================================
     // Camera

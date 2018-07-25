@@ -132,6 +132,7 @@ void ABaseCharacter::BindInput()
         
         InputComponent->BindAction ("aim", IE_Pressed,  this, &ABaseCharacter::EnterCombatControlMode);
         InputComponent->BindAction ("aim", IE_Released, this, &ABaseCharacter::EnterExploreControlMode);
+        InputComponent->BindAction ("interact", IE_Pressed, this, &ABaseCharacter::InteractPressed);
         for (int i = (int)EBuildableActorType::None; i < (int)EBuildableActorType::NumBuildables; ++i)
         {
             InputComponent->BindAction<FHotkeyDelegate> (*(FString("item-hotkey-") + FString::FromInt(i)), IE_Pressed, this, &ABaseCharacter::ItemHotkeyPressed, i);
