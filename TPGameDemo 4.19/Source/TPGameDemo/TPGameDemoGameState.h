@@ -119,10 +119,8 @@ struct RoomState
         RoomStatus = Trained;
     }
 
-    void DisableRoom()
-    {
-        RoomStatus = Dead;
-    }
+    void DisableRoom();
+    
 
     void SetRoomConnected()
     {

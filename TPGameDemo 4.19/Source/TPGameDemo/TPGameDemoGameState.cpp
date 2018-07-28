@@ -32,6 +32,10 @@ void AWallBuilder::DestroyWestDoor_Implementation(){}
 
 void AWallBuilder::TrainingProgressUpdatedForDoor_Implementation(EDirectionType doorWallType, float progress){}
 
+void RoomState::DisableRoom()
+{
+    RoomStatus = RoomState::Status::Dead;
+}
 
 ATPGameDemoGameState::ATPGameDemoGameState(const FObjectInitializer& ObjectInitializer)
 {
@@ -140,7 +144,8 @@ bool ATPGameDemoGameState::DoesRoomExist(FIntPoint roomCoords) const
 
 bool ATPGameDemoGameState::IsRoomTrained(FIntPoint roomCoords) const
 {
-    return GetRoomStateChecked(roomCoords).RoomStatus == RoomState::Status::Trained;
+    auto room = GetRoomStateChecked(roomCoords);
+    return room.RoomStatus == RoomState::Status::Trained || room.RoomStatus == RoomState::Connected;
 }
 
 bool ATPGameDemoGameState::DoesWallExist(FIntPoint roomCoords, EDirectionType wallType)
