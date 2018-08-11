@@ -4,34 +4,6 @@
 #include <functional>
 #include "TPGameDemoGameState.h"
 
-void ARoomBuilder::BuildRoom_Implementation(const TArray<int>& doorPositionsOnWalls, float complexity, float density){}
-
-void ARoomBuilder::DestroyRoom_Implementation(){}
-
-void ARoomBuilder::HealthChanged_Implementation(float health){}
-
-void ARoomBuilder::TrainingProgressUpdated_Implementation(float progress){}
-
-void ARoomBuilder::RoomWasConnected_Implementation(){}
-
-void AWallBuilder::BuildSouthWall_Implementation(){}
-
-void AWallBuilder::BuildWestWall_Implementation(){}
-
-void AWallBuilder::DestroySouthWall_Implementation(){}
-
-void AWallBuilder::DestroyWestWall_Implementation(){}
-
-void AWallBuilder::SpawnSouthDoor_Implementation(){}
-
-void AWallBuilder::SpawnWestDoor_Implementation(){}
-
-void AWallBuilder::DestroySouthDoor_Implementation(){}
-
-void AWallBuilder::DestroyWestDoor_Implementation(){}
-
-void AWallBuilder::TrainingProgressUpdatedForDoor_Implementation(EDirectionType doorWallType, float progress){}
-
 void RoomState::DisableRoom()
 {
     RoomStatus = RoomState::Status::Dead;
@@ -171,6 +143,11 @@ int ATPGameDemoGameState::GetDoorPositionOnWall(FIntPoint roomCoords, EDirection
 {
     WallState& wallState = GetWallState(roomCoords, wallType);
     return wallState.DoorPosition;
+}
+
+bool ATPGameDemoGameState::IsDoorUnlocked(FIntPoint roomCoords, EDirectionType wallDirection)
+{
+    return GetWallStatesForRoom(roomCoords)[(int)wallDirection]->DoorState != EDoorState::Locked;
 }
 
 FIntPoint ATPGameDemoGameState::GetSignalPointPositionInRoom(FIntPoint roomCoords) const
@@ -354,6 +331,7 @@ void ATPGameDemoGameState::SetRoomConnected(FIntPoint roomCoords)
     if (DoesRoomExist(roomCoords))
     {
         RoomStates[roomIndices.X][roomIndices.Y].SetRoomConnected();
+        RoomWasConnected(roomCoords);
         GetRoomBuilder(roomCoords)->RoomWasConnected();
     }
 }
@@ -391,7 +369,7 @@ void ATPGameDemoGameState::EnableRoomState(FIntPoint roomCoords, float complexit
                                                                wallStates[(int)EDirectionType::South]->DoorPosition,
                                                                wallStates[(int)EDirectionType::West]->DoorPosition},
                                                                complexity, density);
-    
+        RoomBuilt(roomCoords);
         FlagWallsForUpdate(roomCoords);
     }
 }
@@ -540,14 +518,45 @@ void ATPGameDemoGameState::DestroyNeighbouringDoors(FIntPoint roomCoords, TArray
 
 void ATPGameDemoGameState::DoorOpened(FIntPoint roomCoords, EDirectionType wallDirection, float complexity, float density)
 {
-    if (!DoesRoomExist(roomCoords))
+    if (IsDoorUnlocked(roomCoords, wallDirection))
     {
-        EnableRoomState(roomCoords, complexity, density);
+        if (!DoesRoomExist(roomCoords))
+        {
+            EnableRoomState(roomCoords, complexity, density);
+        }
+        FIntPoint neighbourRoomCoords = GetRoomCoords(GetNeighbouringRoomIndices(roomCoords, wallDirection));
+        if (!DoesRoomExist(neighbourRoomCoords))
+        {
+            EnableRoomState(neighbourRoomCoords, complexity, density);
+        }
     }
-    FIntPoint neighbourRoomCoords = GetRoomCoords(GetNeighbouringRoomIndices(roomCoords, wallDirection));
-    if (!DoesRoomExist(neighbourRoomCoords))
+}
+
+void ATPGameDemoGameState::LockDoor(FIntPoint roomCoords, EDirectionType wallDirection)
+{
+    auto wallState = GetWallStatesForRoom(roomCoords)[(int)wallDirection];
+    wallState->LockDoor();
+    auto wallBuilder = GetWallBuilder(roomCoords, wallDirection);
+    if (wallBuilder != nullptr)
     {
-        EnableRoomState(neighbourRoomCoords, complexity, density);
+        if (wallDirection == EDirectionType::North || wallDirection == EDirectionType::South)
+            wallBuilder->LockSouthDoor();
+        else
+            wallBuilder->LockWestDoor();
+    }
+}
+
+void ATPGameDemoGameState::UnlockDoor(FIntPoint roomCoords, EDirectionType wallDirection)
+{
+    auto wallState = GetWallStatesForRoom(roomCoords)[(int)wallDirection];
+    wallState->UnlockDoor();
+    auto wallBuilder = GetWallBuilder(roomCoords, wallDirection);
+    if (wallBuilder != nullptr)
+    {
+        if (wallDirection == EDirectionType::North || wallDirection == EDirectionType::South)
+            wallBuilder->UnlockSouthDoor();
+        else
+            wallBuilder->UnlockWestDoor();
     }
 }
 
@@ -724,5 +733,58 @@ FVector2D ATPGameDemoGameState::GetGridCellWorldPosition (int x, int y, int Room
     positionX += RoomOffsetX * NumGridUnitsX * GridUnitLengthXCM - RoomOffsetX * GridUnitLengthXCM;
     positionY += RoomOffsetY * NumGridUnitsY * GridUnitLengthYCM - RoomOffsetY * GridUnitLengthYCM;
     return FVector2D (positionX, positionY);
+}
+
+// -------------------------- Perimeter Mechanic ----------------------------------
+
+int ATPGameDemoGameState::GetNumRoomsOnPerimeter()
+{
+    return 8 + (CurrentPerimeter - 1) * 4;
+}
+
+void ATPGameDemoGameState::RoomWasConnected(FIntPoint roomCoords)
+{
+    const int x = FMath::Abs(roomCoords.X);
+    const int y = FMath::Abs(roomCoords.Y);
+    if (x > CurrentPerimeter || y > CurrentPerimeter)
+    {
+        CurrentPerimeter = FMath::Max(x,y);
+        NumPerimeterRoomsConnected = 1;
+    }
+    else if (x == CurrentPerimeter || y == CurrentPerimeter)
+    {
+        ++NumPerimeterRoomsConnected;
+        if (NumPerimeterRoomsConnected >= GetNumRoomsOnPerimeter())
+        {
+            UnlockPerimeterDoors();
+            ++CurrentPerimeter;
+            NumPerimeterRoomsConnected = 0;
+        }
+    }
+}
+
+void ATPGameDemoGameState::UnlockPerimeterDoors()
+{
+    for (int p = -CurrentPerimeter; p <= CurrentPerimeter; ++p)
+    {
+        UnlockDoor(FIntPoint(CurrentPerimeter, p), EDirectionType::North);
+        UnlockDoor(FIntPoint(p, CurrentPerimeter), EDirectionType::East);
+        UnlockDoor(FIntPoint(-CurrentPerimeter, p), EDirectionType::South);
+        UnlockDoor(FIntPoint(p, -CurrentPerimeter), EDirectionType::West);
+    }
+}
+
+void ATPGameDemoGameState::RoomBuilt(FIntPoint roomCoords)
+{
+    const int x = roomCoords.X;
+    const int y = roomCoords.Y;
+    if (x == CurrentPerimeter)
+        LockDoor(roomCoords, EDirectionType::North);
+    if (y == CurrentPerimeter)
+        LockDoor(roomCoords, EDirectionType::East);
+    if (x + CurrentPerimeter == 0)
+        LockDoor(roomCoords, EDirectionType::South);
+    if (y + CurrentPerimeter == 0)
+        LockDoor(roomCoords, EDirectionType::West);
 }
 

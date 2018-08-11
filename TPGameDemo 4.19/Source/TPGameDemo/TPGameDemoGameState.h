@@ -24,6 +24,7 @@ enum class EDoorState : uint8
 {
     Open,
     Closed,
+    Locked,
     Opening,
     Closing,
     NumStates
@@ -54,7 +55,21 @@ struct WallState
 
     void DisableDoor()
     {
-        bDoorExists = false;
+        if (DoorState != EDoorState::Locked)
+        {
+            DoorState = EDoorState::Open;
+            bDoorExists = false;
+        }
+    }
+
+    void LockDoor()
+    {
+        DoorState = EDoorState::Locked;
+    }
+
+    void UnlockDoor()
+    {
+        DoorState = EDoorState::Closed;
     }
 
     bool HasDoor() const
@@ -171,19 +186,19 @@ class TPGAMEDEMO_API ARoomBuilder : public AActor
 public:
 	GENERATED_BODY()
 
-    UFUNCTION(BlueprintNativeEvent, BlueprintCallable, Category = "World Room Building")
+    UFUNCTION(BlueprintImplementableEvent, BlueprintCallable, Category = "World Room Building")
         void BuildRoom(const TArray<int>& doorPositionsOnWalls, float complexity = 0.0f, float density = 0.0f);
 
-    UFUNCTION(BlueprintNativeEvent, BlueprintCallable, Category = "World Room Building")
+    UFUNCTION(BlueprintImplementableEvent, BlueprintCallable, Category = "World Room Building")
         void DestroyRoom();
 
-    UFUNCTION(BlueprintNativeEvent, BlueprintCallable, Category = "World Room Health")
+    UFUNCTION(BlueprintImplementableEvent, BlueprintCallable, Category = "World Room Health")
         void HealthChanged(float health);
 
-    UFUNCTION(BlueprintNativeEvent, BlueprintCallable, Category = "World Room Health")
+    UFUNCTION(BlueprintImplementableEvent, BlueprintCallable, Category = "World Room Health")
         void TrainingProgressUpdated(float progress);
 
-    UFUNCTION(BlueprintNativeEvent, BlueprintCallable, Category = "World Room Health")
+    UFUNCTION(BlueprintImplementableEvent, BlueprintCallable, Category = "World Room Health")
         void RoomWasConnected();
 };
 
@@ -196,31 +211,43 @@ class TPGAMEDEMO_API AWallBuilder : public AActor
 public:
 	GENERATED_BODY()
 
-    UFUNCTION(BlueprintNativeEvent, BlueprintCallable, Category = "World Wall Building")
+    UFUNCTION(BlueprintImplementableEvent, BlueprintCallable, Category = "World Wall Building")
         void BuildSouthWall();
 
-    UFUNCTION(BlueprintNativeEvent, BlueprintCallable, Category = "World Wall Building")
+    UFUNCTION(BlueprintImplementableEvent, BlueprintCallable, Category = "World Wall Building")
         void BuildWestWall();
 
-    UFUNCTION(BlueprintNativeEvent, BlueprintCallable, Category = "World Wall Building")
+    UFUNCTION(BlueprintImplementableEvent, BlueprintCallable, Category = "World Wall Building")
         void DestroySouthWall();
 
-    UFUNCTION(BlueprintNativeEvent, BlueprintCallable, Category = "World Wall Building")
+    UFUNCTION(BlueprintImplementableEvent, BlueprintCallable, Category = "World Wall Building")
         void DestroyWestWall();
 
-    UFUNCTION(BlueprintNativeEvent, BlueprintCallable, Category = "World Door States")
+    UFUNCTION(BlueprintImplementableEvent, BlueprintCallable, Category = "World Door States")
         void SpawnSouthDoor();
 
-    UFUNCTION(BlueprintNativeEvent, BlueprintCallable, Category = "World Door States")
+    UFUNCTION(BlueprintImplementableEvent, BlueprintCallable, Category = "World Door States")
         void SpawnWestDoor();
 
-    UFUNCTION(BlueprintNativeEvent, BlueprintCallable, Category = "World Door States")
+    UFUNCTION(BlueprintImplementableEvent, BlueprintCallable, Category = "World Door States")
         void DestroySouthDoor();
 
-    UFUNCTION(BlueprintNativeEvent, BlueprintCallable, Category = "World Door States")
+    UFUNCTION(BlueprintImplementableEvent, BlueprintCallable, Category = "World Door States")
         void DestroyWestDoor();
 
-    UFUNCTION(BlueprintNativeEvent, BlueprintCallable, Category = "World Door States")
+    UFUNCTION(BlueprintImplementableEvent, BlueprintCallable, Category = "World Door States")
+        void LockSouthDoor();
+
+    UFUNCTION(BlueprintImplementableEvent, BlueprintCallable, Category = "World Door States")
+        void LockWestDoor();
+
+    UFUNCTION(BlueprintImplementableEvent, BlueprintCallable, Category = "World Door States")
+        void UnlockSouthDoor();
+
+    UFUNCTION(BlueprintImplementableEvent, BlueprintCallable, Category = "World Door States")
+        void UnlockWestDoor();
+
+    UFUNCTION(BlueprintImplementableEvent, BlueprintCallable, Category = "World Door States")
         void TrainingProgressUpdatedForDoor(EDirectionType doorWallType, float progress);
 };
 
@@ -301,6 +328,9 @@ public:
 
     UFUNCTION(BlueprintCallable, Category = "World Room States")
         int GetDoorPositionOnWall(FIntPoint roomCoords, EDirectionType wallType); 
+
+    UFUNCTION(BlueprintCallable, Category = "World Door States")
+        bool IsDoorUnlocked(FIntPoint roomCoords, EDirectionType wallDirection);
 
     UFUNCTION(BlueprintCallable, Category = "World Room States")
         FIntPoint GetSignalPointPositionInRoom(FIntPoint roomCoords) const;
@@ -424,7 +454,13 @@ public:
     // --------------------- Door Interaction -------------------------------------
 
     UFUNCTION(BlueprintCallable, Category = "Door Interaction")
-        void DoorOpened(FIntPoint roomCoords, EDirectionType wallDirection, float complexity = 0.0f, float density = 0.0f); 
+        void DoorOpened(FIntPoint roomCoords, EDirectionType wallDirection, float complexity = 0.0f, float density = 0.0f);
+
+    UFUNCTION(BlueprintCallable, Category = "Door Interaction")
+        void LockDoor(FIntPoint roomCoords, EDirectionType wallDirection);
+
+    UFUNCTION(BlueprintCallable, Category = "Door Interaction")
+        void UnlockDoor(FIntPoint roomCoords, EDirectionType wallDirection);
 
     // ----------------------- Delegates -------------------------------------------
 
@@ -492,4 +528,11 @@ private:
     bool WallXYIndicesValid(FIntPoint wallRoomCoords) const;
 
     SignalLostEvent OnSignalLost;
+
+    int CurrentPerimeter = 1;
+    int NumPerimeterRoomsConnected = 0;
+    int GetNumRoomsOnPerimeter();
+    void RoomWasConnected(FIntPoint roomCoords);
+    void RoomBuilt(FIntPoint roomCoords);
+    void UnlockPerimeterDoors();
 };
