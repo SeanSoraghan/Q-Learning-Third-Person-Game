@@ -137,6 +137,8 @@ public:
     UPROPERTY (BlueprintReadWrite, EditAnywhere, Category = "Base Character Camera Movement")
         FRotator DefaultLookCombatRotation  = FRotator (0.0f, 0.0f, 0.0f);
 
+    UFUNCTION(BlueprintImplementableEvent, Category = "Base Character Camera Movement")
+        void UpdateFollowCameraPosition (float delta);
     //=========================================================================================
     // Movement
     //=========================================================================================

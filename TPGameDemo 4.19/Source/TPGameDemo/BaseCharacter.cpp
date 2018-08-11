@@ -220,6 +220,7 @@ void ABaseCharacter::SetupExploreMovementControls()
         InputComponent->BindAction ("move-left",      IE_Released, this, &ABaseCharacter::ExploreLeftReleased);
 
         InputComponent->BindAxis   ("look-right", this, &ABaseCharacter::UpdateHorizontalLookRotation);
+        InputComponent->BindAxis   ("follow-camera-zoom", this, &ABaseCharacter::UpdateFollowCameraPosition);
     }
 }
 
