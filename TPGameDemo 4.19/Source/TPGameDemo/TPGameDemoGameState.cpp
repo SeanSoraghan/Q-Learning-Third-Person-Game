@@ -330,9 +330,12 @@ void ATPGameDemoGameState::SetRoomConnected(FIntPoint roomCoords)
     FIntPoint roomIndices = GetRoomXYIndicesChecked(roomCoords);
     if (DoesRoomExist(roomCoords))
     {
-        RoomStates[roomIndices.X][roomIndices.Y].SetRoomConnected();
-        RoomWasConnected(roomCoords);
-        GetRoomBuilder(roomCoords)->RoomWasConnected();
+        if (RoomStates[roomIndices.X][roomIndices.Y].RoomStatus != RoomState::Status::Connected)
+        {
+            RoomStates[roomIndices.X][roomIndices.Y].SetRoomConnected();
+            RoomWasConnected(roomCoords);
+            GetRoomBuilder(roomCoords)->RoomWasConnected();
+        }
     }
 }
 
