@@ -139,6 +139,10 @@ public:
 
     UFUNCTION(BlueprintImplementableEvent, Category = "Base Character Camera Movement")
         void UpdateFollowCameraPosition (float delta);
+    UFUNCTION(BlueprintImplementableEvent, Category = "Base Character Camera Movement")
+        void MapViewPressed();
+    UFUNCTION(BlueprintImplementableEvent, Category = "Base Character Camera Movement")
+        void MapViewReleased();
     //=========================================================================================
     // Movement
     //=========================================================================================
