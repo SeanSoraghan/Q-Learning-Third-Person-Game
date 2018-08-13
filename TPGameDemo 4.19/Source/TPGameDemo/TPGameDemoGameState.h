@@ -312,6 +312,9 @@ public:
         bool DoesRoomExist(FIntPoint roomCoords) const;
 
     UFUNCTION(BlueprintCallable, Category = "World Rooms States")
+        bool IsRoomConnected(FIntPoint roomCoords) const;
+
+    UFUNCTION(BlueprintCallable, Category = "World Rooms States")
         bool IsRoomTrained(FIntPoint roomCoords) const; 
 
     UFUNCTION(BlueprintCallable, Category = "World Rooms States")

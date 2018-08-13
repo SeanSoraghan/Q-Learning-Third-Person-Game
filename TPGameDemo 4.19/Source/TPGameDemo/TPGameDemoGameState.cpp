@@ -114,6 +114,11 @@ bool ATPGameDemoGameState::DoesRoomExist(FIntPoint roomCoords) const
     return GetRoomStateChecked(roomCoords).RoomExists();
 }
 
+bool ATPGameDemoGameState::IsRoomConnected(FIntPoint roomCoords) const
+{
+    return GetRoomStateChecked(roomCoords).RoomStatus == RoomState::Connected;
+}
+
 bool ATPGameDemoGameState::IsRoomTrained(FIntPoint roomCoords) const
 {
     auto room = GetRoomStateChecked(roomCoords);
