@@ -536,6 +536,9 @@ private:
     int NumPerimeterRoomsConnected = 0;
     int GetNumRoomsOnPerimeter();
     void RoomWasConnected(FIntPoint roomCoords);
-    void RoomBuilt(FIntPoint roomCoords);
+    void LockDoorIfOnPerimeter(FIntPoint roomCoords);
     void UnlockPerimeterDoors();
+    void UpdateDoorLockedStateForNeighbouringRooms(FIntPoint roomCoords, FIntPoint neighbourCoords, EDirectionType wallType);
+    bool DoorIsOnPerimeter(FIntPoint roomCoords, EDirectionType doorDirection);
+    FThreadSafeBool PerimeterDoorsNeedUnlocked = false;
 };

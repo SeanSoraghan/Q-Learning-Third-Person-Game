@@ -93,14 +93,25 @@ void ATPGameDemoGameState::Tick( float DeltaTime )
             continue;
         }
 
-        bool roomTrained = IsRoomTrained(roomCoords);
-        bool neighbourTrained = IsRoomTrained(neighbourCoords);
+        // Door Spawned State:
+        const bool roomTrained = IsRoomTrained(roomCoords);
+        const bool neighbourTrained = IsRoomTrained(neighbourCoords);
 
         EnableWallState(roomCoords, wallType);
         if (roomTrained && neighbourTrained)
             DisableDoorState(roomCoords, wallType);
         else
             EnableDoorState(roomCoords, wallType);
+        // Door Locked State:
+        UpdateDoorLockedStateForNeighbouringRooms(roomCoords, neighbourCoords, wallType);
+        LockDoorIfOnPerimeter(roomCoords);
+        if (PerimeterDoorsNeedUnlocked)
+        {
+            UnlockPerimeterDoors();
+            ++CurrentPerimeter;
+            NumPerimeterRoomsConnected = 0;
+            PerimeterDoorsNeedUnlocked = false;
+        }
     }
     WallsToUpdate.Empty();
 }
@@ -377,7 +388,6 @@ void ATPGameDemoGameState::EnableRoomState(FIntPoint roomCoords, float complexit
                                                                wallStates[(int)EDirectionType::South]->DoorPosition,
                                                                wallStates[(int)EDirectionType::West]->DoorPosition},
                                                                complexity, density);
-        RoomBuilt(roomCoords);
         FlagWallsForUpdate(roomCoords);
     }
 }
@@ -750,6 +760,8 @@ int ATPGameDemoGameState::GetNumRoomsOnPerimeter()
     return 8 + (CurrentPerimeter - 1) * 4;
 }
 
+//Should call this in tick room update, if the room in question is connected. That would probably require managing an array of connected perimeter rooms, 
+// so we could then check if the room is contained first before adding it. 
 void ATPGameDemoGameState::RoomWasConnected(FIntPoint roomCoords)
 {
     const int x = FMath::Abs(roomCoords.X);
@@ -764,9 +776,34 @@ void ATPGameDemoGameState::RoomWasConnected(FIntPoint roomCoords)
         ++NumPerimeterRoomsConnected;
         if (NumPerimeterRoomsConnected >= GetNumRoomsOnPerimeter())
         {
-            UnlockPerimeterDoors();
-            ++CurrentPerimeter;
-            NumPerimeterRoomsConnected = 0;
+            PerimeterDoorsNeedUnlocked = true;
+        }
+    }
+    FlagWallsForUpdate(roomCoords);
+}
+
+void ATPGameDemoGameState::UpdateDoorLockedStateForNeighbouringRooms(FIntPoint roomCoords, FIntPoint neighbourCoords, EDirectionType wallType)
+{
+    const bool roomExists = DoesRoomExist(roomCoords);
+    const bool neighbourExists = DoesRoomExist(neighbourCoords); 
+    const bool roomConnected = IsRoomConnected(roomCoords);
+    const bool neighbourConnected = IsRoomConnected(neighbourCoords);
+    const EDoorState doorState = GetWallState(roomCoords, wallType).DoorState;
+    const bool doorOnPerimeter = DoorIsOnPerimeter(roomCoords, wallType);
+    if (roomConnected || neighbourConnected)
+    {
+        if (doorState == EDoorState::Locked && !doorOnPerimeter)
+        {
+            UnlockDoor(roomCoords, wallType);
+        }
+    }
+    else
+    {
+        const bool oneNotConnectedAndOtherDoesntExist = (roomExists && !roomConnected && !neighbourExists) 
+                                                        ||(!roomExists && neighbourExists && !neighbourConnected); 
+        if (oneNotConnectedAndOtherDoesntExist && doorState != EDoorState::Locked)
+        {
+            LockDoor(roomCoords, wallType);
         }
     }
 }
@@ -782,7 +819,7 @@ void ATPGameDemoGameState::UnlockPerimeterDoors()
     }
 }
 
-void ATPGameDemoGameState::RoomBuilt(FIntPoint roomCoords)
+void ATPGameDemoGameState::LockDoorIfOnPerimeter(FIntPoint roomCoords)
 {
     const int x = roomCoords.X;
     const int y = roomCoords.Y;
@@ -790,9 +827,26 @@ void ATPGameDemoGameState::RoomBuilt(FIntPoint roomCoords)
         LockDoor(roomCoords, EDirectionType::North);
     if (y == CurrentPerimeter)
         LockDoor(roomCoords, EDirectionType::East);
-    if (x + CurrentPerimeter == 0)
+    if (x == -CurrentPerimeter)
         LockDoor(roomCoords, EDirectionType::South);
-    if (y + CurrentPerimeter == 0)
+    if (y == -CurrentPerimeter)
         LockDoor(roomCoords, EDirectionType::West);
+}
+
+bool ATPGameDemoGameState::DoorIsOnPerimeter(FIntPoint roomCoords, EDirectionType doorDirection)
+{
+    const int x = roomCoords.X;
+    const int y = roomCoords.Y;
+    const int outerPerimeter = CurrentPerimeter + 1;
+    if (doorDirection == EDirectionType::North && (x == CurrentPerimeter || x == -outerPerimeter))
+        return true;
+    if (doorDirection == EDirectionType::South && (x == outerPerimeter || x == -CurrentPerimeter))
+        return true;
+    if (doorDirection == EDirectionType::East && (y == CurrentPerimeter || y == -outerPerimeter))
+        return true;
+    if (doorDirection == EDirectionType::West && (y == outerPerimeter || y == -CurrentPerimeter))
+        return true;
+
+    return false;
 }
 
