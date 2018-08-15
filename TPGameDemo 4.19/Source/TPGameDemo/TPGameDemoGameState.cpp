@@ -111,6 +111,9 @@ void ATPGameDemoGameState::Tick( float DeltaTime )
             ++CurrentPerimeter;
             NumPerimeterRoomsConnected = 0;
             PerimeterDoorsNeedUnlocked = false;
+            ATPGameDemoGameMode* gameMode = (ATPGameDemoGameMode*) GetWorld()->GetAuthGameMode();
+            UpdateSignalStrength(gameMode->DefaultSignalStrength);
+            OnPerimeterComplete.Broadcast();
         }
     }
     WallsToUpdate.Empty();
@@ -179,6 +182,11 @@ bool ATPGameDemoGameState::TilePositionIsEmpty(FIntPoint roomCoords, FIntPoint t
 bool ATPGameDemoGameState::RoomTilePositionIsEmpty(FRoomPositionPair roomAndPosition) const
 {
     return TilePositionIsEmpty(roomAndPosition.RoomCoords, roomAndPosition.PositionInRoom);
+}
+
+bool ATPGameDemoGameState::RoomIsWithinPerimeter(FIntPoint roomCoords) const
+{
+    return FMath::Abs(roomCoords.X) < CurrentPerimeter && FMath::Abs(roomCoords.Y) < CurrentPerimeter;
 }
 
 EQuadrantType ATPGameDemoGameState::GetQuadrantTypeForRoomCoords(FIntPoint roomCoords) const
@@ -586,6 +594,14 @@ void ATPGameDemoGameState::RegisterSignalLostCallback(const FOnSignalLost& Callb
     });
 }
 
+void ATPGameDemoGameState::RegisterPerimeterCompleteCallback(const FOnPerimeterComplete& Callback)
+{
+    OnPerimeterComplete.AddLambda([Callback]()
+    {
+        Callback.ExecuteIfBound();
+    });
+}
+
 //============================================================================
 //============================================================================
 
@@ -757,7 +773,7 @@ FVector2D ATPGameDemoGameState::GetGridCellWorldPosition (int x, int y, int Room
 
 int ATPGameDemoGameState::GetNumRoomsOnPerimeter()
 {
-    return 8 + (CurrentPerimeter - 1) * 4;
+    return CurrentPerimeter * 8;
 }
 
 //Should call this in tick room update, if the room in question is connected. That would probably require managing an array of connected perimeter rooms, 

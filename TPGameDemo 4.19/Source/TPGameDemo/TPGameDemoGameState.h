@@ -254,6 +254,8 @@ public:
 DECLARE_MULTICAST_DELEGATE (FMazeDimensionsChanged);
 DECLARE_EVENT(ATPGameDemoGameState, SignalLostEvent);
 DECLARE_DYNAMIC_DELEGATE(FOnSignalLost);
+DECLARE_EVENT(ATPGameDemoGameState, PerimeterCompleteEvent);
+DECLARE_DYNAMIC_DELEGATE(FOnPerimeterComplete);
 
 /**
  * 
@@ -345,6 +347,8 @@ public:
     UFUNCTION(BlueprintCallable, Category = "World Rooms States")
         bool RoomTilePositionIsEmpty(FRoomPositionPair roomAndPosition) const;
 
+    UFUNCTION(BlueprintCallable, Category = "World Rooms States")
+        bool RoomIsWithinPerimeter(FIntPoint roomCoords) const;
     // --------------------- neighbouring rooms -------------------------------------
 
     UFUNCTION(BlueprintCallable, Category = "World Rooms States")
@@ -469,6 +473,8 @@ public:
 
     UFUNCTION(BlueprintCallable, Category = "World Signal State")
         void RegisterSignalLostCallback(const FOnSignalLost& Callback);
+    UFUNCTION(BlueprintCallable, Category = "World Perimeter State")
+        void RegisterPerimeterCompleteCallback(const FOnPerimeterComplete& Callback);
 
     //============================================================================
     // Properties
@@ -531,6 +537,7 @@ private:
     bool WallXYIndicesValid(FIntPoint wallRoomCoords) const;
 
     SignalLostEvent OnSignalLost;
+    PerimeterCompleteEvent OnPerimeterComplete;
 
     int CurrentPerimeter = 1;
     int NumPerimeterRoomsConnected = 0;
