@@ -51,7 +51,7 @@ void AEnemyActor::Tick( float DeltaTime )
 {
 	Super::Tick( DeltaTime );
     TimeSinceLastPositionChange += DeltaTime;
-    if (TimeSinceLastPositionChange >= MovementStuckThresholdSeconds && BehaviourState != EEnemyBehaviourState::Avoiding)
+    if (MovementStuckThresholdSeconds > 0.0f && TimeSinceLastPositionChange >= MovementStuckThresholdSeconds && BehaviourState != EEnemyBehaviourState::Avoiding)
     {
         TimeSpentAvoiding = 0.0f;
         BehaviourState = EEnemyBehaviourState::Avoiding;
@@ -327,7 +327,7 @@ void AEnemyActor::UpdatePolicyForPlayerPosition (int targetX, int targetY)
         if (gameState != nullptr)
         {
             // If the player is in a doorway, we set the target according to the doorway they are in.
-            // Due to the way rooms overlpap, enemies will never recieve a player position changed notification
+            // Due to the way rooms overlap, enemies will never recieve a player position changed notification
             // when the player is in the north or east door, as these are part of the neighbouring rooms.
             if (targetX == 0)
             {

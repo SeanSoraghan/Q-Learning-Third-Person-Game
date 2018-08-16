@@ -104,15 +104,15 @@ public:
         float MovementSpeed = 1.0f;
     UPROPERTY(BlueprintReadWrite, EditAnywhere, Category = "Enemy Movement")
         float RotationSpeed = 0.1f; 
-    /** If the actor doesn't move within this time period, their behaviour will be changed to 'avoid' for a short time. */
+    /** If the actor doesn't move within this time period, their behaviour will be changed to 'avoid' for a short time. 
+    *   A value of 0 will cause no avoidance behaviour.
+    */
     UPROPERTY(BlueprintReadWrite, EditAnywhere, Category = "Enemy Movement")
         float MovementStuckThresholdSeconds = 1.5f;
-        
 private:
     EEnemyBehaviourState  BehaviourState = EEnemyBehaviourState::Exploring;
     FTargetPosition       TargetRoomPosition;
     FRoomPositionPair     AvoidanceTarget;
-    //FIntPoint             CurrentRoomCoords = FIntPoint::ZeroValue;
     FString               LevelPoliciesDir;
     FString               CurrentLevelPolicyDir;
     TArray<TArray<int>>   CurrentLevelPolicy;
