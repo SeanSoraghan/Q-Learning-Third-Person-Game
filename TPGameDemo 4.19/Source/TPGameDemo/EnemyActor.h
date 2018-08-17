@@ -109,6 +109,8 @@ public:
     */
     UPROPERTY(BlueprintReadWrite, EditAnywhere, Category = "Enemy Movement")
         float MovementStuckThresholdSeconds = 1.5f;
+    UFUNCTION(BlueprintNativeEvent, BlueprintCallable, Category = "Enemy Movement")
+        void EnteredNewRoom();
 private:
     EEnemyBehaviourState  BehaviourState = EEnemyBehaviourState::Exploring;
     FTargetPosition       TargetRoomPosition;

@@ -118,13 +118,20 @@ void AEnemyActor::PositionChanged()
     }
     else if (BehaviourState == EEnemyBehaviourState::ChangingRooms)
     {
-        ATPGameDemoGameState* gameState = (ATPGameDemoGameState*) GetWorld()->GetGameState();
-        if (gameState != nullptr)
+        if (IsOnGridEdge())
         {
-            const float z = GetActorLocation().Z;
-            FRoomPositionPair roomAndPosition = GetTargetRoomAndPositionForDirectionType(TargetRoomPosition.DoorAction);
-            FVector2D targetXY = gameState->GetWorldXYForRoomAndPosition(roomAndPosition);
-            MovementTarget = FVector(targetXY.X, targetXY.Y, z);
+            ATPGameDemoGameState* gameState = (ATPGameDemoGameState*) GetWorld()->GetGameState();
+            if (gameState != nullptr)
+            {
+                const float z = GetActorLocation().Z;
+                FRoomPositionPair roomAndPosition = GetTargetRoomAndPositionForDirectionType(TargetRoomPosition.DoorAction);
+                FVector2D targetXY = gameState->GetWorldXYForRoomAndPosition(roomAndPosition);
+                MovementTarget = FVector(targetXY.X, targetXY.Y, z);
+            }
+        }
+        else
+        {
+            EnteredNewRoom();
         }
     }
     else if (BehaviourState == EEnemyBehaviourState::Avoiding)
@@ -139,11 +146,22 @@ void AEnemyActor::RoomCoordsChanged()
 {
     ClearPreviousDoorTarget();
     LoadLevelPolicyForRoomCoordinates(CurrentRoomCoords);
-    if (BehaviourState == EEnemyBehaviourState::ChangingRooms)
+    
+    // If the enemy wasn't changing rooms, trigger entered new room immediately.
+    if (BehaviourState != EEnemyBehaviourState::ChangingRooms)
     {
-        BehaviourState = EEnemyBehaviourState::Exploring;
-        ChooseDoorTarget();
+        EnteredNewRoom();
+    }// Otherwise only trigger entered new room if the enemy has made it all the way through the door (is not on the edge).
+    else if (!IsOnGridEdge())
+    {
+        EnteredNewRoom();
     }
+}
+
+void AEnemyActor::EnteredNewRoom_Implementation()
+{
+    BehaviourState = EEnemyBehaviourState::Exploring;
+    ChooseDoorTarget();
 }
 
 void AEnemyActor::ClearPreviousDoorTarget()
