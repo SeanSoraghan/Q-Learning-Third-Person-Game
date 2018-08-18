@@ -115,7 +115,8 @@ void AMazeActor::UpdatePosition (bool broadcastChange)
             gameState->ActorEnteredTilePosition(CurrentRoomCoords, FIntPoint(GridXPosition, GridYPosition));
         }
 
-        if (PreviousRoomCoords != CurrentRoomCoords)
+        const bool roomChanged = PreviousRoomCoords != CurrentRoomCoords;
+        if (roomChanged)
         {
             RoomCoordsChanged();
             RoomCoordsChangedEvent.Broadcast();
@@ -125,6 +126,10 @@ void AMazeActor::UpdatePosition (bool broadcastChange)
         GridPositionChangedEvent.Broadcast();
         PreviousGridXPosition = GridXPosition;
         PreviousGridYPosition = GridYPosition;
+        if (roomChanged)
+        {
+
+        }
     }
 }
 
