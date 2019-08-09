@@ -4,7 +4,7 @@ using UnrealBuildTool;
 
 public class TPGameDemo : ModuleRules
 {
-	public TPGameDemo(TargetInfo Target)
+	public TPGameDemo(ReadOnlyTargetRules Target) : base (Target)
 	{
 		PublicDependencyModuleNames.AddRange(new string[] { "Core", "CoreUObject", "Engine", "InputCore" });
 

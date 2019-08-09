@@ -24,13 +24,22 @@ enum class EControlState : uint8
     NumStates
 };
 
-enum class EDirectionType : uint8
+UENUM(BlueprintType)
+enum class EBuildableActorType : uint8
+{
+    None    UMETA (DisplayName = "None"),
+    Turret  UMETA (DisplayName = "Turret"),
+    Mine    UMETA (DisplayName = "Mine"),
+    NumBuildables
+};
+
+enum class EMovementDirectionType : uint8
 {
     Forward   UMETA (DisplayName = "Forward") = 0,
     Right     UMETA (DisplayName = "Right"),
     Backwards UMETA (DisplayName = "Backwards"),
     Left      UMETA (DisplayName = "Left"),
-    NumDirections
+    NumMovementDirections
 };
 
 //===========================================================================================
@@ -40,13 +49,13 @@ struct SMovementKeysPressedState
 {
     SMovementKeysPressedState ()
     {
-        for (int d = 0; d < (int) EDirectionType::NumDirections; d++)
+        for (int d = 0; d < (int) EMovementDirectionType::NumMovementDirections; d++)
             DirectionStates[d] = false;
     }
 
     bool AreAnyKeysPressed() 
     {
-        for (uint8 d = 0; d < (uint8) EDirectionType::NumDirections; d++)
+        for (uint8 d = 0; d < (uint8) EMovementDirectionType::NumMovementDirections; d++)
             if (DirectionStates[(int) d])
                 return true;
 
@@ -59,7 +68,8 @@ struct SMovementKeysPressedState
 //===========================================================================================
 
 DECLARE_DYNAMIC_MULTICAST_DELEGATE (FPlayerFired);
-DECLARE_DYNAMIC_MULTICAST_DELEGATE (FPlayerControlRotationChanged);
+
+DECLARE_DELEGATE_OneParam          (FHotkeyDelegate, int);
 
 /*
 The base class for the main player character. Includes functionality for input handling, movement, and animating between viewpoints.
@@ -114,6 +124,8 @@ public:
     // Input
     //=========================================================================================
 	virtual void SetupPlayerInputComponent (class UInputComponent* inputComponent) override;
+    UFUNCTION(BlueprintImplementableEvent, Category = "Base Character Interaction")
+        void InteractPressed();
 
     //=========================================================================================
     // Camera
@@ -125,6 +137,12 @@ public:
     UPROPERTY (BlueprintReadWrite, EditAnywhere, Category = "Base Character Camera Movement")
         FRotator DefaultLookCombatRotation  = FRotator (0.0f, 0.0f, 0.0f);
 
+    UFUNCTION(BlueprintImplementableEvent, Category = "Base Character Camera Movement")
+        void UpdateFollowCameraPosition (float delta);
+    UFUNCTION(BlueprintImplementableEvent, Category = "Base Character Camera Movement")
+        void MapViewPressed();
+    UFUNCTION(BlueprintImplementableEvent, Category = "Base Character Camera Movement")
+        void MapViewReleased();
     //=========================================================================================
     // Movement
     //=========================================================================================
@@ -143,14 +161,26 @@ public:
 
     UFUNCTION (BlueprintCallable, Category = "Base Character Movement")
         void UpdateControlRotation();
-    UPROPERTY (BlueprintAssignable, Category = "Base Character Movement")
-        FPlayerControlRotationChanged OnPlayerControlRotationUpdated;
+    UFUNCTION (BlueprintImplementableEvent, Category = "Base Character Movement")
+        void OnPlayerControlRotationUpdated();
+
+    UPROPERTY(BlueprintReadOnly, VisibleAnywhere, Category="Base Character Movement")
+        EControlState ControlState = EControlState::Explore;
 
     //=========================================================================================
     // Shooting
     //=========================================================================================
     UPROPERTY (BlueprintAssignable, Category = "Base Character Shooting")
         FPlayerFired OnPlayerFired;
+    
+    //=========================================================================================
+    // Building
+    //=========================================================================================
+    UPROPERTY (BlueprintReadWrite, Category = "Base Character Building")
+        EBuildableActorType BuildableItem;
+    UFUNCTION (BlueprintImplementableEvent, Category = "Base Character Building")
+        void OnPlayerBuildItemChanged();
+    
 private:
     //=========================================================================================
     // Input Responders
@@ -164,10 +194,10 @@ private:
     void SetupCombatMovementControls();
     void SetupExploreMovementControls();
 
-    void UpdateMovementForcesForDirectionKey (EDirectionType direction, bool pressed);
+    void UpdateMovementForcesForDirectionKey (EMovementDirectionType direction, bool pressed);
 
-    void CombatDirectionPressed  (EDirectionType direction);
-    void CombatDirectionReleased (EDirectionType direction);
+    void CombatDirectionPressed  (EMovementDirectionType direction);
+    void CombatDirectionReleased (EMovementDirectionType direction);
 
     void CombatForwardPressed();
     void CombatForwardReleased();
@@ -178,8 +208,8 @@ private:
     void CombatLeftPressed();
     void CombatLeftReleased();
 
-    void ExploreDirectionPressed  (EDirectionType direction);
-    void ExploreDirectionReleased (EDirectionType direction);
+    void ExploreDirectionPressed  (EMovementDirectionType direction);
+    void ExploreDirectionReleased (EMovementDirectionType direction);
     void CheckForPressedKeys();
 
     void ExploreForwardPressed();
@@ -190,10 +220,11 @@ private:
     void ExploreRightReleased();
     void ExploreLeftPressed();
     void ExploreLeftReleased();
+    void ItemHotkeyPressed(int itemNumber);
     void UpdateMeshRotationForExploreDirection();
 
     SMovementKeysPressedState MovementKeysPressedState;
-    EControlState ControlState = EControlState::Explore;
+    
 
     void UpdateVerticalLookRotation   (float delta);
     void UpdateHorizontalLookRotation (float delta);
@@ -212,6 +243,7 @@ private:
     // Shooting
     //=========================================================================================
     void PlayerFired();
+    //PlayerFiredEvent OnPlayerFired;
 
     //=========================================================================================
     // Timeline
@@ -228,6 +260,11 @@ private:
     FRotator TimelineTargetMeshRotation;
 
     //=========================================================================================
+    // Build Items
+    //=========================================================================================
+    
+
+    //=========================================================================================
     // Helper Functions
     //=========================================================================================
     void     LimitVerticalLookRotation();
@@ -237,7 +274,7 @@ private:
     void     UpdateTimelineTargetRotations();
     void     InterpolateControlRotationToMeshRotation (float deltaTime);
     void     PrintToScreen                            (const FString message);
-    bool     IsDirectionPressed                       (EDirectionType direction);
+    bool     IsDirectionPressed                       (EMovementDirectionType direction);
     //Debugging
     
 };

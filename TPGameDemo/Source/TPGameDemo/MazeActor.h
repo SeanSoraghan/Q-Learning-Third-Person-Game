@@ -2,11 +2,16 @@
 
 #pragma once
 #include "GameFramework/Character.h"
+#include "TPGameDemo.h"
+//#include "TextParserComponent.h"
 #include "MazeActor.generated.h"
 
 
 DECLARE_DYNAMIC_MULTICAST_DELEGATE (FGridPositionChanged);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE (FRoomCoordsChanged);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE (FActorDied);
+
+
 
 /*
 The base class for an actor that can exist and navigate within a maze level. Maze actors maintain grid x and grid y position values.
@@ -33,24 +38,26 @@ public:
 	// Called every frame
 	virtual void Tick( float DeltaSeconds ) override;
 
+    /** Use this to change whether a specific implementation of MazeActor should count towards a positions actor count. */
+    UFUNCTION(BlueprintCallable, Category = "Maze Actor Positions")
+        void SetOccupyCells(bool bShouldOccupy);
 	//=========================================================================================
     // Maze Position
     //=========================================================================================
     UPROPERTY (BlueprintReadOnly, Category = "Actor Grid Positions")
+        FIntPoint CurrentRoomCoords = FIntPoint(0,0);
+    UPROPERTY (BlueprintReadOnly, Category = "Actor Grid Positions")
         int GridXPosition                 = 0;
     UPROPERTY (BlueprintReadOnly, Category = "Actor Grid Positions")
         int GridYPosition                 = 0;
+    UFUNCTION(BlueprintCallable, Category = "Actor Grid Positions")
+        FRoomPositionPair GetRoomAndPosition();
 
-    int CurrentLevelNumGridUnitsX     = 10;
-    int CurrentLevelNumGridUnitsY     = 10;
-    int CurrentLevelGridUnitLengthXCM = 200;
-    int CurrentLevelGridUnitLengthYCM = 200;
-    int PreviousGridXPosition         = 0;
-    int PreviousGridYPosition         = 0;
-
-    //UFUNCTION (BlueprintCallable, Category = "Actor Grid Positions")
     UPROPERTY (BlueprintAssignable, Category = "Actor Grid Positions")
         FGridPositionChanged GridPositionChangedEvent;
+
+    UPROPERTY (BlueprintAssignable, Category = "Actor Room Coords")
+        FRoomCoordsChanged RoomCoordsChangedEvent;
 
     UPROPERTY (BlueprintReadWrite, Category = "Maze Actor Health")
         float Health;
@@ -73,6 +80,24 @@ public:
     UPROPERTY (BlueprintAssignable, Category = "Maze Actor Health")
         FActorDied OnActorDied;
 
+    UFUNCTION (BlueprintCallable, Category = "Maze Actor Maze Model")
+        void UpdateMazeDimensions();
+
+    UFUNCTION (BlueprintCallable, Category = "Maze Actor Position")
+        bool IsOnGridEdge() const;
+
 private:
     void UpdatePosition (bool broadcastChange = true);
+
+    virtual void PositionChanged();
+    virtual void RoomCoordsChanged();
+
+    int CurrentLevelNumGridUnitsX     = 10;
+    int CurrentLevelNumGridUnitsY     = 10;
+    int CurrentLevelGridUnitLengthXCM = 200;
+    int CurrentLevelGridUnitLengthYCM = 200;
+    int PreviousGridXPosition         = 0;
+    int PreviousGridYPosition         = 0;
+    FIntPoint PreviousRoomCoords      = FIntPoint(0,0);
+    bool bOccupyCells = true;
 };

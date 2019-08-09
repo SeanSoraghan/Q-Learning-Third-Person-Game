@@ -7,7 +7,6 @@
 // Sets default values for this component's properties
 UTimelineContainerComponent::UTimelineContainerComponent (const FObjectInitializer& ObjectInitializer)
 {
-	bWantsBeginPlay = true;
 	PrimaryComponentTick.bCanEverTick = false;
 
     static ConstructorHelpers::FObjectFinder<UCurveFloat> LinearTime (TEXT("/Game/Utils/Timelines/LinearTime.LinearTime"));

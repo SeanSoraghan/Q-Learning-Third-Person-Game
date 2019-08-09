@@ -5,21 +5,9 @@ using System.Collections.Generic;
 
 public class TPGameDemoEditorTarget : TargetRules
 {
-	public TPGameDemoEditorTarget(TargetInfo Target)
+	public TPGameDemoEditorTarget(TargetInfo Target) : base(Target)
 	{
 		Type = TargetType.Editor;
-	}
-
-	//
-	// TargetRules interface.
-	//
-
-	public override void SetupBinaries(
-		TargetInfo Target,
-		ref List<UEBuildBinaryConfiguration> OutBuildBinaryConfigurations,
-		ref List<string> OutExtraModuleNames
-		)
-	{
-		OutExtraModuleNames.AddRange( new string[] { "TPGameDemo" } );
+		ExtraModuleNames.Add("TPGameDemo");
 	}
 }
