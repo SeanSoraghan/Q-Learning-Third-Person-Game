@@ -509,6 +509,34 @@ void ATPGameDemoGameState::DisableDoorState(FIntPoint roomCoords, EDirectionType
     }
 }
 
+void ATPGameDemoGameState::GeneratePerimeterRooms()
+{
+	UnlockPerimeterDoors();
+	int numRoomsOnEdge = CurrentPerimeter * 2 + 1;
+	int cornerRoom = numRoomsOnEdge / 2;
+	for (int i = -cornerRoom; i < cornerRoom + 1; ++i)
+	{
+		DoorOpened(FIntPoint(i, -cornerRoom), EDirectionType::East, 0.2f, 0.2f);
+		DoorOpened(FIntPoint(i, cornerRoom), EDirectionType::West, 0.2f, 0.2f);
+		DoorOpened(FIntPoint(-cornerRoom, i), EDirectionType::North, 0.2f, 0.2f);
+		DoorOpened(FIntPoint(cornerRoom, i), EDirectionType::South, 0.2f, 0.2f);
+	}
+}
+
+void ATPGameDemoGameState::ConnectPerimeterRooms()
+{
+	int numRoomsOnEdge = CurrentPerimeter * 2 + 1;
+	int cornerRoom = numRoomsOnEdge / 2;
+	for (int i = -cornerRoom; i < cornerRoom + 1; ++i)
+	{
+		SetRoomConnected(FIntPoint(i, -cornerRoom));
+		SetRoomConnected(FIntPoint(i, cornerRoom));
+		SetRoomConnected(FIntPoint(-cornerRoom, i));
+		SetRoomConnected(FIntPoint(cornerRoom, i));
+	}
+	
+}
+
 void ATPGameDemoGameState::DestroyDoorInRoom(FIntPoint roomCoords, EDirectionType doorWallDirection)
 {
     if (auto wallBuilder = GetWallBuilder(roomCoords, doorWallDirection))

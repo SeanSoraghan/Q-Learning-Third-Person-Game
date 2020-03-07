@@ -458,6 +458,12 @@ public:
     UFUNCTION(BlueprintCallable, Category = "World Rooms States")
         void DisableDoorState(FIntPoint roomCoords, EDirectionType wallType);
 
+	UFUNCTION(BlueprintCallable, Category = "World Rooms States")
+		void GeneratePerimeterRooms();
+
+	UFUNCTION(BlueprintCallable, Category = "World Rooms States")
+		void ConnectPerimeterRooms();
+
     // --------------------- Door Interaction -------------------------------------
 
     UFUNCTION(BlueprintCallable, Category = "Door Interaction")

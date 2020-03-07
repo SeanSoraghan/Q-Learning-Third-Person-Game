@@ -86,6 +86,12 @@ public:
     UFUNCTION (BlueprintCallable, Category = "Maze Actor Position")
         bool IsOnGridEdge() const;
 
+    FIntPoint GetPreviousRoomCoords() const { return PreviousRoomCoords; }
+
+    /* Check if the current grid position is next to a door. If so, return which direction type the door is.
+    Return EDirectionType::NumDirections if the current grid position is not next to a door. */
+    EDirectionType GetCurrentGridPositionDoorDirection();
+
 private:
     void UpdatePosition (bool broadcastChange = true);
 

@@ -98,7 +98,10 @@ public:
     //======================================================================================================
     // Movement
     //====================================================================================================== 
-    UPROPERTY(BlueprintReadOnly, VisibleAnywhere, Category = "Enemy Movement")
+	UFUNCTION(BlueprintCallable, Category = "Enemy Movement")
+		bool IsPositionValid();
+
+	UPROPERTY(BlueprintReadOnly, VisibleAnywhere, Category = "Enemy Movement")
         FVector MovementTarget = FVector::ZeroVector;
     UPROPERTY(BlueprintReadWrite, EditAnywhere, Category = "Enemy Movement")
         float MovementSpeed = 1.0f;
@@ -120,17 +123,20 @@ private:
     TArray<TArray<int>>   CurrentLevelPolicy;
     bool                  LevelPoliciesDirFound = false;
 
+    // Can't seem to call parent implementation of EnteredNewRoom from blueprint, so use this call function instead.
+    void CallEnteredNewRoom();
+
     //======================================================================================================
     // Behaviour Policy
     //====================================================================================================== 
     void ResetPolicy();
     void PrintLevelPolicy();
     void UpdatePolicyForTargetPosition();
-
     //======================================================================================================
     // Movement
     //====================================================================================================== 
     void UpdateMovement();
+    void SetBehaviourState(EEnemyBehaviourState newState);
     // Returns the room coords and position in room indicated by the given movement direction, determined by the actors current position.
     // If the movement action would cause them to change rooms, roomCoords will indicate which room they would enter.
     FRoomPositionPair GetTargetRoomAndPositionForDirectionType(EDirectionType actionType);

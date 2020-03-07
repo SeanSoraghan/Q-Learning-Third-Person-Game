@@ -93,8 +93,8 @@ void AMazeActor::UpdatePosition (bool broadcastChange)
     const int mappedX = worldPosition.X + overlappingGridLengthCMX / 2;
     const int mappedY = worldPosition.Y + overlappingGridLengthCMY / 2;
     // get current room coords. negative values should start indexed from -1, not 0 (hence the ternary addition).
-    const int roomX = FMath::Abs(mappedX / overlappingGridLengthCMX) + (mappedX < 0 ? 1 : 0) * FMath::Sign(mappedX);
-    const int roomY = FMath::Abs(mappedY / overlappingGridLengthCMY) + (mappedY < 0 ? 1 : 0) * FMath::Sign(mappedY);
+    const int roomX = (FMath::Abs(mappedX / overlappingGridLengthCMX) + (mappedX < 0 ? 1 : 0)) * FMath::Sign(mappedX);
+    const int roomY = (FMath::Abs(mappedY / overlappingGridLengthCMY) + (mappedY < 0 ? 1 : 0)) * FMath::Sign(mappedY);
     CurrentRoomCoords = FIntPoint(roomX, roomY);
     // divide mappedX and mappedY to get individual cell coordinates within room. If negative, should index backwards.
     const int numUnitsX = (int) (mappedX /*- CurrentLevelGridUnitLengthXCM * 0.5f*/) / (CurrentLevelGridUnitLengthXCM);
@@ -154,6 +154,24 @@ bool AMazeActor::IsOnGridEdge() const
         return GridXPosition == 0 || GridXPosition == numUnitsX - 1 || GridYPosition == 0 || GridYPosition == numUnitsY - 1;
     }
     return false;
+}
+
+EDirectionType AMazeActor::GetCurrentGridPositionDoorDirection()
+{
+    if (ATPGameDemoGameState* gameState = (ATPGameDemoGameState*)GetWorld()->GetGameState())
+    {
+        const int numUnitsX = gameState->NumGridUnitsX;
+        const int numUnitsY = gameState->NumGridUnitsY;
+        if (GridXPosition == numUnitsX - 2)
+            return EDirectionType::North;
+        if (GridXPosition == 1)
+            return EDirectionType::South;
+        if (GridYPosition == numUnitsY - 2)
+            return EDirectionType::East;
+        if (GridYPosition == 1)
+            return EDirectionType::West;
+    }
+    return EDirectionType::NumDirectionTypes;
 }
 
 void AMazeActor::PositionChanged(){}

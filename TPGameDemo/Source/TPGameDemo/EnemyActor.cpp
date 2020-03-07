@@ -54,7 +54,7 @@ void AEnemyActor::Tick( float DeltaTime )
     if (MovementStuckThresholdSeconds > 0.0f && TimeSinceLastPositionChange >= MovementStuckThresholdSeconds && BehaviourState != EEnemyBehaviourState::Avoiding)
     {
         TimeSpentAvoiding = 0.0f;
-        BehaviourState = EEnemyBehaviourState::Avoiding;
+        SetBehaviourState(EEnemyBehaviourState::Avoiding);
         AvoidingBehaviourTimeout = FMath::RandRange(1.5f, 2.5f);
         TargetRoomPosition.DoorAction = EDirectionType::NumDirectionTypes;
         UWorld* world = GetWorld();
@@ -65,7 +65,7 @@ void AEnemyActor::Tick( float DeltaTime )
         //        AsyncTask(ENamedThreads::GameThread, [this]()
         //        {
         //            ChooseDoorTarget();
-        //            BehaviourState = EEnemyBehaviourState::Exploring;
+        //            SetBehaviourState(EEnemyBehaviourState::Exploring;
         //            //ClearAvoidanceTimer();
         //            UpdateMovement();
         //        });
@@ -79,7 +79,7 @@ void AEnemyActor::Tick( float DeltaTime )
         if (TimeSpentAvoiding >= AvoidingBehaviourTimeout)
         {
             ChooseDoorTarget();
-            BehaviourState = EEnemyBehaviourState::Exploring;
+            SetBehaviourState(EEnemyBehaviourState::Exploring);
             UpdateMovement();
         }
     }
@@ -89,6 +89,19 @@ void AEnemyActor::Tick( float DeltaTime )
     //        CurrentRoomCoords == AvoidanceTarget.RoomCoords)
     //        TargetNearbyEmptyCell();
     //}
+
+	// if (changingRooms)
+	//   if (reached target)
+	//		update position ...
+	if (BehaviourState == EEnemyBehaviourState::ChangingRooms)
+	{
+        const bool onTargetGridPosition = TargetRoomPosition.Position.X == GridXPosition && TargetRoomPosition.Position.Y == GridYPosition;
+        if (!onTargetGridPosition && !IsOnGridEdge())
+        {
+            CallEnteredNewRoom();
+        }
+	}
+
     FVector MovementVector = MovementTarget - GetActorLocation();
     MovementVector.Normalize();
     FRotator CurrentRotation = GetActorForwardVector().Rotation();
@@ -100,15 +113,48 @@ void AEnemyActor::Tick( float DeltaTime )
 //======================================================================================================
 // Movement
 //======================================================================================================
+bool AEnemyActor::IsPositionValid()
+{
+	ATPGameDemoGameState* gameState = (ATPGameDemoGameState*)GetWorld()->GetGameState();
+	if (gameState != nullptr)
+	{
+		if (GridXPosition == 0)
+			return GridYPosition == gameState->GetDoorPositionOnWall(CurrentRoomCoords, EDirectionType::South);
+		//if (GridXPosition == gameState->NumGridUnitsX)
+			//return GridYPosition == gameState->GetDoorPositionOnWall(CurrentRoomCoords, EDirectionType::North);
+		if (GridYPosition == 0)
+			return GridXPosition == gameState->GetDoorPositionOnWall(CurrentRoomCoords, EDirectionType::West);
+		//if (GridYPosition == gameState->NumGridUnitsY)
+			//return GridXPosition == gameState->GetDoorPositionOnWall(CurrentRoomCoords, EDirectionType::East);
+		ensure(GridXPosition > 0 && GridXPosition < gameState->NumGridUnitsX && GridYPosition > 0 && GridYPosition < gameState->NumGridUnitsY);
+	}
+	
+	int nextAction = CurrentLevelPolicy[GridXPosition][GridYPosition];
+	return nextAction >= (int)EDirectionType::North && nextAction < (int)EDirectionType::NumDirectionTypes;
+}
+
 void AEnemyActor::PositionChanged()
 {
+	ensure(IsPositionValid());
+	if (!IsPositionValid())
+	{
+		UE_LOG(LogTemp, Warning, TEXT("Killing from position changed"));
+		Destroy();
+		return;
+	}
+
+    /*if (IsOnGridEdge())
+    {
+        ensure(BehaviourState == EEnemyBehaviourState::ChangingRooms);
+    }*/
+
     TimeSinceLastPositionChange = 0.0f;
     if (GridXPosition == TargetRoomPosition.Position.X && GridYPosition == TargetRoomPosition.Position.Y)
     {
         if (TargetRoomPosition.DoorAction != EDirectionType::NumDirectionTypes && 
             BehaviourState == EEnemyBehaviourState::Exploring)
         {
-            BehaviourState = EEnemyBehaviourState::ChangingRooms;
+            SetBehaviourState(EEnemyBehaviourState::ChangingRooms);
             UpdateMovementForActionType(TargetRoomPosition.DoorAction);
         }
     }
@@ -131,7 +177,7 @@ void AEnemyActor::PositionChanged()
         }
         else
         {
-            EnteredNewRoom();
+            CallEnteredNewRoom();
         }
     }
     else if (BehaviourState == EEnemyBehaviourState::Avoiding)
@@ -150,17 +196,25 @@ void AEnemyActor::RoomCoordsChanged()
     // If the enemy wasn't changing rooms, trigger entered new room immediately.
     if (BehaviourState != EEnemyBehaviourState::ChangingRooms)
     {
-        EnteredNewRoom();
+        CallEnteredNewRoom();
     }// Otherwise only trigger entered new room if the enemy has made it all the way through the door (is not on the edge).
     else if (!IsOnGridEdge())
     {
-        EnteredNewRoom();
+        CallEnteredNewRoom();
     }
+}
+
+void AEnemyActor::CallEnteredNewRoom()
+{
+    SetBehaviourState(EEnemyBehaviourState::Exploring);
+    //If you choose the door you're on, you won't get another positionChanged call, so you'll get stuck!'...
+    ChooseDoorTarget();
+    EnteredNewRoom();
 }
 
 void AEnemyActor::EnteredNewRoom_Implementation()
 {
-    BehaviourState = EEnemyBehaviourState::Exploring;
+    SetBehaviourState(EEnemyBehaviourState::Exploring);
     ChooseDoorTarget();
 }
 
@@ -171,11 +225,28 @@ void AEnemyActor::ClearPreviousDoorTarget()
 
 void AEnemyActor::UpdateMovement()
 {
+	ensure(IsPositionValid());
+	if (!IsPositionValid())
+	{
+		UE_LOG(LogTemp, Warning, TEXT("Killing from update movement"));
+		Destroy();
+		return;
+	}
+
     if (!IsOnGridEdge())
     {
         EDirectionType actionType = SelectNextAction();
         UpdateMovementForActionType(actionType);
     }
+}
+
+void AEnemyActor::SetBehaviourState(EEnemyBehaviourState newState)
+{
+    if (newState != EEnemyBehaviourState::ChangingRooms)
+    {
+        ensure(!IsOnGridEdge());
+    }
+    BehaviourState = newState;
 }
 
 void AEnemyActor::UpdateMovementForActionType(EDirectionType actionType)
@@ -187,7 +258,7 @@ void AEnemyActor::UpdateMovementForActionType(EDirectionType actionType)
         FRoomPositionPair roomAndPosition = GetTargetRoomAndPositionForDirectionType(actionType);
         //if (!gameState->RoomTilePositionIsEmpty(roomAndPosition) && BehaviourState != EEnemyBehaviourState::Avoiding)
         //{
-        //    BehaviourState = EEnemyBehaviourState::Avoiding;
+        //    SetBehaviourState(EEnemyBehaviourState::Avoiding);
         //    TargetRoomPosition.DoorAction = EDirectionType::NumDirectionTypes;
         //    UWorld* world = GetWorld();
         //    if (world != nullptr)
@@ -195,7 +266,7 @@ void AEnemyActor::UpdateMovementForActionType(EDirectionType actionType)
         //        world->GetTimerManager().SetTimer (StopAvoidanceTimerHandle, [this]()
         //        { 
         //            ChooseDoorTarget();
-        //            BehaviourState = EEnemyBehaviourState::Exploring;
+        //            SetBehaviourState(EEnemyBehaviourState::Exploring);
         //            //ClearAvoidanceTimer();
         //            UpdateMovement();
         //        }, FMath::RandRange(2.5f, 4.5f), false);
@@ -358,7 +429,7 @@ void AEnemyActor::UpdatePolicyForPlayerPosition (int targetX, int targetY)
                 return;
             }
         }
-        BehaviourState = EEnemyBehaviourState::Exploring;
+        SetBehaviourState(EEnemyBehaviourState::Exploring);
         UpdatePolicyForTargetPosition();
     }
 }
@@ -464,6 +535,10 @@ void AEnemyActor::ChooseDoorTarget()
                         possibleDoors.Add((EDirectionType)i);
         if (possibleDoors.Num() > 1 && possibleDoors.Contains(PreviousDoorTarget))
             possibleDoors.Remove(PreviousDoorTarget);
+        // Check if we're currently on a door position. If so, remove it from the possible doors to choose from
+        EDirectionType CurrentGridPositionDoorType = GetCurrentGridPositionDoorDirection();
+        if (possibleDoors.Num() > 1 && possibleDoors.Contains(CurrentGridPositionDoorType))
+            possibleDoors.Remove(CurrentGridPositionDoorType);
         int doorIndex = FMath::RandRange(0, possibleDoors.Num() - 1);
         EDirectionType doorAction = possibleDoors[doorIndex];        
         int doorPositionOnWall = neighbourPositions[(int)possibleDoors[doorIndex]];
