@@ -126,10 +126,6 @@ void AMazeActor::UpdatePosition (bool broadcastChange)
         GridPositionChangedEvent.Broadcast();
         PreviousGridXPosition = GridXPosition;
         PreviousGridYPosition = GridYPosition;
-        if (roomChanged)
-        {
-
-        }
     }
 }
 
@@ -154,24 +150,6 @@ bool AMazeActor::IsOnGridEdge() const
         return GridXPosition == 0 || GridXPosition == numUnitsX - 1 || GridYPosition == 0 || GridYPosition == numUnitsY - 1;
     }
     return false;
-}
-
-EDirectionType AMazeActor::GetCurrentGridPositionDoorDirection()
-{
-    if (ATPGameDemoGameState* gameState = (ATPGameDemoGameState*)GetWorld()->GetGameState())
-    {
-        const int numUnitsX = gameState->NumGridUnitsX;
-        const int numUnitsY = gameState->NumGridUnitsY;
-        if (GridXPosition == numUnitsX - 2)
-            return EDirectionType::North;
-        if (GridXPosition == 1)
-            return EDirectionType::South;
-        if (GridYPosition == numUnitsY - 2)
-            return EDirectionType::East;
-        if (GridYPosition == 1)
-            return EDirectionType::West;
-    }
-    return EDirectionType::NumDirectionTypes;
 }
 
 void AMazeActor::PositionChanged(){}

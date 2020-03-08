@@ -17,6 +17,7 @@ enum class EDirectionType : uint8
     NumDirectionTypes
 };
 
+
 UENUM(BlueprintType)
 enum class ECellState : uint8
 {
@@ -34,6 +35,11 @@ struct FRoomPositionPair
     FIntPoint RoomCoords;
     UPROPERTY (BlueprintReadWrite, EditAnywhere, Category = "Rooms And Positions")
     FIntPoint PositionInRoom;
+};
+
+namespace DirectionHelpers
+{
+    EDirectionType GetOppositeDirection(EDirectionType direction);
 };
 
 namespace LevelBuilderHelpers

@@ -45,6 +45,9 @@ struct FTargetPosition
     }
 };
 
+
+DECLARE_LOG_CATEGORY_EXTERN(LogEnemyActor, Log, All);
+
 UCLASS()
 class TPGAMEDEMO_API AEnemyActor : public AMazeActor
 {
@@ -123,6 +126,8 @@ private:
     TArray<TArray<int>>   CurrentLevelPolicy;
     bool                  LevelPoliciesDirFound = false;
 
+    int LastPositionChangedPosX = -1;
+    int LastPositionChangedPosY = -1;
     // Can't seem to call parent implementation of EnteredNewRoom from blueprint, so use this call function instead.
     void CallEnteredNewRoom();
 
@@ -150,8 +155,11 @@ private:
     //FVector LastDistanceTrackerStartPosition = FVector::ZeroVector;
     //float DistanceTrackerTime = 0.0f;
 
-    EDirectionType PreviousDoorTarget = EDirectionType::NumDirectionTypes;
-    void ClearPreviousDoorTarget();
+    //EDirectionType PreviousDoorTarget = EDirectionType::NumDirectionTypes;
+    //void ClearPreviousDoorTarget();
+
+    /* The door through which the current room was entered */
+    EDirectionType PreviousDoor = EDirectionType::NumDirectionTypes;
     //======================================================================================================
     // From AMazeActor
     //====================================================================================================== 

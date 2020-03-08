@@ -6,6 +6,11 @@ IMPLEMENT_PRIMARY_GAME_MODULE( FDefaultGameModuleImpl, TPGameDemo, "TPGameDemo" 
 
 const FString LevelBuilderHelpers::LevelsDir() { return FPaths::/*GameDir*/ProjectDir() + "Content/Levels/"; }
 
+EDirectionType DirectionHelpers::GetOppositeDirection(EDirectionType direction)
+{
+    return (EDirectionType)(((int)direction + 2) % (int)EDirectionType::NumDirectionTypes);
+}
+
 FIntPoint LevelBuilderHelpers::GetTargetPointForAction(FIntPoint startingPoint, EDirectionType actionType, int numSpaces /*= 1*/)
 {
     FIntPoint endPoint = startingPoint;
