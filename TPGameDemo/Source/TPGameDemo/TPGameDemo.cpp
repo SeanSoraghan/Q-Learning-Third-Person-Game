@@ -11,6 +11,18 @@ EDirectionType DirectionHelpers::GetOppositeDirection(EDirectionType direction)
     return (EDirectionType)(((int)direction + 2) % (int)EDirectionType::NumDirectionTypes);
 }
 
+FString DirectionHelpers::GetDisplayString(EDirectionType direction)
+{
+    switch (direction)
+    {
+    case EDirectionType::North: return "North";
+    case EDirectionType::East: return "East";
+    case EDirectionType::South: return "South";
+    case EDirectionType::West: return "West";
+    default: return "None";
+    }
+}
+
 FIntPoint LevelBuilderHelpers::GetTargetPointForAction(FIntPoint startingPoint, EDirectionType actionType, int numSpaces /*= 1*/)
 {
     FIntPoint endPoint = startingPoint;

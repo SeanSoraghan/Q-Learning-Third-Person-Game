@@ -79,7 +79,8 @@ struct WallState
 
     void GenerateRandomDoorPosition(int doorPositionMax)
     {
-        DoorPosition = FMath::RandRange(1, doorPositionMax);
+#pragma message("Remove this hard coded door position")
+        DoorPosition = 1;// FMath::RandRange(1, doorPositionMax);
     }
 
     EDoorState DoorState = EDoorState::Closed;
@@ -517,6 +518,13 @@ private:
     TArray<TArray<AWallBuilder*>> WallBuilders;
 	TArray<TArray<RoomState>> RoomStates;
     TArray<TArray<WallStateCouple>> WallStates;
+
+    // An array (each room in the world) of arrays (each target position in the room) 
+    // of 2D arrays (the optimal action at each position)
+    typedef TArray<TArray<int>> BehaviourMap;
+    typedef TArray<BehaviourMap> TargetMaps;
+    TArray<TargetMaps> WorldBehaviourMap;
+    FDirectionSet GetOptimalActions(FIntPoint roomCoords, FIntPoint targetGridPosition, FIntPoint currentGridPosition);
 
     // Struct containing the coordinates of a west/south wall state couple and the specific wall type.
     struct WallPosition

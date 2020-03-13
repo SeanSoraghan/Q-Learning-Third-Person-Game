@@ -31,6 +31,15 @@ enum class EEnemyBehaviourState : uint8
     NumBehaviourStates
 };
 
+UENUM(BlueprintType)
+enum class ELogEventType : uint8
+{
+    Info,
+    Warning,
+    Error,
+    NumTypes
+};
+
 USTRUCT()
 struct FTargetPosition
 {
@@ -43,6 +52,13 @@ struct FTargetPosition
     {
         return DoorAction != EDirectionType::NumDirectionTypes;
     }
+
+    FString ToInfoString() const
+    {
+        FString positionString = FString::Format(TEXT("Target Position: {0}"), { Position.ToString() });
+        FString actionString = FString::Format(TEXT("Action : {0}"), { DirectionHelpers::GetDisplayString(DoorAction) });
+        return positionString + " | " + actionString;
+    }
 };
 
 
@@ -53,7 +69,9 @@ class TPGAMEDEMO_API AEnemyActor : public AMazeActor
 {
 	GENERATED_BODY()
 	
-public:	
+public:
+    static FString GetBehaviourString(EEnemyBehaviourState behaviourState);
+
 	// Sets default values for this actor's properties
 	AEnemyActor (const FObjectInitializer& ObjectInitializer);
 
@@ -121,16 +139,36 @@ private:
     EEnemyBehaviourState  BehaviourState = EEnemyBehaviourState::Exploring;
     FTargetPosition       TargetRoomPosition;
     FRoomPositionPair     AvoidanceTarget;
+    FString               LogDir;
     FString               LevelPoliciesDir;
     FString               CurrentLevelPolicyDir;
     TArray<TArray<int>>   CurrentLevelPolicy;
     bool                  LevelPoliciesDirFound = false;
+    bool                  LogDirFound = false;
+    bool                  SaveLifetimeLog = false;
+    FString               LifetimeLog;
 
-    int LastPositionChangedPosX = -1;
-    int LastPositionChangedPosY = -1;
     // Can't seem to call parent implementation of EnteredNewRoom from blueprint, so use this call function instead.
     void CallEnteredNewRoom();
 
+    //======================================================================================================
+    // Logging
+    //======================================================================================================
+    void LogLine(const FString& lineString);
+    void LogEvent(const FString& eventInfo, ELogEventType logType);
+    FIntPoint RoomAtLastEventLog;
+    void LogRoom();
+    FIntPoint PositionAtLastEventLog;
+    void LogPosition();
+    EEnemyBehaviourState BehaviourAtLastEventLog;
+    void LogBehaviour();
+    FTargetPosition TargetAtLastEventLog;
+    void LogTarget();
+    FVector WorldPosAtLastEventLog;
+    void LogWorldPosition();
+    void LogDetails();
+    void SaveLifetimeString();
+    void AssertWithErrorLog(const bool& condition, FString errorLog);
     //======================================================================================================
     // Behaviour Policy
     //====================================================================================================== 
@@ -140,6 +178,11 @@ private:
     //======================================================================================================
     // Movement
     //====================================================================================================== 
+    /** Deal with the edge case (lol) where the actor reaches the edge of a grid room but its behaviour is not set to 
+        changing rooms. This seems to happen sometimes, probably because the enemy gets pushed into the edge, or due to
+        update lag / glitching.
+    */
+    void ReachedGridEdgeWithoutChangingRooms();
     void UpdateMovement();
     void SetBehaviourState(EEnemyBehaviourState newState);
     // Returns the room coords and position in room indicated by the given movement direction, determined by the actors current position.

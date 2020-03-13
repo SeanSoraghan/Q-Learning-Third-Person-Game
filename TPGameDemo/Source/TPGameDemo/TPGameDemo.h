@@ -14,9 +14,31 @@ enum class EDirectionType : uint8
     East  UMETA (DisplayName = "East"),
     South UMETA (DisplayName = "South"),
     West  UMETA (DisplayName = "West"),
-    NumDirectionTypes
+    NumDirectionTypes UMETA(DisplayName = "None")
 };
 
+//UENUM(BlueprintType)
+//enum class EDirectionFlag : uint8
+//{
+//    NorthF = 1 << 0,
+//    EastF = 1 << 1,
+//    SouthF = 1 << 2,
+//    WestF = 1 << 3,
+//    NumDirectionFlags = 1 << 4
+//};
+
+USTRUCT(BlueprintType)
+struct FDirectionSet
+{
+    GENERATED_USTRUCT_BODY()
+    FDirectionSet(){}
+    
+    bool CheckDirection(EDirectionType direction) { return DirectionsMask & (1 << (int)direction); }
+    
+    void EnableDirection(EDirectionType direction) { DirectionsMask |= (1 << (int)direction); }
+    void DisableDirection(EDirectionType direction) { DirectionsMask &= (~(1 << (int)direction)); }
+    uint8 DirectionsMask = 0;
+};
 
 UENUM(BlueprintType)
 enum class ECellState : uint8
@@ -40,6 +62,7 @@ struct FRoomPositionPair
 namespace DirectionHelpers
 {
     EDirectionType GetOppositeDirection(EDirectionType direction);
+    FString GetDisplayString(EDirectionType direction);
 };
 
 namespace LevelBuilderHelpers
