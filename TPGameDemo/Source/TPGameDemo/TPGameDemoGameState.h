@@ -519,12 +519,17 @@ private:
 	TArray<TArray<RoomState>> RoomStates;
     TArray<TArray<WallStateCouple>> WallStates;
 
-    // An array (each room in the world) of arrays (each target position in the room) 
+    // A 2D array (each room in the world) of 2D arrays (each target position in the room) 
     // of 2D arrays (the optimal action at each position)
-    typedef TArray<TArray<int>> BehaviourMap;
-    typedef TArray<BehaviourMap> TargetMaps;
-    TArray<TargetMaps> WorldBehaviourMap;
-    FDirectionSet GetOptimalActions(FIntPoint roomCoords, FIntPoint targetGridPosition, FIntPoint currentGridPosition);
+    typedef TArray<TArray<FDirectionSet>> BehaviourMap;
+    typedef TArray<TArray<BehaviourMap>> TargetMaps;
+    TArray<TArray<TargetMaps>> WorldBehaviourMap;
+    FDirectionSet GetOptimalActions(FIntPoint roomCoords, FIntPoint targetGridPosition, FIntPoint currentGridPosition)
+    {
+        return WorldBehaviourMap[roomCoords.X][roomCoords.Y]
+                                [targetGridPosition.X][targetGridPosition.Y]
+                                [currentGridPosition.X][currentGridPosition.Y];
+    }
 
     // Struct containing the coordinates of a west/south wall state couple and the specific wall type.
     struct WallPosition

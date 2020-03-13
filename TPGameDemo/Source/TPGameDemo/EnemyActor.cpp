@@ -154,7 +154,7 @@ bool AEnemyActor::IsPositionValid()
 		ensure(GridXPosition > 0 && GridXPosition < gameState->NumGridUnitsX && GridYPosition > 0 && GridYPosition < gameState->NumGridUnitsY);
 	}
 	
-	int nextAction = CurrentLevelPolicy[GridXPosition][GridYPosition];
+	int nextAction = (int)CurrentLevelPolicy[GridXPosition][GridYPosition].ChooseDirection();
 	return nextAction >= (int)EDirectionType::North && nextAction < (int)EDirectionType::NumDirectionTypes;
 }
 
@@ -366,7 +366,7 @@ EDirectionType AEnemyActor::SelectNextAction()
 {
     if (CurrentLevelPolicy.Num() > GridXPosition && GridXPosition > 0)
         if (CurrentLevelPolicy.Num() > 0 && CurrentLevelPolicy[GridXPosition].Num() > GridYPosition && GridYPosition > 0)
-            return (EDirectionType)CurrentLevelPolicy[GridXPosition][GridYPosition];
+            return CurrentLevelPolicy[GridXPosition][GridYPosition].ChooseDirection();
 
     return EDirectionType::NumDirectionTypes;
 }
@@ -615,7 +615,7 @@ void AEnemyActor::ResetPolicy()
 {
     for (int row = 0; row < CurrentLevelPolicy.Num(); row++)
         for (int col = 0; col < CurrentLevelPolicy[row].Num(); col++)
-            CurrentLevelPolicy[row][col] = 0;
+            CurrentLevelPolicy[row][col].Clear();
 }
 
 void AEnemyActor::PrintLevelPolicy()

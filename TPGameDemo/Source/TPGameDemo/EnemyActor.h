@@ -140,9 +140,10 @@ private:
     FTargetPosition       TargetRoomPosition;
     FRoomPositionPair     AvoidanceTarget;
     FString               LogDir;
+#pragma message("Eventually the enemies won't store their own policy, but will ask the game state for actions depending on their state ...")
     FString               LevelPoliciesDir;
     FString               CurrentLevelPolicyDir;
-    TArray<TArray<int>>   CurrentLevelPolicy;
+    TArray<TArray<FDirectionSet>>   CurrentLevelPolicy;
     bool                  LevelPoliciesDirFound = false;
     bool                  LogDirFound = false;
     bool                  SaveLifetimeLog = false;

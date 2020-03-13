@@ -59,15 +59,13 @@ bool LevelBuilderHelpers::GridPositionIsValid(FIntPoint position, int sizeX, int
     return !(position.X < 0 || position.Y < 0 || position.X > sizeX - 1 || position.Y > sizeY -1);
 }
 
-const FString LevelBuilderHelpers::ActionStringDelimiter() {return FString(" ");}
-
 /*
-Takes in a text file and fills an array with numbers.
-File should be a square grid format with numbers separated by spaces.
+Takes in a text file and fills an array with FDirectionSets.
+File should be a square grid format with FDirectionSets separated by spaces.
 If invertX is true, the lines in the text file will be entered from bottom to top
 into the 2D int array (rather than top to bottom).
 */
-void LevelBuilderHelpers::FillArrayFromTextFile (FString fileName, TArray<TArray<int>>& arrayRef, bool invertX /*= false*/)
+void LevelBuilderHelpers::FillArrayFromTextFile (FString fileName, TArray<TArray<FDirectionSet>>& arrayRef, bool invertX /*= false*/)
 {
 
     #if ON_SCREEN_DEBUGGING
@@ -85,15 +83,24 @@ void LevelBuilderHelpers::FillArrayFromTextFile (FString fileName, TArray<TArray
     for (int row = (invertX ? numRows - 1 : 0); (invertX ? row >= 0 : row < numRows); (invertX ? row-- : row++))
     {
         
-        TArray<FString> actionStrings;
-        LevelPolicyStringArray[row].ParseIntoArray (actionStrings, *ActionStringDelimiter(), 1);
-        if (actionStrings.Num() > 0)
+        TArray<FString> behaviourStrings; // the optimal direction set at each position
+        LevelPolicyStringArray[row].ParseIntoArray (behaviourStrings, *Delimiters::DirectionSetStringDelimiter, 1);
+        if (behaviourStrings.Num() > 0)
         {
-            arrayRef.Add (TArray<int>());
-            arrayRef[arrayRef.Num() - 1].Empty();
-            for (int action = 0; action < actionStrings.Num(); action++)
+            arrayRef.Add (TArray<FDirectionSet>());
+            TArray<FDirectionSet>& behaviourMapRow = arrayRef[arrayRef.Num() - 1];
+            behaviourMapRow.Empty();
+            for (int col = 0; col < behaviourStrings.Num(); col++)
             {
-                arrayRef[arrayRef.Num() - 1].Add (FCString::Atoi(*actionStrings[action]));
+                TArray<FString> actionStrings; // the actions to choose from
+                behaviourStrings[col].ParseIntoArray(actionStrings, *Delimiters::ActionDelimiter, 1);
+                behaviourMapRow.Add(FDirectionSet());
+                ensure(actionStrings.Num() < (int)EDirectionType::NumDirectionTypes && actionStrings.Num() > 0);
+                for (int action = 0; action < actionStrings.Num(); ++action)
+                {
+                    behaviourMapRow[col].EnableDirection((EDirectionType)action);
+                }
+                ensure(behaviourMapRow[col].IsValid());
             }
         }
     }
@@ -105,7 +112,7 @@ Writes a 2D int array to a text file. File will have a square grid format with n
 separated by spaces. If invertX is true, the lines in the text file will be entered 
 from bottom to top (rather than top to bottom).
 */
-void LevelBuilderHelpers::WriteArrayToTextFile (TArray<TArray<int>>& arrayRef, FString fileName, bool invertX /*= false*/)
+void LevelBuilderHelpers::WriteArrayToTextFile (TArray<TArray<FDirectionSet>>& arrayRef, FString fileName, bool invertX /*= false*/)
 {
     const int numX = arrayRef.Num();
     const int numY = arrayRef[0].Num();
@@ -115,15 +122,82 @@ void LevelBuilderHelpers::WriteArrayToTextFile (TArray<TArray<int>>& arrayRef, F
         FString row = "";
         for (int y = 0; y < numY; ++y)
         {
-            row += FString::FromInt(arrayRef[x][y]);
+            row += arrayRef[x][y].ToString();
             if (y < numY - 1)
-                row += FString(" ");
+                row += Delimiters::DirectionSetStringDelimiter;
             else if (x < numX - 1)
                 row += FString("\n");
         }
         text += row;
     }
     FFileHelper::SaveStringToFile(text, * fileName);
+}
+
+void LevelBuilderHelpers::FillArrayFromTextFile(FString fileName, TArray<TArray<int>>& arrayRef, bool invertX)
+{
+#if ON_SCREEN_DEBUGGING
+    if (!FPlatformFileManager::Get().GetPlatformFile().FileExists(*fileName))
+    {
+        GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red, FString::Printf(TEXT("Cant Find file: | %s |"), *fileName));
+        return;
+    }
+#endif
+
+    arrayRef.Empty();
+    TArray<FString> LevelPolicyStringArray;
+    FFileHelper::LoadANSITextFileToStrings(*(fileName), NULL, LevelPolicyStringArray);
+    const int numRows = LevelPolicyStringArray.Num();
+    for (int row = (invertX ? numRows - 1 : 0); (invertX ? row >= 0 : row < numRows); (invertX ? row-- : row++))
+    {
+
+        TArray<FString> actionStrings;
+        LevelPolicyStringArray[row].ParseIntoArray(actionStrings, *Delimiters::DirectionSetStringDelimiter, 1);
+        if (actionStrings.Num() > 0)
+        {
+            arrayRef.Add(TArray<int>());
+            arrayRef[arrayRef.Num() - 1].Empty();
+            for (int action = 0; action < actionStrings.Num(); action++)
+            {
+                arrayRef[arrayRef.Num() - 1].Add(FCString::Atoi(*actionStrings[action]));
+            }
+        }
+    }
+}
+
+void LevelBuilderHelpers::WriteArrayToTextFile(TArray<TArray<int>>& arrayRef, FString fileName, bool invertX)
+{
+    const int numX = arrayRef.Num();
+    const int numY = arrayRef[0].Num();
+    FString text = FString("");
+    for (int x = (invertX ? numX - 1 : 0); (invertX ? x >= 0 : x < numX); (invertX ? x-- : x++))
+    {
+        FString row = "";
+        for (int y = 0; y < numY; ++y)
+        {
+            row += FString::FromInt(arrayRef[x][y]);
+            if (y < numY - 1)
+                row += Delimiters::DirectionSetStringDelimiter;
+            else if (x < numX - 1)
+                row += FString("\n");
+        }
+        text += row;
+    }
+    FFileHelper::SaveStringToFile(text, *fileName);
+}
+
+void LevelBuilderHelpers::PrintArray(TArray<TArray<FDirectionSet>>& arrayRef)
+{
+    UE_LOG(LogTemp, Warning, TEXT("Level Array--------------"));
+    for (int row = arrayRef.Num() - 1; row >= 0; --row)
+    {
+        FString s = "";
+
+        for (int col = 0; col < arrayRef[row].Num(); col++)
+            s += FString("|") + " " + arrayRef[row][col].ToString(true) + " ";
+
+        UE_LOG(LogTemp, Warning, TEXT("%s"), *s);
+        //GEngine->AddOnScreenDebugMessage(-1, 1000.f, FColor::Red, s);
+    }
 }
 
 void LevelBuilderHelpers::PrintArray(TArray<TArray<int>>& arrayRef)
@@ -134,9 +208,9 @@ void LevelBuilderHelpers::PrintArray(TArray<TArray<int>>& arrayRef)
         FString s = "";
 
         for (int col = 0; col < arrayRef[row].Num(); col++)
-            s += FString("|") + 
-                 (arrayRef[row][col] == -1 ? FString("") : FString(" ")) + 
-                 FString::FromInt (arrayRef[row][col]);
+            s += FString("|") +
+            (arrayRef[row][col] == -1 ? FString("") : FString(" ")) +
+            FString::FromInt(arrayRef[row][col]);
 
         UE_LOG(LogTemp, Warning, TEXT("%s"), *s);
         //GEngine->AddOnScreenDebugMessage(-1, 1000.f, FColor::Red, s);

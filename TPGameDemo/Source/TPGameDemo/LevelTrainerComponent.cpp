@@ -84,15 +84,11 @@ const TArray<float> GridState::GetRewards() const
     return ActionRewards;
 }
 
-const float GridState::GetOptimalQValueAndActions(TArray<EDirectionType>* ActionsArrayToSet) const 
+const float GridState::GetOptimalQValueAndActions(FDirectionSet& Actions) const 
 {
-    const bool updateArray = ActionsArrayToSet != nullptr;
-    if (updateArray)
-        ActionsArrayToSet->Empty();
     ensure(ActionQValues.Num() == (int)EDirectionType::NumDirectionTypes);
     float optimalQValue = ActionQValues[0];
-    if (updateArray)
-        ActionsArrayToSet->Add((EDirectionType)0);
+    Actions.EnableDirection((EDirectionType)0);
     for (int i = 1; i < ActionQValues.Num(); ++i)
     {
         float currentV = ActionQValues[i];
@@ -100,12 +96,10 @@ const float GridState::GetOptimalQValueAndActions(TArray<EDirectionType>* Action
         {
             if (currentV > optimalQValue)
             {
-                if (updateArray)
-                    ActionsArrayToSet->Empty();
+                Actions.Clear();
                 optimalQValue = currentV;
             }
-            if (updateArray)
-                ActionsArrayToSet->Add((EDirectionType)i);
+            Actions.EnableDirection((EDirectionType)i);
         }
     }
     return optimalQValue;
@@ -298,7 +292,7 @@ void ULevelTrainerComponent::TrainNextGoalPosition(int numSimulationsPerStarting
         FString CurrentPositionString = FString::FromInt(CurrentGoalPosition.X) + FString("_") + FString::FromInt(CurrentGoalPosition.Y);
         //Create string and save to text file.
         FString CurrentPositionFileName = LevelBuilderHelpers::LevelsDir() + CurrentLevelName + "/" + CurrentPositionString + ".txt";
-        TArray<TArray<int>> envArray = GetEnvironmentIntArray();
+        TArray<TArray<FDirectionSet>> envArray = GetBehaviourMap();
         //LevelBuilderHelpers::PrintArray(envArray);
         LevelBuilderHelpers::WriteArrayToTextFile(envArray, CurrentPositionFileName);
         GetState(CurrentGoalPosition).SetIsGoal(false);
@@ -311,30 +305,22 @@ void ULevelTrainerComponent::ResetGoalPosition()
     CurrentGoalPosition = FIntPoint(0,0);
 }
 
-TArray<TArray<int>> ULevelTrainerComponent::GetEnvironmentIntArray()
+TArray<TArray<FDirectionSet>> ULevelTrainerComponent::GetBehaviourMap()
 {
-    TArray<TArray<int>> outArray;
+    TArray<TArray<FDirectionSet>> outArray;
+    outArray.Reserve(Environment.Num());
     for (int x = 0; x < Environment.Num(); ++x)
     {
-        outArray.Add(TArray<int>());
+        outArray.Add(TArray<FDirectionSet>());
         for (int y = 0; y < Environment[0].Num(); ++y)
         {
-            if (!GetState(FIntPoint(x,y)).IsStateValid())
+            outArray[x].Add(FDirectionSet());
+            FDirectionSet& directionSet = outArray[x][y];
+            directionSet.Clear();
+            if (GetState(FIntPoint(x, y)).IsStateValid())
             {
-                outArray[x].Add(-1);
-            }
-            else
-            {
-                TArray<EDirectionType> optimalActions;
-                GetState(FIntPoint(x,y)).GetOptimalQValueAndActions(&optimalActions);
-                ensure(optimalActions.Num() > 0);
-                EDirectionType actionToTake = optimalActions[0];
-                if (optimalActions.Num() > 1)
-                {
-                    int actionIndex = FMath::RandRange(0, optimalActions.Num() - 1);
-                    actionToTake = optimalActions[actionIndex];
-                }
-                outArray[x].Add((int)actionToTake);
+                GetState(FIntPoint(x, y)).GetOptimalQValueAndActions(directionSet);
+                ensure(directionSet.IsValid());
             }
         }
     }
@@ -371,6 +357,7 @@ void ULevelTrainerComponent::ClearEnvironment()
 
 void ULevelTrainerComponent::SimulateRun(FIntPoint startingStatePosition, int maxNumActions)
 {
+    //taking too long to train!
     int numActionsTaken = 0;
     bool goalReached = false;
     if (GetState(startingStatePosition).IsGoalState())
@@ -378,17 +365,13 @@ void ULevelTrainerComponent::SimulateRun(FIntPoint startingStatePosition, int ma
     FIntPoint currentPosition = startingStatePosition;
     while (numActionsTaken < maxNumActions && !goalReached)
     {
-        TArray<EDirectionType> optimalActions;
+        FDirectionSet optimalActions;
         GridState& currentState = GetState(currentPosition);
-        currentState.GetOptimalQValueAndActions(&optimalActions);
-        ensure(optimalActions.Num() > 0);
-        EDirectionType actionToTake = optimalActions[0];
-        if (optimalActions.Num() > 1)
-        {
-            int actionIndex = FMath::RandRange(0, optimalActions.Num() - 1);
-            actionToTake = optimalActions[actionIndex];
-        }
-        const float maxNextReward = GetState(currentState.GetActionTarget(actionToTake)).GetOptimalQValueAndActions(nullptr);
+        currentState.GetOptimalQValueAndActions(optimalActions);
+        ensure(optimalActions.IsValid());
+        EDirectionType actionToTake = optimalActions.ChooseDirection();
+        FDirectionSet dummyNextActions;
+        const float maxNextReward = GetState(currentState.GetActionTarget(actionToTake)).GetOptimalQValueAndActions(dummyNextActions);
         const float currentQValue = currentState.GetQValues()[(int)actionToTake];
         const float discountedNextReward = GridTrainingConstants::DiscountFactor * maxNextReward;
         const float immediateReward = currentState.GetRewards()[(int)actionToTake];

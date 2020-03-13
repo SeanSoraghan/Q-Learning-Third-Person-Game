@@ -59,7 +59,7 @@ public:
     const TArray<float> GetQValues() const;
     const TArray<float> GetRewards() const;
 
-    const float GetOptimalQValueAndActions(TArray<EDirectionType>* ActionsArrayToSet) const;
+    const float GetOptimalQValueAndActions(FDirectionSet& Actions) const;
 
     void UpdateQValue(EDirectionType actionType, float deltaQ);
     void ResetQValues();
@@ -131,7 +131,7 @@ private:
     TSharedPtr<LevelTrainerRunnable> TrainerRunnable;
     FCriticalSection ClientSection;
 
-    TArray<TArray<int>> GetEnvironmentIntArray();
+    TArray<TArray<FDirectionSet>> GetBehaviourMap();
     void ClearEnvironment();
 	TArray<TArray<GridState>> Environment;
     void InitTrainerThread();
