@@ -23,9 +23,6 @@ FString AEnemyActor::GetBehaviourString(EEnemyBehaviourState behaviourState)
 AEnemyActor::AEnemyActor (const FObjectInitializer& ObjectInitializer) : Super (ObjectInitializer)
 {
 	PrimaryActorTick.bCanEverTick = true;
-    LevelPoliciesDir = FPaths::ProjectDir();
-    LevelPoliciesDir += "Content/Levels/GeneratedRooms/";
-    LevelPoliciesDirFound = FPlatformFileManager::Get().GetPlatformFile().DirectoryExists (*LevelPoliciesDir);
     LogDir = FPaths::ProjectDir();
     LogDir += "Content/Logs/";
     LogDirFound = FPlatformFileManager::Get().GetPlatformFile().DirectoryExists(*LogDir);
@@ -108,6 +105,7 @@ void AEnemyActor::Tick( float DeltaTime )
 	if (BehaviourState == EEnemyBehaviourState::ChangingRooms)
 	{
         const bool onTargetGridPosition = TargetRoomPosition.Position.X == GridXPosition && TargetRoomPosition.Position.Y == GridYPosition;
+        ensure(onTargetGridPosition || IsOnGridEdge());
         if (!onTargetGridPosition && !IsOnGridEdge())
         {
             SaveLifetimeLog = true;
@@ -119,6 +117,7 @@ void AEnemyActor::Tick( float DeltaTime )
         BehaviourState == EEnemyBehaviourState::Exploring)
     {
         const bool onTargetGridPosition = TargetRoomPosition.Position.X == GridXPosition && TargetRoomPosition.Position.Y == GridYPosition;
+        ensure(!onTargetGridPosition);
         if (onTargetGridPosition)
         {
             SaveLifetimeLog = true;
@@ -152,10 +151,11 @@ bool AEnemyActor::IsPositionValid()
 		//if (GridYPosition == gameState->NumGridUnitsY)
 			//return GridXPosition == gameState->GetDoorPositionOnWall(CurrentRoomCoords, EDirectionType::East);
 		ensure(GridXPosition > 0 && GridXPosition < gameState->NumGridUnitsX && GridYPosition > 0 && GridYPosition < gameState->NumGridUnitsY);
+        FDirectionSet optimalActions = gameState->GetOptimalActions(CurrentRoomCoords, TargetRoomPosition.Position, FIntPoint(GridXPosition, GridYPosition));
+        return optimalActions.IsValid();
 	}
 	
-	int nextAction = (int)CurrentLevelPolicy[GridXPosition][GridYPosition].ChooseDirection();
-	return nextAction >= (int)EDirectionType::North && nextAction < (int)EDirectionType::NumDirectionTypes;
+    return false;
 }
 
 void AEnemyActor::PositionChanged()
@@ -218,8 +218,6 @@ void AEnemyActor::PositionChanged()
 void AEnemyActor::RoomCoordsChanged()
 {
     LogEvent("Room coords changed", ELogEventType::Info);
-    //ClearPreviousDoorTarget();
-    LoadLevelPolicyForRoomCoordinates(CurrentRoomCoords);
     
     // If we're not on the grid edge, call entered new room immediately.
     if (!IsOnGridEdge())
@@ -228,9 +226,10 @@ void AEnemyActor::RoomCoordsChanged()
         CallEnteredNewRoom();
     }
     // otherwise if we're not changing rooms, direct ourselves towards one of the rooms from the doorway.
-    else if (BehaviourState != EEnemyBehaviourState::ChangingRooms)
+    else //if (BehaviourState != EEnemyBehaviourState::ChangingRooms)
     {
-        ReachedGridEdgeWithoutChangingRooms();
+        ensure(BehaviourState == EEnemyBehaviourState::ChangingRooms);
+        //ReachedGridEdgeWithoutChangingRooms();
     }
 }
 
@@ -240,7 +239,7 @@ void AEnemyActor::CallEnteredNewRoom()
     SetBehaviourState(EEnemyBehaviourState::Exploring);
     //you're testing if this is sufficient for enemies not getting stuck between rooms' ...
     if (TargetRoomPosition.DoorAction < EDirectionType::NumDirectionTypes)
-        PreviousDoor = DirectionHelpers::GetOppositeDirection(TargetRoomPosition.DoorAction);// (EDirectionType)(((int)TargetRoomPosition.DoorAction + 2) % (int)EDirectionType::NumDirectionTypes);
+        PreviousDoor = DirectionHelpers::GetOppositeDirection(TargetRoomPosition.DoorAction);
     ChooseDoorTarget();
     EnteredNewRoom();
 }
@@ -251,14 +250,12 @@ void AEnemyActor::EnteredNewRoom_Implementation()
     ChooseDoorTarget();
 }
 
-//void AEnemyActor::ClearPreviousDoorTarget()
-//{
-//    PreviousDoorTarget = EDirectionType::NumDirectionTypes;
-//}
 void AEnemyActor::ReachedGridEdgeWithoutChangingRooms()
 {
 #pragma message("make sure in blueprint when the enemy has reached the center, it doesnt updatepolicyforcenter when it changes rooms on edge...")
     // Due to the way rooms overlap, if an enemy is inside a doorway, we can assume both rooms that use this door currently exist.
+    SaveLifetimeLog = true;
+    LogEvent("Reached grid edge without changing rooms", ELogEventType::Error);
     
 }
 
@@ -364,9 +361,12 @@ void AEnemyActor::ClearAvoidanceTimer()
 
 EDirectionType AEnemyActor::SelectNextAction()
 {
-    if (CurrentLevelPolicy.Num() > GridXPosition && GridXPosition > 0)
-        if (CurrentLevelPolicy.Num() > 0 && CurrentLevelPolicy[GridXPosition].Num() > GridYPosition && GridYPosition > 0)
-            return CurrentLevelPolicy[GridXPosition][GridYPosition].ChooseDirection();
+    ATPGameDemoGameState* gameState = (ATPGameDemoGameState*)GetWorld()->GetGameState();
+    if (gameState != nullptr)
+    {
+        FDirectionSet optimalActions = gameState->GetOptimalActions(CurrentRoomCoords, TargetRoomPosition.Position, FIntPoint(GridXPosition, GridYPosition));
+        return optimalActions.ChooseDirection();
+    }
 
     return EDirectionType::NumDirectionTypes;
 }
@@ -438,22 +438,6 @@ void AEnemyActor::SetMovementTimerPaused (bool movementTimerShouldBePaused)
 //======================================================================================================
 // Behaviour Policy
 //======================================================================================================
-void AEnemyActor::LoadLevelPolicyForRoomCoordinates (FIntPoint levelCoords)
-{
-    CurrentRoomCoords = levelCoords;
-    FString levelName = FString::FromInt(levelCoords.X) + FString("_") + FString::FromInt(levelCoords.Y);
-    LoadLevelPolicy(levelName);
-}
-
-void AEnemyActor::LoadLevelPolicy (FString levelName)
-{
-    if (LevelPoliciesDirFound)
-    {
-        CurrentLevelPolicyDir = LevelPoliciesDir + levelName + "/";
-        //UpdateMovement();
-    }
-}
-
 void AEnemyActor::UpdatePolicyForPlayerPosition (int targetX, int targetY)
 {
     if (BehaviourState != EEnemyBehaviourState::Avoiding && !IsOnGridEdge())
@@ -480,7 +464,7 @@ void AEnemyActor::UpdatePolicyForPlayerPosition (int targetX, int targetY)
             }
         }
         SetBehaviourState(EEnemyBehaviourState::Exploring);
-        UpdatePolicyForTargetPosition();
+        UpdateMovement();
     }
 }
 
@@ -518,21 +502,7 @@ void AEnemyActor::UpdatePolicyForDoorType (EDirectionType doorType, int doorPosi
                 break;
             }
         }
-        UpdatePolicyForTargetPosition();
-    }
-}
-
-void AEnemyActor::UpdatePolicyForTargetPosition()
-{
-    int targetX = TargetRoomPosition.Position.X;
-    int targetY = TargetRoomPosition.Position.Y;
-    if (LevelPoliciesDirFound)
-    {
-        ResetPolicy();
-        FString policy = CurrentLevelPolicyDir + FString::FromInt (targetX) + "_" + FString::FromInt (targetY) + ".txt";
-        LevelBuilderHelpers::FillArrayFromTextFile (policy, CurrentLevelPolicy);
         UpdateMovement();
-        //PrintLevelPolicy();
     }
 }
 
@@ -609,19 +579,6 @@ void AEnemyActor::ChooseDoorTarget()
             UpdateMovementForActionType(TargetRoomPosition.DoorAction);
         }
     }
-}
-
-void AEnemyActor::ResetPolicy()
-{
-    for (int row = 0; row < CurrentLevelPolicy.Num(); row++)
-        for (int col = 0; col < CurrentLevelPolicy[row].Num(); col++)
-            CurrentLevelPolicy[row][col].Clear();
-}
-
-void AEnemyActor::PrintLevelPolicy()
-{
-    UE_LOG(LogTemp, Warning, TEXT("Level Policy::"));
-    LevelBuilderHelpers::PrintArray(CurrentLevelPolicy);
 }
 
 void AEnemyActor::LogLine(const FString& lineString)

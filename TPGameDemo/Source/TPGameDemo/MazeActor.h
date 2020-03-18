@@ -41,6 +41,9 @@ public:
     /** Use this to change whether a specific implementation of MazeActor should count towards a positions actor count. */
     UFUNCTION(BlueprintCallable, Category = "Maze Actor Positions")
         void SetOccupyCells(bool bShouldOccupy);
+
+    UFUNCTION(BlueprintCallable, Category = "Maze Actor Positions")
+        void InitialisePosition(FIntPoint roomCoords);
 	//=========================================================================================
     // Maze Position
     //=========================================================================================

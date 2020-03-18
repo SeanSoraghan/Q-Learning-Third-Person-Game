@@ -13,6 +13,10 @@ ATPGameDemoGameState::ATPGameDemoGameState(const FObjectInitializer& ObjectIniti
 {
 	PrimaryActorTick.bCanEverTick = true;
     PrimaryActorTick.TickGroup = TG_PostUpdateWork;
+
+    FString LevelPoliciesDir = FPaths::ProjectDir();
+    LevelPoliciesDir += "Content/Levels/GeneratedRooms/";
+    LevelPoliciesDirFound = FPlatformFileManager::Get().GetPlatformFile().DirectoryExists (*LevelPoliciesDir);
 }
 
 ATPGameDemoGameState::~ATPGameDemoGameState()
@@ -48,6 +52,7 @@ void ATPGameDemoGameState::InitialiseArrays()
         TArray<RoomState> roomsRow;
         TArray<ARoomBuilder*> roomBuilderRow;
         TArray<AWallBuilder*> wallBuilderRow;
+        WorldBehaviourMaps.Add(TArray<TargetMapsArray>());
         for (int y = 0; y < NumGridsXY; ++y)
         {
             wallsRow.Add(WallStateCouple());
@@ -55,6 +60,9 @@ void ATPGameDemoGameState::InitialiseArrays()
 
             roomBuilderRow.Add(nullptr);
             wallBuilderRow.Add(nullptr);
+
+            WorldBehaviourMaps[x].AddDefaulted();
+            InitialiseTargetMapsArray(WorldBehaviourMaps[x][y], NumGridUnitsX, NumGridUnitsY);
         }
         // Add one final wall couple (where the west wall will be the east wall of the final room, and the south wall will be ignored).
         wallsRow.Add(WallStateCouple());

@@ -21,7 +21,7 @@ enum class EDirectionType : uint8
 namespace Delimiters
 {
     const FString DirectionSetStringDelimiter = " ";
-    const FString ActionDelimiter = "-";
+    const FString ActionDelimiter = "_";
 };
 
 USTRUCT(BlueprintType)
@@ -41,15 +41,12 @@ struct FDirectionSet
 
     FDirectionSet()
     {
-        DirectionSelectionSet.empty();
+        DirectionSelectionSet.clear();
     }
 
     FDirectionSet(uint8 directionsMask) : DirectionsMask(directionsMask) 
     {
-        DirectionSelectionSet.empty();
-        for (int d = 0; d < (int)EDirectionType::NumDirectionTypes; ++d)
-            if (CheckDirection((EDirectionType)d))
-                DirectionSelectionSet.insert((EDirectionType)d);
+        UpdateSelectionSet();
     }
 
     EDirectionType ChooseDirection() 
@@ -72,7 +69,7 @@ struct FDirectionSet
     void Clear()
     {
         DirectionsMask = 0;
-        DirectionSelectionSet.empty();
+        DirectionSelectionSet.clear();
     }
 
     void EnableDirection(EDirectionType direction) 
@@ -88,6 +85,8 @@ struct FDirectionSet
 
     FString ToString(bool padSpaces = false) 
     {
+        if (!IsValid())
+            return FString("-1");
         FString str = "";
         if (CheckDirection(EDirectionType::North))
             str += FString::FromInt((int)EDirectionType::North);
@@ -105,6 +104,15 @@ struct FDirectionSet
 
     uint8 DirectionsMask = 0;
     std::set<EDirectionType> DirectionSelectionSet;
+
+private:
+    void UpdateSelectionSet()
+    {
+        DirectionSelectionSet.clear();
+        for (int d = 0; d < (int)EDirectionType::NumDirectionTypes; ++d)
+            if (CheckDirection((EDirectionType)d))
+                DirectionSelectionSet.insert((EDirectionType)d);
+    }
 };
 
 UENUM(BlueprintType)
@@ -130,6 +138,32 @@ namespace DirectionHelpers
 {
     EDirectionType GetOppositeDirection(EDirectionType direction);
     FString GetDisplayString(EDirectionType direction);
+};
+
+namespace
+{
+    typedef TArray<TArray<FDirectionSet>> BehaviourMap;
+    typedef TArray<TArray<BehaviourMap>> TargetMapsArray;
+    void InitialiseBehaviourMap(BehaviourMap& behaviourMap, int numX, int numY)
+    {
+        for (int x = 0; x < numX; ++x)
+        {
+            behaviourMap.Add(TArray<FDirectionSet>());
+            behaviourMap[x].AddDefaulted(numY);
+        }
+    }
+    void InitialiseTargetMapsArray(TargetMapsArray& targetMaps, int numX, int numY)
+    {
+        for (int x = 0; x < numX; ++x)
+        {
+            targetMaps.Add(TArray<BehaviourMap>());
+            for (int y = 0; y < numY; ++y)
+            {
+                targetMaps[x].Add(BehaviourMap());
+                InitialiseBehaviourMap(targetMaps[x][y], numX, numY);
+            }
+        }
+    }
 };
 
 namespace LevelBuilderHelpers

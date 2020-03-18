@@ -95,10 +95,10 @@ void LevelBuilderHelpers::FillArrayFromTextFile (FString fileName, TArray<TArray
                 TArray<FString> actionStrings; // the actions to choose from
                 behaviourStrings[col].ParseIntoArray(actionStrings, *Delimiters::ActionDelimiter, 1);
                 behaviourMapRow.Add(FDirectionSet());
-                ensure(actionStrings.Num() < (int)EDirectionType::NumDirectionTypes && actionStrings.Num() > 0);
+                ensure(actionStrings.Num() <= (int)EDirectionType::NumDirectionTypes && actionStrings.Num() > 0);
                 for (int action = 0; action < actionStrings.Num(); ++action)
                 {
-                    behaviourMapRow[col].EnableDirection((EDirectionType)action);
+                    behaviourMapRow[col].EnableDirection((EDirectionType)(FCString::Atoi(*actionStrings[action])));
                 }
                 ensure(behaviourMapRow[col].IsValid());
             }

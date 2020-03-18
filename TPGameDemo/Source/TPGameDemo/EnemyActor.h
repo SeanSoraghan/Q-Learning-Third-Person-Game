@@ -101,18 +101,13 @@ public:
         void UpdateMovementForActionType(EDirectionType actionType);
     //======================================================================================================
     // Behaviour Policy
-    //====================================================================================================== 
-    UFUNCTION (BlueprintCallable, Category = "Enemy Policy")
-        void LoadLevelPolicyForRoomCoordinates (FIntPoint levelCoords);
+    //======================================================================================================
 
     UFUNCTION (BlueprintCallable, Category = "Enemy Movement")
         virtual void UpdatePolicyForPlayerPosition (int playerX, int playerY);
 
     UFUNCTION (BlueprintCallable, Category = "Enemy Movement")
         virtual void UpdatePolicyForDoorType (EDirectionType doorTypem, int doorPositionOnWall);
-
-    UFUNCTION (BlueprintCallable, Category = "Enemy Policy")
-        void LoadLevelPolicy (FString levelName);
 
     UFUNCTION (BlueprintCallable, Category = "Enemy Movement")
         bool TargetNearbyEmptyCell();
@@ -141,10 +136,6 @@ private:
     FRoomPositionPair     AvoidanceTarget;
     FString               LogDir;
 #pragma message("Eventually the enemies won't store their own policy, but will ask the game state for actions depending on their state ...")
-    FString               LevelPoliciesDir;
-    FString               CurrentLevelPolicyDir;
-    TArray<TArray<FDirectionSet>>   CurrentLevelPolicy;
-    bool                  LevelPoliciesDirFound = false;
     bool                  LogDirFound = false;
     bool                  SaveLifetimeLog = false;
     FString               LifetimeLog;
@@ -170,12 +161,6 @@ private:
     void LogDetails();
     void SaveLifetimeString();
     void AssertWithErrorLog(const bool& condition, FString errorLog);
-    //======================================================================================================
-    // Behaviour Policy
-    //====================================================================================================== 
-    void ResetPolicy();
-    void PrintLevelPolicy();
-    void UpdatePolicyForTargetPosition();
     //======================================================================================================
     // Movement
     //====================================================================================================== 

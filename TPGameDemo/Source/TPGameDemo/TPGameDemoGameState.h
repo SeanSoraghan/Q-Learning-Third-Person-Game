@@ -375,6 +375,22 @@ public:
     UFUNCTION(BlueprintCallable, Category = "World Room Building")
         AWallBuilder* GetWallBuilder(FIntPoint roomCoords, EDirectionType direction);
     
+    // --------------------- Behaviour -------------------------------------
+
+    FDirectionSet GetOptimalActions(FIntPoint roomCoords, FIntPoint targetGridPosition, FIntPoint currentGridPosition)
+    {
+        FIntPoint indices = GetRoomXYIndicesChecked(roomCoords);
+        return WorldBehaviourMaps[indices.X][indices.Y]
+            [targetGridPosition.X][targetGridPosition.Y]
+            [currentGridPosition.X][currentGridPosition.Y];
+    }
+
+    BehaviourMap GetBehaviourMap(FIntPoint roomCoords, FIntPoint targetGridPosition)
+    {
+        FIntPoint indices = GetRoomXYIndicesChecked(roomCoords);
+        return WorldBehaviourMaps[indices.X][indices.Y]
+                                 [targetGridPosition.X][targetGridPosition.Y];
+    }
     //============================================================================
     // Modifiers
     //============================================================================
@@ -426,6 +442,13 @@ public:
 
     UFUNCTION(BlueprintCallable, Category = "World Rooms States")
         void UpdateSignalStrength(float delta);
+
+    void SetBehaviourMap(FIntPoint roomCoords, FIntPoint targetGridPosition, BehaviourMap behaviourMap)
+    {
+        FIntPoint indices = GetRoomXYIndicesChecked(roomCoords);
+        WorldBehaviourMaps[indices.X][indices.Y]
+                          [targetGridPosition.X][targetGridPosition.Y] = behaviourMap;
+    }
 
     // --------------------- Room & Wall Initialization / Destruction -------------------------------------
 
@@ -521,15 +544,8 @@ private:
 
     // A 2D array (each room in the world) of 2D arrays (each target position in the room) 
     // of 2D arrays (the optimal action at each position)
-    typedef TArray<TArray<FDirectionSet>> BehaviourMap;
-    typedef TArray<TArray<BehaviourMap>> TargetMaps;
-    TArray<TArray<TargetMaps>> WorldBehaviourMap;
-    FDirectionSet GetOptimalActions(FIntPoint roomCoords, FIntPoint targetGridPosition, FIntPoint currentGridPosition)
-    {
-        return WorldBehaviourMap[roomCoords.X][roomCoords.Y]
-                                [targetGridPosition.X][targetGridPosition.Y]
-                                [currentGridPosition.X][currentGridPosition.Y];
-    }
+    TArray<TArray<TargetMapsArray>> WorldBehaviourMaps;
+    bool LevelPoliciesDirFound = false;
 
     // Struct containing the coordinates of a west/south wall state couple and the specific wall type.
     struct WallPosition

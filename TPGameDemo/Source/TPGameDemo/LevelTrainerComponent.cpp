@@ -4,6 +4,9 @@
 #include "TextParserComponent.h"
 #include "LevelTrainerComponent.h"
 
+#define DELTA_Q_CONVERGENCE_THRESHOLD 0.01f
+#define CONVERGENCE_NUM_ACTIONS_MIN 100
+#define CONVERGENCE_NUM_ACTIONS_MAX 300
 //====================================================================================================
 // LevelTrainerRunnable
 //====================================================================================================
@@ -273,6 +276,7 @@ void ULevelTrainerComponent::UpdateEnvironmentForLevel(FString levelName)
 void ULevelTrainerComponent::TrainNextGoalPosition(int numSimulationsPerStartingPosition, int maxNumActionsPerSimulation)
 {
     ClearEnvironment();
+    float maxGoalDistance = sqrt(pow((Environment.Num() - 1), 2.0f) + pow((Environment[0].Num() - 1), 2.0f));
     if (GetState(CurrentGoalPosition).IsStateValid())
     {
         GetState(CurrentGoalPosition).SetIsGoal(true);
@@ -280,11 +284,20 @@ void ULevelTrainerComponent::TrainNextGoalPosition(int numSimulationsPerStarting
         {
             for(int y = 0; y < Environment[0].Num(); ++y)
             {
-                for (int s = 0; s < numSimulationsPerStartingPosition; ++s)
+                if (GetState(FIntPoint(x, y)).IsStateValid() && FIntPoint(x, y) != CurrentGoalPosition)
                 {
-                    if (GetState(FIntPoint(x,y)).IsStateValid() && FIntPoint(x,y) != CurrentGoalPosition)
+                    bool deltaQConverged = false;
+                    int s = 0;
+                    float distanceFromGoal = sqrt(pow((CurrentGoalPosition.X - x), 2.0f) + pow((CurrentGoalPosition.Y - y), 2.0f));
+                    float normedDistanceFromGoal = (distanceFromGoal - 1.0f) / (maxGoalDistance - 1.0f);
+                    int actionsTakenConvergenceThreshold = (int)(normedDistanceFromGoal * (CONVERGENCE_NUM_ACTIONS_MAX - CONVERGENCE_NUM_ACTIONS_MIN)) + CONVERGENCE_NUM_ACTIONS_MIN;
+                    while (!deltaQConverged && s < numSimulationsPerStartingPosition)
                     {
-                        SimulateRun(FIntPoint(x,y), maxNumActionsPerSimulation);
+                        float averageDeltaQ = 0.0f;
+                        int numActionsTaken = 0;
+                        SimulateRun(FIntPoint(x, y), maxNumActionsPerSimulation, averageDeltaQ, numActionsTaken);
+                        deltaQConverged = numActionsTaken >= actionsTakenConvergenceThreshold && averageDeltaQ <= DELTA_Q_CONVERGENCE_THRESHOLD;
+                        ++s;
                     }
                 }
             }
@@ -294,6 +307,12 @@ void ULevelTrainerComponent::TrainNextGoalPosition(int numSimulationsPerStarting
         FString CurrentPositionFileName = LevelBuilderHelpers::LevelsDir() + CurrentLevelName + "/" + CurrentPositionString + ".txt";
         TArray<TArray<FDirectionSet>> envArray = GetBehaviourMap();
         //LevelBuilderHelpers::PrintArray(envArray);
+        ATPGameDemoGameState* gameState = (ATPGameDemoGameState*)GetWorld()->GetGameState();
+        if (gameState != nullptr)
+        {
+            gameState->SetBehaviourMap(RoomCoords, CurrentGoalPosition, envArray);
+        }
+#pragma message("move this to save function in game state.")
         LevelBuilderHelpers::WriteArrayToTextFile(envArray, CurrentPositionFileName);
         GetState(CurrentGoalPosition).SetIsGoal(false);
     }
@@ -305,9 +324,9 @@ void ULevelTrainerComponent::ResetGoalPosition()
     CurrentGoalPosition = FIntPoint(0,0);
 }
 
-TArray<TArray<FDirectionSet>> ULevelTrainerComponent::GetBehaviourMap()
+BehaviourMap ULevelTrainerComponent::GetBehaviourMap()
 {
-    TArray<TArray<FDirectionSet>> outArray;
+    BehaviourMap outArray;
     outArray.Reserve(Environment.Num());
     for (int x = 0; x < Environment.Num(); ++x)
     {
@@ -355,13 +374,13 @@ void ULevelTrainerComponent::ClearEnvironment()
     }
 }
 
-void ULevelTrainerComponent::SimulateRun(FIntPoint startingStatePosition, int maxNumActions)
+void ULevelTrainerComponent::SimulateRun(FIntPoint startingStatePosition, int maxNumActions, float& averageDeltaQ, int& numActionsTaken)
 {
-    //taking too long to train!
-    int numActionsTaken = 0;
+    numActionsTaken = 0;
+    averageDeltaQ = 0.0f;
     bool goalReached = false;
     if (GetState(startingStatePosition).IsGoalState())
-            goalReached = true;
+        goalReached = true;
     FIntPoint currentPosition = startingStatePosition;
     while (numActionsTaken < maxNumActions && !goalReached)
     {
@@ -376,12 +395,14 @@ void ULevelTrainerComponent::SimulateRun(FIntPoint startingStatePosition, int ma
         const float discountedNextReward = GridTrainingConstants::DiscountFactor * maxNextReward;
         const float immediateReward = currentState.GetRewards()[(int)actionToTake];
         const float deltaQ = GridTrainingConstants::LearningRate * (immediateReward + discountedNextReward - currentQValue);
+        averageDeltaQ += deltaQ;
         currentState.UpdateQValue(actionToTake, deltaQ);
         currentPosition = currentState.GetActionTarget(actionToTake);
         ++numActionsTaken;
         if (GetState(currentPosition).IsGoalState())
             goalReached = true;
     }
+    averageDeltaQ /= (float)numActionsTaken;
 }
 
 void ULevelTrainerComponent::IncrementGoalPosition()

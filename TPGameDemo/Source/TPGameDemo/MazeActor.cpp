@@ -44,6 +44,11 @@ void AMazeActor::SetOccupyCells(bool bShouldOccupy)
     bOccupyCells = bShouldOccupy;
 }
 
+void AMazeActor::InitialisePosition(FIntPoint roomCoords)
+{ 
+    CurrentRoomCoords = roomCoords;
+}
+
 float AMazeActor::GetHealthPercentage()
 {
     return Health / MaxHealth;

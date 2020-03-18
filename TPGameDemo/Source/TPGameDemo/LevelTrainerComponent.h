@@ -131,12 +131,13 @@ private:
     TSharedPtr<LevelTrainerRunnable> TrainerRunnable;
     FCriticalSection ClientSection;
 
-    TArray<TArray<FDirectionSet>> GetBehaviourMap();
+    BehaviourMap GetBehaviourMap();
     void ClearEnvironment();
 	TArray<TArray<GridState>> Environment;
     void InitTrainerThread();
     void TrainNextGoalPosition(int numSimulationsPerStartingPosition, int maxNumActionsPerSimulation);
-    void SimulateRun(FIntPoint startingStatePosition, int maxNumActions);
+    // Simulate a run through the while keepting track of the average deltaQ and the num actions taken. (these will be used to measure convergence)
+    void SimulateRun(FIntPoint startingStatePosition, int maxNumActions, float& averageDeltaQ, int& numActionsTaken);
     void IncrementGoalPosition();
     FThreadSafeCounter TrainingPosition = 0;
     FThreadSafeCounter MaxTrainingPosition = 0;
