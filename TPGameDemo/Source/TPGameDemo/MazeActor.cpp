@@ -157,5 +157,16 @@ bool AMazeActor::IsOnGridEdge() const
     return false;
 }
 
+bool AMazeActor::WasOnGridEdge() const
+{
+    if (ATPGameDemoGameState* gameState = (ATPGameDemoGameState*)GetWorld()->GetGameState())
+    {
+        const int numUnitsX = gameState->NumGridUnitsX;
+        const int numUnitsY = gameState->NumGridUnitsY;
+        return PreviousGridXPosition == 0 || PreviousGridXPosition == numUnitsX - 1 || PreviousGridYPosition == 0 || PreviousGridYPosition == numUnitsY - 1;
+    }
+    return false;
+}
+
 void AMazeActor::PositionChanged(){}
 void AMazeActor::RoomCoordsChanged(){}

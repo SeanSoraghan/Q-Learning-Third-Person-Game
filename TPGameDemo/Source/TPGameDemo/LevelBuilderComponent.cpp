@@ -46,15 +46,14 @@ TArray<FWallSegmentDescriptor> ULevelBuilderComponent::GenerateLevelOfSize(int s
     int existingDoorSouth = ExistingDoorPositions[(int)EDirectionType::South];
     int existingDoorWest  = ExistingDoorPositions[(int)EDirectionType::West];
 
-#pragma message("Remove these hard coded door positions.")
     int doorPositionNorth = (existingDoorNorth > 0 && existingDoorNorth < sideLength - 1) ? existingDoorNorth 
-                                                                                        : 1;//FMath::RandRange(1, sideLength - 2);
+                                                                                        : FMath::RandRange(1, sideLength - 2);
     int doorPositionEast = (existingDoorEast > 0 && existingDoorEast < sideLength - 1) ? existingDoorEast 
-                                                                                     : 1;//FMath::RandRange(1, sideLength - 2);
+                                                                                     : FMath::RandRange(1, sideLength - 2);
     int doorPositionSouth = (existingDoorSouth > 0 && existingDoorSouth < sideLength - 1) ? existingDoorSouth 
-                                                                                        : 1;//FMath::RandRange(1, sideLength - 2);
+                                                                                        : FMath::RandRange(1, sideLength - 2);
     int doorPositionWest = (existingDoorWest > 0 && existingDoorWest < sideLength - 1) ? existingDoorWest 
-                                                                                       : 1;//FMath::RandRange(1, sideLength - 2);
+                                                                                       : FMath::RandRange(1, sideLength - 2);
     FIntPoint northDoor = FIntPoint(sideLength - 1, doorPositionNorth);
     FIntPoint eastDoor  = FIntPoint(doorPositionEast, sideLength - 1);
     FIntPoint southDoor = FIntPoint(0, doorPositionSouth);

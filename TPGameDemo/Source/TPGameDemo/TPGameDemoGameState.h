@@ -79,8 +79,7 @@ struct WallState
 
     void GenerateRandomDoorPosition(int doorPositionMax)
     {
-#pragma message("Remove this hard coded door position")
-        DoorPosition = 1;// FMath::RandRange(1, doorPositionMax);
+        DoorPosition = FMath::RandRange(1, doorPositionMax);
     }
 
     EDoorState DoorState = EDoorState::Closed;

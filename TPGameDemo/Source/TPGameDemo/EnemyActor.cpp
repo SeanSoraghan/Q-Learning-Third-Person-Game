@@ -102,7 +102,7 @@ void AEnemyActor::Tick( float DeltaTime )
 	// if (changingRooms)
 	//   if (reached target)
 	//		update position ...
-	if (BehaviourState == EEnemyBehaviourState::ChangingRooms)
+	/*if (BehaviourState == EEnemyBehaviourState::ChangingRooms)
 	{
         const bool onTargetGridPosition = TargetRoomPosition.Position.X == GridXPosition && TargetRoomPosition.Position.Y == GridYPosition;
         ensure(onTargetGridPosition || IsOnGridEdge());
@@ -125,7 +125,7 @@ void AEnemyActor::Tick( float DeltaTime )
             SetBehaviourState(EEnemyBehaviourState::ChangingRooms);
             UpdateMovementForActionType(TargetRoomPosition.DoorAction);
         }
-    }
+    }*/
     FVector MovementVector = MovementTarget - GetActorLocation();
     MovementVector.Normalize();
     FRotator CurrentRotation = GetActorForwardVector().Rotation();
@@ -170,7 +170,7 @@ void AEnemyActor::PositionChanged()
     TimeSinceLastPositionChange = 0.0f;
     LogEvent("Position Change START", ELogEventType::Info);
     FString eventInfo = TEXT("");
-    if (GridXPosition == TargetRoomPosition.Position.X && GridYPosition == TargetRoomPosition.Position.Y)
+    /*if (GridXPosition == TargetRoomPosition.Position.X && GridYPosition == TargetRoomPosition.Position.Y)
     {
         eventInfo += TEXT(" - reached target");
         if (TargetRoomPosition.DoorAction != EDirectionType::NumDirectionTypes && 
@@ -211,6 +211,18 @@ void AEnemyActor::PositionChanged()
         if (GridXPosition == AvoidanceTarget.PositionInRoom.X && GridYPosition == AvoidanceTarget.PositionInRoom.Y && 
             CurrentRoomCoords == AvoidanceTarget.RoomCoords)
             TargetNearbyEmptyCell();
+    }*/
+    if (IsOnGridEdge())
+    {
+        UpdateMovementForActionType(TargetRoomPosition.DoorAction);
+    }
+    else if (WasOnGridEdge())
+    {
+        ChooseDoorTarget();
+    }
+    else
+    {
+        UpdateMovement();
     }
     LogEvent("Position Changed END (" + eventInfo + ")", ELogEventType::Info);
 }
@@ -219,18 +231,18 @@ void AEnemyActor::RoomCoordsChanged()
 {
     LogEvent("Room coords changed", ELogEventType::Info);
     
-    // If we're not on the grid edge, call entered new room immediately.
-    if (!IsOnGridEdge())
-    {
-        LogLine("enemy was NOT on edge - CallEnteredNewRoom()");
-        CallEnteredNewRoom();
-    }
-    // otherwise if we're not changing rooms, direct ourselves towards one of the rooms from the doorway.
-    else //if (BehaviourState != EEnemyBehaviourState::ChangingRooms)
-    {
-        ensure(BehaviourState == EEnemyBehaviourState::ChangingRooms);
-        //ReachedGridEdgeWithoutChangingRooms();
-    }
+    //// If we're not on the grid edge, call entered new room immediately.
+    //if (!IsOnGridEdge())
+    //{
+    //    LogLine("enemy was NOT on edge - CallEnteredNewRoom()");
+    //    CallEnteredNewRoom();
+    //}
+    //// otherwise if we're not changing rooms, direct ourselves towards one of the rooms from the doorway.
+    //else //if (BehaviourState != EEnemyBehaviourState::ChangingRooms)
+    //{
+    //    ensure(BehaviourState == EEnemyBehaviourState::ChangingRooms);
+    //    //ReachedGridEdgeWithoutChangingRooms();
+    //}
 }
 
 void AEnemyActor::CallEnteredNewRoom()
@@ -268,12 +280,12 @@ void AEnemyActor::UpdateMovement()
 		return;
 	}
 
-    if (!IsOnGridEdge())
-    {
+    /*if (!IsOnGridEdge())
+    {*/
         EDirectionType actionType = SelectNextAction();
         LogLine("Selected action " + DirectionHelpers::GetDisplayString(actionType));
         UpdateMovementForActionType(actionType);
-    }
+    //}
 }
 
 void AEnemyActor::SetBehaviourState(EEnemyBehaviourState newState)
@@ -479,26 +491,26 @@ void AEnemyActor::UpdatePolicyForDoorType (EDirectionType doorType, int doorPosi
         {
             case EDirectionType::North:
             {
-                TargetRoomPosition.Position.X = gameState->NumGridUnitsX - 2;
+                TargetRoomPosition.Position.X = gameState->NumGridUnitsX - 1;
                 TargetRoomPosition.Position.Y = doorPositionOnWall;
                 break;
             }
             case EDirectionType::East:
             {
                 TargetRoomPosition.Position.X = doorPositionOnWall;
-                TargetRoomPosition.Position.Y = gameState->NumGridUnitsY - 2;
+                TargetRoomPosition.Position.Y = gameState->NumGridUnitsY - 1;
                 break;
             }
             case EDirectionType::South:
             {
-                TargetRoomPosition.Position.X = 1;
+                TargetRoomPosition.Position.X = 0;
                 TargetRoomPosition.Position.Y = doorPositionOnWall;
                 break;
             }
             case EDirectionType::West:
             {
                 TargetRoomPosition.Position.X = doorPositionOnWall;
-                TargetRoomPosition.Position.Y = 1;
+                TargetRoomPosition.Position.Y = 0;
                 break;
             }
         }

@@ -89,6 +89,9 @@ public:
     UFUNCTION (BlueprintCallable, Category = "Maze Actor Position")
         bool IsOnGridEdge() const;
 
+    UFUNCTION(BlueprintCallable, Category = "Maze Actor Position")
+        bool WasOnGridEdge() const;
+
     FIntPoint GetPreviousRoomCoords() const { return PreviousRoomCoords; }
 
 private:

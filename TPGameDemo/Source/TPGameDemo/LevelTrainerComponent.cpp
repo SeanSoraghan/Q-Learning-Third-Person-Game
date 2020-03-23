@@ -255,7 +255,7 @@ void ULevelTrainerComponent::UpdateEnvironmentForLevel(FString levelName)
         {
             row.Add(GridState());
             GridState& state = row[y];
-            state.SetValid(LevelStructure[x][y] == (int)ECellState::Open);
+            state.SetValid(LevelStructure[x][y] == (int)ECellState::Open || LevelStructure[x][y] == (int)ECellState::Door);
             if (state.IsStateValid())
             {
                 for (int a = 0; a < (int)EDirectionType::NumDirectionTypes; ++a)
@@ -264,7 +264,7 @@ void ULevelTrainerComponent::UpdateEnvironmentForLevel(FString levelName)
                     FIntPoint targetPoint = LevelBuilderHelpers::GetTargetPointForAction(FIntPoint(x,y), actionType);
                     
                     const bool targetValid = LevelBuilderHelpers::GridPositionIsValid(targetPoint, sizeX, sizeY) &&
-                                             LevelStructure[targetPoint.X][targetPoint.Y] == (int)ECellState::Open;
+                                             (LevelStructure[targetPoint.X][targetPoint.Y] == (int)ECellState::Open || LevelStructure[targetPoint.X][targetPoint.Y] == (int)ECellState::Door);
 
                     state.SetActionTarget(actionType, targetValid ? targetPoint : FIntPoint(x,y));
                 }
@@ -291,7 +291,7 @@ void ULevelTrainerComponent::TrainNextGoalPosition(int numSimulationsPerStarting
                     float distanceFromGoal = sqrt(pow((CurrentGoalPosition.X - x), 2.0f) + pow((CurrentGoalPosition.Y - y), 2.0f));
                     float normedDistanceFromGoal = (distanceFromGoal - 1.0f) / (maxGoalDistance - 1.0f);
                     int actionsTakenConvergenceThreshold = (int)(normedDistanceFromGoal * (CONVERGENCE_NUM_ACTIONS_MAX - CONVERGENCE_NUM_ACTIONS_MIN)) + CONVERGENCE_NUM_ACTIONS_MIN;
-                    while (!deltaQConverged && s < numSimulationsPerStartingPosition)
+                    while (/*!deltaQConverged &&*/ s < numSimulationsPerStartingPosition)
                     {
                         float averageDeltaQ = 0.0f;
                         int numActionsTaken = 0;
