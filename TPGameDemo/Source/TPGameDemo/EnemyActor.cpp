@@ -134,6 +134,10 @@ void AEnemyActor::Tick( float DeltaTime )
     AddMovementInput(MovementVector * MovementSpeed);
 }
 
+bool AEnemyActor::HasReachedTargetRoom() const
+{
+    return CurrentRoomCoords == TargetRoomCoords;
+}
 //======================================================================================================
 // Movement
 //======================================================================================================
@@ -160,6 +164,8 @@ bool AEnemyActor::IsPositionValid()
 
 void AEnemyActor::PositionChanged()
 {
+    UE_LOG(LogEnemyActor, Display, TEXT("Position Changed"));
+
     AssertWithErrorLog(IsPositionValid(), TEXT("Position Invalid in PositionChanged!"));
 	if (!IsPositionValid())
 	{
@@ -214,11 +220,15 @@ void AEnemyActor::PositionChanged()
     }*/
     if (IsOnGridEdge())
     {
-        UpdateMovementForActionType(TargetRoomPosition.DoorAction);
+        if (HasReachedTargetRoom())
+            UpdateMovement();
+        else
+            UpdateMovementForActionType(TargetRoomPosition.DoorAction);
     }
     else if (WasOnGridEdge())
     {
         ChooseDoorTarget();
+        UpdateMovement();
     }
     else
     {
@@ -230,7 +240,8 @@ void AEnemyActor::PositionChanged()
 void AEnemyActor::RoomCoordsChanged()
 {
     LogEvent("Room coords changed", ELogEventType::Info);
-    
+    UE_LOG(LogEnemyActor, Display, TEXT("Room Coords Changed"));
+    ChooseDoorTarget();
     //// If we're not on the grid edge, call entered new room immediately.
     //if (!IsOnGridEdge())
     //{
@@ -284,6 +295,7 @@ void AEnemyActor::UpdateMovement()
     {*/
         EDirectionType actionType = SelectNextAction();
         LogLine("Selected action " + DirectionHelpers::GetDisplayString(actionType));
+        UE_LOG(LogEnemyActor, Display, TEXT("Selected action %s"), *DirectionHelpers::GetDisplayString(actionType));
         UpdateMovementForActionType(actionType);
     //}
 }
@@ -521,8 +533,15 @@ void AEnemyActor::UpdatePolicyForDoorType (EDirectionType doorType, int doorPosi
 void AEnemyActor::ChooseDoorTarget()
 {
     ATPGameDemoGameState* gameState = (ATPGameDemoGameState*) GetWorld()->GetGameState();
-    if (gameState != nullptr && !(CurrentRoomCoords.X == 0 && CurrentRoomCoords.Y == 0))
+    if (gameState != nullptr)
     {
+        if (HasReachedTargetRoom())
+        {
+            TargetRoomPosition.DoorAction = EDirectionType::NumDirectionTypes;
+            TargetRoomPosition.Position = FIntPoint(4, 4);
+            UE_LOG(LogEnemyActor, Display, TEXT("Reached centre"));
+            return;
+        }
         TArray<int> neighbourPositions = gameState->GetDoorPositionsForExistingNeighbours(CurrentRoomCoords);
         EQuadrantType quadrant = gameState->GetQuadrantTypeForRoomCoords(CurrentRoomCoords);
         TArray<EDirectionType> possibleDoors;
@@ -580,6 +599,7 @@ void AEnemyActor::ChooseDoorTarget()
         //PreviousDoorTarget = doorAction;
         PreviousDoor = EDirectionType::NumDirectionTypes;
         LogEvent("Chose door position " + DirectionHelpers::GetDisplayString(doorAction), ELogEventType::Info);
+        UE_LOG(LogEnemyActor, Display, TEXT("Chose door position %s"), *DirectionHelpers::GetDisplayString(doorAction));
         UpdatePolicyForDoorType(doorAction, doorPositionOnWall);
 
         //If the enemy enters a door on a corner which is also a door to a different room, we need to ensure their state is changed here.

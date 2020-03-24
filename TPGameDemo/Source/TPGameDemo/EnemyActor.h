@@ -82,6 +82,9 @@ public:
 	// Called every frame
 	virtual void Tick( float DeltaSeconds ) override;
 
+    UFUNCTION(BlueprintCallable, Category = "Enemy Movement")
+        bool HasReachedTargetRoom() const;
+
     UFUNCTION (BlueprintCallable, Category = "Enemy Movement")
         virtual EDirectionType SelectNextAction();
 
@@ -133,6 +136,7 @@ public:
 private:
     EEnemyBehaviourState  BehaviourState = EEnemyBehaviourState::Exploring;
     FTargetPosition       TargetRoomPosition;
+    FIntPoint             TargetRoomCoords = FIntPoint(0, 0); // default to central room.
     FRoomPositionPair     AvoidanceTarget;
     FString               LogDir;
 #pragma message("Eventually the enemies won't store their own policy, but will ask the game state for actions depending on their state ...")
