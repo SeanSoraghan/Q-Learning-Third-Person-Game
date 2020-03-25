@@ -82,8 +82,11 @@ public:
 	// Called every frame
 	virtual void Tick( float DeltaSeconds ) override;
 
-    UFUNCTION(BlueprintCallable, Category = "Enemy Movement")
+    UFUNCTION(BlueprintCallable, Category = "Enemy Position")
         bool HasReachedTargetRoom() const;
+
+    UFUNCTION(BLueprintCallable, Category = "Enemy Position")
+        bool IsOnDoor(EDirectionType direction) const;
 
     UFUNCTION (BlueprintCallable, Category = "Enemy Movement")
         virtual EDirectionType SelectNextAction();
@@ -146,6 +149,7 @@ private:
 
     // Can't seem to call parent implementation of EnteredNewRoom from blueprint, so use this call function instead.
     void CallEnteredNewRoom();
+    void EnteredTargetRoom();
 
     //======================================================================================================
     // Logging

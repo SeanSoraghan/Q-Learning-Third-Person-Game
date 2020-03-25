@@ -138,6 +138,24 @@ bool AEnemyActor::HasReachedTargetRoom() const
 {
     return CurrentRoomCoords == TargetRoomCoords;
 }
+
+bool AEnemyActor::IsOnDoor(EDirectionType direction) const
+{
+    ATPGameDemoGameState* gameState = (ATPGameDemoGameState*)GetWorld()->GetGameState();
+    if (gameState != nullptr)
+    {
+        TArray<int> neighbourPositions = gameState->GetDoorPositionsForExistingNeighbours(CurrentRoomCoords);
+        switch (direction)
+        {
+        case EDirectionType::North: return GridXPosition == gameState->NumGridUnitsX - 1 && GridYPosition == neighbourPositions[(int)direction];
+        case EDirectionType::East: return GridYPosition == gameState->NumGridUnitsY - 1 && GridXPosition == neighbourPositions[(int)direction];
+        case EDirectionType::South: return GridXPosition == 0 && GridYPosition == neighbourPositions[(int)direction];
+        case EDirectionType::West: return GridYPosition == 0 && GridXPosition == neighbourPositions[(int)direction];
+        default: return false;
+        }
+    }
+    return false;
+}
 //======================================================================================================
 // Movement
 //======================================================================================================
@@ -241,7 +259,10 @@ void AEnemyActor::RoomCoordsChanged()
 {
     LogEvent("Room coords changed", ELogEventType::Info);
     UE_LOG(LogEnemyActor, Display, TEXT("Room Coords Changed"));
-    ChooseDoorTarget();
+    if (HasReachedTargetRoom())
+        EnteredTargetRoom();
+    else
+        ChooseDoorTarget();
     //// If we're not on the grid edge, call entered new room immediately.
     //if (!IsOnGridEdge())
     //{
@@ -254,6 +275,14 @@ void AEnemyActor::RoomCoordsChanged()
     //    ensure(BehaviourState == EEnemyBehaviourState::ChangingRooms);
     //    //ReachedGridEdgeWithoutChangingRooms();
     //}
+}
+
+void AEnemyActor::EnteredTargetRoom()
+{
+    TargetRoomPosition.DoorAction = EDirectionType::NumDirectionTypes;
+    TargetRoomPosition.Position = FIntPoint(4, 4);
+    UE_LOG(LogEnemyActor, Display, TEXT("Reached centre"));
+    return;
 }
 
 void AEnemyActor::CallEnteredNewRoom()
@@ -535,13 +564,6 @@ void AEnemyActor::ChooseDoorTarget()
     ATPGameDemoGameState* gameState = (ATPGameDemoGameState*) GetWorld()->GetGameState();
     if (gameState != nullptr)
     {
-        if (HasReachedTargetRoom())
-        {
-            TargetRoomPosition.DoorAction = EDirectionType::NumDirectionTypes;
-            TargetRoomPosition.Position = FIntPoint(4, 4);
-            UE_LOG(LogEnemyActor, Display, TEXT("Reached centre"));
-            return;
-        }
         TArray<int> neighbourPositions = gameState->GetDoorPositionsForExistingNeighbours(CurrentRoomCoords);
         EQuadrantType quadrant = gameState->GetQuadrantTypeForRoomCoords(CurrentRoomCoords);
         TArray<EDirectionType> possibleDoors;
@@ -592,6 +614,17 @@ void AEnemyActor::ChooseDoorTarget()
         if (possibleDoors.Contains(PreviousDoor))
         {
             LogEvent(TEXT("Previous door left in action list"), ELogEventType::Warning);
+        }
+        if (possibleDoors.Num() > 1)
+        {
+            for (auto direction : possibleDoors)
+            {
+                if (IsOnDoor(direction))
+                {
+                    possibleDoors.Remove(direction);
+                    break;
+                }
+            }
         }
         int doorIndex = FMath::RandRange(0, possibleDoors.Num() - 1);
         EDirectionType doorAction = possibleDoors[doorIndex];        
