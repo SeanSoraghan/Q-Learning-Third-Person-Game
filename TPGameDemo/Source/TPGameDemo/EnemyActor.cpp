@@ -37,10 +37,6 @@ void AEnemyActor::BeginPlay()
     if ( ! LevelPoliciesDirFound)
 	    GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red, FString::Printf (TEXT("Couldn't find level policies directory at %s"), *LevelPoliciesDir));
   #endif
-
-    //UWorld* world = GetWorld();
-    //if (world != nullptr)
-    //    world->GetTimerManager().SetTimer (MoveTimerHandle, [this](){ UpdateMovement(); }, 0.5f, true);
 }
 
 void AEnemyActor::EndPlay (const EEndPlayReason::Type EndPlayReason)
@@ -48,8 +44,6 @@ void AEnemyActor::EndPlay (const EEndPlayReason::Type EndPlayReason)
     Super::EndPlay(EndPlayReason);
     if (SaveLifetimeLog)
         SaveLifetimeString();
-    ClearAvoidanceTimer();
-    // Clear Movement Timer
 }
 
 
@@ -137,6 +131,11 @@ void AEnemyActor::Tick( float DeltaTime )
 bool AEnemyActor::HasReachedTargetRoom() const
 {
     return CurrentRoomCoords == TargetRoomCoords;
+}
+
+bool AEnemyActor::HasReachedTargetPosition() const
+{
+    return TargetRoomPosition.Position.X == GridXPosition && TargetRoomPosition.Position.Y == GridYPosition;
 }
 
 bool AEnemyActor::IsOnDoor(EDirectionType direction) const
@@ -238,10 +237,16 @@ void AEnemyActor::PositionChanged()
     }*/
     if (IsOnGridEdge())
     {
-        if (HasReachedTargetRoom())
-            UpdateMovement();
-        else
+        if (HasReachedTargetPosition() && TargetRoomPosition.DoorAction != EDirectionType::NumDirectionTypes)
+        {
             UpdateMovementForActionType(TargetRoomPosition.DoorAction);
+        }
+        else
+        {
+            if (!HasReachedTargetRoom())
+                ChooseDoorTarget();
+            UpdateMovement();
+        }
     }
     else if (WasOnGridEdge() && !HasReachedTargetRoom())
     {
@@ -258,23 +263,10 @@ void AEnemyActor::PositionChanged()
 void AEnemyActor::RoomCoordsChanged()
 {
     LogEvent("Room coords changed", ELogEventType::Info);
-    UE_LOG(LogEnemyActor, Display, TEXT("Room Coords Changed"));
     if (HasReachedTargetRoom())
         EnteredTargetRoom();
     else
         ChooseDoorTarget();
-    //// If we're not on the grid edge, call entered new room immediately.
-    //if (!IsOnGridEdge())
-    //{
-    //    LogLine("enemy was NOT on edge - CallEnteredNewRoom()");
-    //    CallEnteredNewRoom();
-    //}
-    //// otherwise if we're not changing rooms, direct ourselves towards one of the rooms from the doorway.
-    //else //if (BehaviourState != EEnemyBehaviourState::ChangingRooms)
-    //{
-    //    ensure(BehaviourState == EEnemyBehaviourState::ChangingRooms);
-    //    //ReachedGridEdgeWithoutChangingRooms();
-    //}
 }
 
 void AEnemyActor::EnteredTargetRoom()

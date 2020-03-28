@@ -85,6 +85,9 @@ public:
     UFUNCTION(BlueprintCallable, Category = "Enemy Position")
         bool HasReachedTargetRoom() const;
 
+    UFUNCTION(BlueprintCallable, Category = "Enemy Position")
+        bool HasReachedTargetPosition() const;
+
     UFUNCTION(BLueprintCallable, Category = "Enemy Position")
         bool IsOnDoor(EDirectionType direction) const;
 
