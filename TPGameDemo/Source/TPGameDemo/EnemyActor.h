@@ -6,7 +6,7 @@
 #include "TPGameDemoGameState.h"
 #include "EnemyActor.generated.h"
 
-
+#define ENEMY_LIFETIME_LOGS 0
 
 /*
 The base class for an enemy actor. Enemies behave according to `level policies' which are action-value tables that have been trained using Q-Learning.
@@ -21,15 +21,6 @@ this delegate is bound to a function that calls UpdatePolicyForPlayerPosition (i
 
 See MazeActor.h
 */
-
-UENUM(BlueprintType)
-enum class EEnemyBehaviourState : uint8
-{
-    Exploring,
-    Avoiding,
-    ChangingRooms,
-    NumBehaviourStates
-};
 
 UENUM(BlueprintType)
 enum class ELogEventType : uint8
@@ -70,8 +61,6 @@ class TPGAMEDEMO_API AEnemyActor : public AMazeActor
 	GENERATED_BODY()
 	
 public:
-    static FString GetBehaviourString(EEnemyBehaviourState behaviourState);
-
 	// Sets default values for this actor's properties
 	AEnemyActor (const FObjectInitializer& ObjectInitializer);
 
@@ -97,15 +86,6 @@ public:
     UFUNCTION (BlueprintCallable, Category = "Enemy Behaviour")
         virtual void ChooseDoorTarget();
 
-    UPROPERTY (BlueprintReadOnly, Category = "Enemy Movement Timing")
-        FTimerHandle MoveTimerHandle;
-
-    UFUNCTION (BlueprintCallable, Category = "Enemy Movement Timing")
-        virtual void StopMovementTimer();
-
-    UFUNCTION (BlueprintCallable, Category = "Enemy Movement Timing")
-        virtual void SetMovementTimerPaused (bool movementTimerShouldBePaused);
-
     UFUNCTION (BlueprintCallable, Category = "Enemy Movement")
         void UpdateMovementForActionType(EDirectionType actionType);
     //======================================================================================================
@@ -117,9 +97,6 @@ public:
 
     UFUNCTION (BlueprintCallable, Category = "Enemy Movement")
         virtual void UpdatePolicyForDoorType (EDirectionType doorTypem, int doorPositionOnWall);
-
-    UFUNCTION (BlueprintCallable, Category = "Enemy Movement")
-        bool TargetNearbyEmptyCell();
     //======================================================================================================
     // Movement
     //====================================================================================================== 
@@ -131,72 +108,21 @@ public:
     UPROPERTY(BlueprintReadWrite, EditAnywhere, Category = "Enemy Movement")
         float MovementSpeed = 1.0f;
     UPROPERTY(BlueprintReadWrite, EditAnywhere, Category = "Enemy Movement")
-        float RotationSpeed = 0.1f; 
-    /** If the actor doesn't move within this time period, their behaviour will be changed to 'avoid' for a short time. 
-    *   A value of 0 will cause no avoidance behaviour.
-    */
-    UPROPERTY(BlueprintReadWrite, EditAnywhere, Category = "Enemy Movement")
-        float MovementStuckThresholdSeconds = 1.5f;
-    UFUNCTION(BlueprintNativeEvent, BlueprintCallable, Category = "Enemy Movement")
-        void EnteredNewRoom();
+        float RotationSpeed = 0.1f;
+
 private:
-    EEnemyBehaviourState  BehaviourState = EEnemyBehaviourState::Exploring;
     FTargetPosition       TargetRoomPosition;
     FIntPoint             TargetRoomCoords = FIntPoint(0, 0); // default to central room.
-    FRoomPositionPair     AvoidanceTarget;
-    FString               LogDir;
-#pragma message("Eventually the enemies won't store their own policy, but will ask the game state for actions depending on their state ...")
-    bool                  LogDirFound = false;
-    bool                  SaveLifetimeLog = false;
-    FString               LifetimeLog;
 
-    // Can't seem to call parent implementation of EnteredNewRoom from blueprint, so use this call function instead.
-    void CallEnteredNewRoom();
     void EnteredTargetRoom();
 
     //======================================================================================================
-    // Logging
-    //======================================================================================================
-    void LogLine(const FString& lineString);
-    void LogEvent(const FString& eventInfo, ELogEventType logType);
-    FIntPoint RoomAtLastEventLog;
-    void LogRoom();
-    FIntPoint PositionAtLastEventLog;
-    void LogPosition();
-    EEnemyBehaviourState BehaviourAtLastEventLog;
-    void LogBehaviour();
-    FTargetPosition TargetAtLastEventLog;
-    void LogTarget();
-    FVector WorldPosAtLastEventLog;
-    void LogWorldPosition();
-    void LogDetails();
-    void SaveLifetimeString();
-    void AssertWithErrorLog(const bool& condition, FString errorLog);
-    //======================================================================================================
     // Movement
     //====================================================================================================== 
-    /** Deal with the edge case (lol) where the actor reaches the edge of a grid room but its behaviour is not set to 
-        changing rooms. This seems to happen sometimes, probably because the enemy gets pushed into the edge, or due to
-        update lag / glitching.
-    */
-    void ReachedGridEdgeWithoutChangingRooms();
     void UpdateMovement();
-    void SetBehaviourState(EEnemyBehaviourState newState);
     // Returns the room coords and position in room indicated by the given movement direction, determined by the actors current position.
     // If the movement action would cause them to change rooms, roomCoords will indicate which room they would enter.
     FRoomPositionPair GetTargetRoomAndPositionForDirectionType(EDirectionType actionType);
-    
-    FTimerHandle StopAvoidanceTimerHandle;
-    void ClearAvoidanceTimer();
-    float TimeSinceLastPositionChange = 0.0f;
-    float AvoidingBehaviourTimeout = 1.0f;
-    float TimeSpentAvoiding = 0.0f;
-    //float CurrentDistanceTravelled = 0.0f;
-    //FVector LastDistanceTrackerStartPosition = FVector::ZeroVector;
-    //float DistanceTrackerTime = 0.0f;
-
-    //EDirectionType PreviousDoorTarget = EDirectionType::NumDirectionTypes;
-    //void ClearPreviousDoorTarget();
 
     /* The door through which the current room was entered */
     EDirectionType PreviousDoor = EDirectionType::NumDirectionTypes;
@@ -205,4 +131,29 @@ private:
     //====================================================================================================== 
     virtual void PositionChanged() override;
     virtual void RoomCoordsChanged() override;
+
+
+    //======================================================================================================
+    // Logging
+    //======================================================================================================
+#if ENEMY_LIFETIME_LOGS
+    FString               LogDir;
+    bool                  LogDirFound = false;
+    bool                  SaveLifetimeLog = false;
+    FString               LifetimeLog;
+
+    void LogLine(const FString& lineString);
+    void LogEvent(const FString& eventInfo, ELogEventType logType);
+    FIntPoint RoomAtLastEventLog;
+    void LogRoom();
+    FIntPoint PositionAtLastEventLog;
+    void LogPosition();
+    FTargetPosition TargetAtLastEventLog;
+    void LogTarget();
+    FVector WorldPosAtLastEventLog;
+    void LogWorldPosition();
+    void LogDetails();
+    void SaveLifetimeString();
+    void AssertWithErrorLog(const bool& condition, FString errorLog);
+#endif
 };

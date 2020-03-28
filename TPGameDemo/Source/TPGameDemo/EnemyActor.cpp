@@ -7,26 +7,18 @@
 
 DEFINE_LOG_CATEGORY(LogEnemyActor);
 
-FString AEnemyActor::GetBehaviourString(EEnemyBehaviourState behaviourState)
-{
-    switch (behaviourState)
-    {
-        case EEnemyBehaviourState::Avoiding: return "AVOID";
-        case EEnemyBehaviourState::ChangingRooms: return "CHANGE ROOMS";
-        case EEnemyBehaviourState::Exploring: return "EXPLORE";
-        default: return "None";
-    }
-}
 //======================================================================================================
 // Initialisation
 //====================================================================================================== 
 AEnemyActor::AEnemyActor (const FObjectInitializer& ObjectInitializer) : Super (ObjectInitializer)
 {
 	PrimaryActorTick.bCanEverTick = true;
+#if ENEMY_LIFETIME_LOGS
     LogDir = FPaths::ProjectDir();
     LogDir += "Content/Logs/";
     LogDirFound = FPlatformFileManager::Get().GetPlatformFile().DirectoryExists(*LogDir);
     LifetimeLog = GetNameSafe(this) + TEXT(" Lifetime:\n");
+#endif
 }
 
 void AEnemyActor::BeginPlay()
@@ -42,8 +34,10 @@ void AEnemyActor::BeginPlay()
 void AEnemyActor::EndPlay (const EEndPlayReason::Type EndPlayReason)
 {
     Super::EndPlay(EndPlayReason);
+#if ENEMY_LIFETIME_LOGS
     if (SaveLifetimeLog)
         SaveLifetimeString();
+#endif
 }
 
 
@@ -53,73 +47,6 @@ void AEnemyActor::EndPlay (const EEndPlayReason::Type EndPlayReason)
 void AEnemyActor::Tick( float DeltaTime )
 {
 	Super::Tick( DeltaTime );
-    TimeSinceLastPositionChange += DeltaTime;
-    if (MovementStuckThresholdSeconds > 0.0f && TimeSinceLastPositionChange >= MovementStuckThresholdSeconds && BehaviourState != EEnemyBehaviourState::Avoiding)
-    {
-        TimeSpentAvoiding = 0.0f;
-        SetBehaviourState(EEnemyBehaviourState::Avoiding);
-        AvoidingBehaviourTimeout = FMath::RandRange(1.5f, 2.5f);
-        TargetRoomPosition.DoorAction = EDirectionType::NumDirectionTypes;
-        UWorld* world = GetWorld();
-        //if (world != nullptr)
-        //{
-        //    world->GetTimerManager().SetTimer (StopAvoidanceTimerHandle, [this]()
-        //    { 
-        //        AsyncTask(ENamedThreads::GameThread, [this]()
-        //        {
-        //            ChooseDoorTarget();
-        //            SetBehaviourState(EEnemyBehaviourState::Exploring;
-        //            //ClearAvoidanceTimer();
-        //            UpdateMovement();
-        //        });
-        //    }, FMath::RandRange(1.5f, 3.5f), false);
-        //}
-        TargetNearbyEmptyCell();
-    }
-    if (BehaviourState == EEnemyBehaviourState::Avoiding)
-    {
-        TimeSpentAvoiding += DeltaTime;
-        if (TimeSpentAvoiding >= AvoidingBehaviourTimeout)
-        {
-            ChooseDoorTarget();
-            SetBehaviourState(EEnemyBehaviourState::Exploring);
-            UpdateMovement();
-        }
-    }
-    //if (BehaviourState == EEnemyBehaviourState::Avoiding)
-    //{
-    //    if (GridXPosition == AvoidanceTarget.PositionInRoom.X && GridYPosition == AvoidanceTarget.PositionInRoom.Y && 
-    //        CurrentRoomCoords == AvoidanceTarget.RoomCoords)
-    //        TargetNearbyEmptyCell();
-    //}
-
-	// if (changingRooms)
-	//   if (reached target)
-	//		update position ...
-	/*if (BehaviourState == EEnemyBehaviourState::ChangingRooms)
-	{
-        const bool onTargetGridPosition = TargetRoomPosition.Position.X == GridXPosition && TargetRoomPosition.Position.Y == GridYPosition;
-        ensure(onTargetGridPosition || IsOnGridEdge());
-        if (!onTargetGridPosition && !IsOnGridEdge())
-        {
-            SaveLifetimeLog = true;
-            LogEvent("CHANGING ROOMS when not on target position or edge!", ELogEventType::Warning);
-            CallEnteredNewRoom();
-        }
-	}
-    if (TargetRoomPosition.DoorAction != EDirectionType::NumDirectionTypes &&
-        BehaviourState == EEnemyBehaviourState::Exploring)
-    {
-        const bool onTargetGridPosition = TargetRoomPosition.Position.X == GridXPosition && TargetRoomPosition.Position.Y == GridYPosition;
-        ensure(!onTargetGridPosition);
-        if (onTargetGridPosition)
-        {
-            SaveLifetimeLog = true;
-            LogEvent("REACHED TARGET without updating behaviour to CHANGE ROOMS!", ELogEventType::Warning);
-            SetBehaviourState(EEnemyBehaviourState::ChangingRooms);
-            UpdateMovementForActionType(TargetRoomPosition.DoorAction);
-        }
-    }*/
     FVector MovementVector = MovementTarget - GetActorLocation();
     MovementVector.Normalize();
     FRotator CurrentRotation = GetActorForwardVector().Rotation();
@@ -181,60 +108,20 @@ bool AEnemyActor::IsPositionValid()
 
 void AEnemyActor::PositionChanged()
 {
-    UE_LOG(LogEnemyActor, Display, TEXT("Position Changed"));
-
+#if ENEMY_LIFETIME_LOGS
     AssertWithErrorLog(IsPositionValid(), TEXT("Position Invalid in PositionChanged!"));
+#else
+    ensure(IsPositionValid());
+#endif
 	if (!IsPositionValid())
 	{
 		Destroy();
 		return;
 	}
-
-    TimeSinceLastPositionChange = 0.0f;
+#if ENEMY_LIFETIME_LOGS
     LogEvent("Position Change START", ELogEventType::Info);
+#endif
     FString eventInfo = TEXT("");
-    /*if (GridXPosition == TargetRoomPosition.Position.X && GridYPosition == TargetRoomPosition.Position.Y)
-    {
-        eventInfo += TEXT(" - reached target");
-        if (TargetRoomPosition.DoorAction != EDirectionType::NumDirectionTypes && 
-            BehaviourState == EEnemyBehaviourState::Exploring)
-        {
-            eventInfo += TEXT(" - has valid target");
-            SetBehaviourState(EEnemyBehaviourState::ChangingRooms);
-            UpdateMovementForActionType(TargetRoomPosition.DoorAction);
-        }
-    }
-    else if (BehaviourState == EEnemyBehaviourState::Exploring)
-    {
-        eventInfo += TEXT(" - exploring");
-        UpdateMovement();
-    }
-    else if (BehaviourState == EEnemyBehaviourState::ChangingRooms)
-    {
-        if (IsOnGridEdge())
-        {
-            eventInfo += TEXT(" - changing rooms on grid edge");
-            ATPGameDemoGameState* gameState = (ATPGameDemoGameState*) GetWorld()->GetGameState();
-            if (gameState != nullptr)
-            {
-                const float z = GetActorLocation().Z;
-                FRoomPositionPair roomAndPosition = GetTargetRoomAndPositionForDirectionType(TargetRoomPosition.DoorAction);
-                FVector2D targetXY = gameState->GetWorldXYForRoomAndPosition(roomAndPosition);
-                MovementTarget = FVector(targetXY.X, targetXY.Y, z);
-            }
-        }
-        else
-        {
-            eventInfo += TEXT(" - changing rooms, not reached target, not on edge - CallEnteredNewRoom()");
-            CallEnteredNewRoom();
-        }
-    }
-    else if (BehaviourState == EEnemyBehaviourState::Avoiding)
-    {
-        if (GridXPosition == AvoidanceTarget.PositionInRoom.X && GridYPosition == AvoidanceTarget.PositionInRoom.Y && 
-            CurrentRoomCoords == AvoidanceTarget.RoomCoords)
-            TargetNearbyEmptyCell();
-    }*/
     if (IsOnGridEdge())
     {
         if (HasReachedTargetPosition() && TargetRoomPosition.DoorAction != EDirectionType::NumDirectionTypes)
@@ -257,12 +144,16 @@ void AEnemyActor::PositionChanged()
     {
         UpdateMovement();
     }
+#if ENEMY_LIFETIME_LOGS
     LogEvent("Position Changed END (" + eventInfo + ")", ELogEventType::Info);
+#endif
 }
 
 void AEnemyActor::RoomCoordsChanged()
 {
+#if ENEMY_LIFETIME_LOGS
     LogEvent("Room coords changed", ELogEventType::Info);
+#endif
     if (HasReachedTargetRoom())
         EnteredTargetRoom();
     else
@@ -273,66 +164,27 @@ void AEnemyActor::EnteredTargetRoom()
 {
     TargetRoomPosition.DoorAction = EDirectionType::NumDirectionTypes;
     TargetRoomPosition.Position = FIntPoint(4, 4);
-    UE_LOG(LogEnemyActor, Display, TEXT("Reached centre"));
     return;
-}
-
-void AEnemyActor::CallEnteredNewRoom()
-{
-    LogEvent("Entered new room", ELogEventType::Info);
-    SetBehaviourState(EEnemyBehaviourState::Exploring);
-    //you're testing if this is sufficient for enemies not getting stuck between rooms' ...
-    if (TargetRoomPosition.DoorAction < EDirectionType::NumDirectionTypes)
-        PreviousDoor = DirectionHelpers::GetOppositeDirection(TargetRoomPosition.DoorAction);
-    ChooseDoorTarget();
-    EnteredNewRoom();
-}
-
-void AEnemyActor::EnteredNewRoom_Implementation()
-{
-    SetBehaviourState(EEnemyBehaviourState::Exploring);
-    ChooseDoorTarget();
-}
-
-void AEnemyActor::ReachedGridEdgeWithoutChangingRooms()
-{
-#pragma message("make sure in blueprint when the enemy has reached the center, it doesnt updatepolicyforcenter when it changes rooms on edge...")
-    // Due to the way rooms overlap, if an enemy is inside a doorway, we can assume both rooms that use this door currently exist.
-    SaveLifetimeLog = true;
-    LogEvent("Reached grid edge without changing rooms", ELogEventType::Error);
-    
 }
 
 void AEnemyActor::UpdateMovement()
 {
+#if ENEMY_LIFETIME_LOGS
 	AssertWithErrorLog(IsPositionValid(), TEXT("Position invalid in UpdateMovement!"));
+#else
+    ensure(IsPositionValid());
+#endif
 	if (!IsPositionValid())
 	{
 		Destroy();
 		return;
 	}
 
-    /*if (!IsOnGridEdge())
-    {*/
-        EDirectionType actionType = SelectNextAction();
-        LogLine("Selected action " + DirectionHelpers::GetDisplayString(actionType));
-        UE_LOG(LogEnemyActor, Display, TEXT("Selected action %s"), *DirectionHelpers::GetDisplayString(actionType));
-        UpdateMovementForActionType(actionType);
-    //}
-}
-
-void AEnemyActor::SetBehaviourState(EEnemyBehaviourState newState)
-{
-    FString currentBehaviourString = GetBehaviourString(BehaviourState);
-    FString newBehaviourString = GetBehaviourString(newState);
-    FString changeString = "CHANGE BEHAVIOUR from " + currentBehaviourString + " to " + newBehaviourString;
-    LogLine(changeString);
-    if (newState != EEnemyBehaviourState::ChangingRooms)
-    {
-        //this sometimes fails.SetBehaviourState is called from various places ... check that each makes sense, and that the surrounding calls make sense ...?
-        AssertWithErrorLog(!IsOnGridEdge(), TEXT("Behaviour is not set to CHANGE ROOMS but enemy is on edge!"));
-    }
-    BehaviourState = newState;
+    EDirectionType actionType = SelectNextAction();
+#if ENEMY_LIFETIME_LOGS
+    LogLine("Selected action " + DirectionHelpers::GetDisplayString(actionType));
+#endif
+    UpdateMovementForActionType(actionType);
 }
 
 void AEnemyActor::UpdateMovementForActionType(EDirectionType actionType)
@@ -342,66 +194,14 @@ void AEnemyActor::UpdateMovementForActionType(EDirectionType actionType)
     {
         const float z = GetActorLocation().Z;
         FRoomPositionPair roomAndPosition = GetTargetRoomAndPositionForDirectionType(actionType);
-        //if (!gameState->RoomTilePositionIsEmpty(roomAndPosition) && BehaviourState != EEnemyBehaviourState::Avoiding)
-        //{
-        //    SetBehaviourState(EEnemyBehaviourState::Avoiding);
-        //    TargetRoomPosition.DoorAction = EDirectionType::NumDirectionTypes;
-        //    UWorld* world = GetWorld();
-        //    if (world != nullptr)
-        //    {
-        //        world->GetTimerManager().SetTimer (StopAvoidanceTimerHandle, [this]()
-        //        { 
-        //            ChooseDoorTarget();
-        //            SetBehaviourState(EEnemyBehaviourState::Exploring);
-        //            //ClearAvoidanceTimer();
-        //            UpdateMovement();
-        //        }, FMath::RandRange(2.5f, 4.5f), false);
-        //    }
-        //    TargetNearbyEmptyCell();
-        //    return;
-        //}
-        
+#if ENEMY_LIFETIME_LOGS
         LogEvent(TEXT("Move ") + DirectionHelpers::GetDisplayString(actionType) 
             + " to " + roomAndPosition.PositionInRoom.ToString() 
             + " in room " + roomAndPosition.RoomCoords.ToString(), ELogEventType::Info);
-
+#endif
         FVector2D targetXY = gameState->GetWorldXYForRoomAndPosition(roomAndPosition);
         MovementTarget = FVector(targetXY.X, targetXY.Y, z);
     }
-}
-
-bool AEnemyActor::TargetNearbyEmptyCell()
-{
-    ATPGameDemoGameState* gameState = (ATPGameDemoGameState*) GetWorld()->GetGameState();
-    if (gameState != nullptr)
-    {
-        // Target neighbour cells to see if they are empty.
-        // When an empty one is found, update the MovementTarget.
-        // If the neighbour cell is not empty, continue testing the others in a clockwise motion.
-        // Randomize the starting neighbour so that lots of avoiding enemies dont tend to head in the same direction.
-        const int randomStartingDirection = FMath::RandRange(0, (int)EDirectionType::NumDirectionTypes - 1);
-        for (int i = 0; i < (int)EDirectionType::NumDirectionTypes; ++i)
-        {
-            int clampedDirection = FMath::Fmod (i + randomStartingDirection, (int)EDirectionType::NumDirectionTypes);
-            EDirectionType direction = (EDirectionType) (clampedDirection);
-            FRoomPositionPair avoidanceTarget = GetTargetRoomAndPositionForDirectionType(direction);
-            if (gameState->RoomTilePositionIsEmpty(avoidanceTarget))
-            {
-                AvoidanceTarget = avoidanceTarget;
-                FVector2D targetXY = gameState->GetWorldXYForRoomAndPosition(avoidanceTarget);
-                MovementTarget = FVector(targetXY.X, targetXY.Y, GetActorLocation().Z);
-                return true;
-            }
-        }
-    }
-    return false;
-}
-
-void AEnemyActor::ClearAvoidanceTimer()
-{
-    UWorld* world = GetWorld();
-    if (world != nullptr)
-        world->GetTimerManager().ClearTimer(StopAvoidanceTimerHandle);
 }
 
 EDirectionType AEnemyActor::SelectNextAction()
@@ -457,37 +257,15 @@ FRoomPositionPair AEnemyActor::GetTargetRoomAndPositionForDirectionType(EDirecti
 }
 
 //======================================================================================================
-// Movement Timing
-//====================================================================================================== 
-void AEnemyActor::StopMovementTimer()
-{
-    UWorld* world = GetWorld();
-    if (world != nullptr)
-    {
-        world->GetTimerManager().PauseTimer (MoveTimerHandle);
-        world->GetTimerManager().ClearTimer (MoveTimerHandle);
-    }  
-}
-
-void AEnemyActor::SetMovementTimerPaused (bool movementTimerShouldBePaused)
-{
-    UWorld* world = GetWorld();
-    if (world != nullptr)
-    {
-        if (movementTimerShouldBePaused && ! world->GetTimerManager().IsTimerPaused (MoveTimerHandle))
-            world->GetTimerManager().PauseTimer (MoveTimerHandle);
-        else if ( ! movementTimerShouldBePaused && world->GetTimerManager().IsTimerPaused (MoveTimerHandle))
-            world->GetTimerManager().UnPauseTimer (MoveTimerHandle);
-    }  
-}
-//======================================================================================================
 // Behaviour Policy
 //======================================================================================================
 void AEnemyActor::UpdatePolicyForPlayerPosition (int targetX, int targetY)
 {
-    if (BehaviourState != EEnemyBehaviourState::Avoiding && !IsOnGridEdge())
+    if (!IsOnGridEdge())
     {
+#if ENEMY_LIFETIME_LOGS
         LogEvent("Updating policy for player position", ELogEventType::Info);
+#endif
         TargetRoomPosition.Position.X = targetX;
         TargetRoomPosition.Position.Y = targetY;
         TargetRoomPosition.DoorAction = EDirectionType::NumDirectionTypes;
@@ -508,7 +286,6 @@ void AEnemyActor::UpdatePolicyForPlayerPosition (int targetX, int targetY)
                 return;
             }
         }
-        SetBehaviourState(EEnemyBehaviourState::Exploring);
         UpdateMovement();
     }
 }
@@ -519,7 +296,9 @@ void AEnemyActor::UpdatePolicyForDoorType (EDirectionType doorType, int doorPosi
     if (gameState != nullptr)
     {
         TargetRoomPosition.DoorAction = doorType;
+#if ENEMY_LIFETIME_LOGS
         LogEvent("Updating policy for door type " + DirectionHelpers::GetDisplayString(doorType), ELogEventType::Info);
+#endif
         switch (doorType)
         {
             case EDirectionType::North:
@@ -594,19 +373,14 @@ void AEnemyActor::ChooseDoorTarget()
             if(DoorPriorities[i])
                 if (neighbourPositions[i] != 0)
                     possibleDoors.Add((EDirectionType)i);
-        if (possibleDoors.Num() <= 0)
-            for (int i = 0; i < (int)EDirectionType::NumDirectionTypes; ++i)
-                if(DoorPriorities[i])
-                    if (neighbourPositions[i] == 0)
-                        possibleDoors.Add((EDirectionType)i);
-        //if (possibleDoors.Num() > 1 && possibleDoors.Contains(PreviousDoorTarget))
-        //    possibleDoors.Remove(PreviousDoorTarget);
         if (possibleDoors.Num() > 1 && possibleDoors.Contains(PreviousDoor))
                 possibleDoors.Remove(PreviousDoor);
+#if ENEMY_LIFETIME_LOGS
         if (possibleDoors.Contains(PreviousDoor))
         {
             LogEvent(TEXT("Previous door left in action list"), ELogEventType::Warning);
         }
+#endif
         if (possibleDoors.Num() > 1)
         {
             for (auto direction : possibleDoors)
@@ -618,26 +392,37 @@ void AEnemyActor::ChooseDoorTarget()
                 }
             }
         }
+        if (possibleDoors.Num() <= 0)
+        {
+#if ENEMY_LIFETIME_LOGS
+            LogEvent(TEXT("No available doors! Destroying enemy"), ELogEventType::Warning);
+#endif
+            Destroy();
+            return;
+        }
         int doorIndex = FMath::RandRange(0, possibleDoors.Num() - 1);
         EDirectionType doorAction = possibleDoors[doorIndex];        
         int doorPositionOnWall = neighbourPositions[(int)possibleDoors[doorIndex]];
         //PreviousDoorTarget = doorAction;
         PreviousDoor = EDirectionType::NumDirectionTypes;
+#if ENEMY_LIFETIME_LOGS
         LogEvent("Chose door position " + DirectionHelpers::GetDisplayString(doorAction), ELogEventType::Info);
-        UE_LOG(LogEnemyActor, Display, TEXT("Chose door position %s"), *DirectionHelpers::GetDisplayString(doorAction));
+#endif
         UpdatePolicyForDoorType(doorAction, doorPositionOnWall);
 
         //If the enemy enters a door on a corner which is also a door to a different room, we need to ensure their state is changed here.
         const bool onTargetGridPosition = TargetRoomPosition.Position.X == GridXPosition && TargetRoomPosition.Position.Y == GridYPosition;
         if (onTargetGridPosition)
         {
+#if ENEMY_LIFETIME_LOGS
             LogLine(">>> Chose door at current grid position! <<<");
-            SetBehaviourState(EEnemyBehaviourState::ChangingRooms);
+#endif
             UpdateMovementForActionType(TargetRoomPosition.DoorAction);
         }
     }
 }
 
+#if ENEMY_LIFETIME_LOGS
 void AEnemyActor::LogLine(const FString& lineString)
 {
     if (!LifetimeLog.IsEmpty())
@@ -654,11 +439,6 @@ void AEnemyActor::LogPosition()
 {
     LogLine(TEXT("Previous GridPos: ") + PositionAtLastEventLog.ToString() + FString::Format(TEXT(" | GridPos: X={0} Y={1}"), { GridXPosition, GridYPosition }));
     PositionAtLastEventLog = FIntPoint(GridXPosition, GridYPosition);
-}
-void AEnemyActor::LogBehaviour()
-{
-    LogLine(FString("Previous Behaviour: ") + GetBehaviourString(BehaviourAtLastEventLog) + FString(" | Behaviour: ") + GetBehaviourString(BehaviourState));
-    BehaviourAtLastEventLog = BehaviourState;
 }
 void AEnemyActor::LogTarget()
 {
@@ -684,10 +464,6 @@ void AEnemyActor::LogDetails()
     else if (PositionAtLastEventLog.X != GridXPosition || PositionAtLastEventLog.Y != GridYPosition)
     {
         LogPosition();
-    }
-    if (BehaviourAtLastEventLog != BehaviourState)
-    {
-        LogBehaviour();
     }
     if (TargetAtLastEventLog.DoorAction != TargetRoomPosition.DoorAction || TargetAtLastEventLog.Position != TargetRoomPosition.Position)
     {
@@ -741,3 +517,4 @@ void AEnemyActor::SaveLifetimeString()
         FFileHelper::SaveStringToFile(LifetimeLog, *( LogDir + "/" + filename));
     }
 }
+#endif
