@@ -146,6 +146,8 @@ private:
 
     LevelTrainedEvent OnLevelTrained;
     //FThreadSafeCounter NumUnfinishedTasks = 0;
+
+    FDelegateHandle WorldCleanupHandle;
 };
 
 

@@ -1,6 +1,7 @@
 // Fill out your copyright notice in the Description page of Project Settings.
 
 #include "TPGameDemo.h"
+#include "Engine/World.h"
 #include "TextParserComponent.h"
 #include "LevelTrainerComponent.h"
 
@@ -165,6 +166,18 @@ static FThreadSafeCounter ThreadCounter;
 ULevelTrainerComponent::ULevelTrainerComponent()
 {
 	PrimaryComponentTick.bCanEverTick = true;
+    WorldCleanupHandle = FWorldDelegates::OnWorldCleanup.AddLambda([this](UWorld* world, bool, bool)
+    {
+        if (GetWorld() == world)
+        {
+            if (TrainerRunnable.IsValid())
+            {
+                UE_LOG(LogTemp, Warning, TEXT("Exiting training thread."));
+                TrainerRunnable->Exit();
+            }
+            FWorldDelegates::OnWorldCleanup.Remove(WorldCleanupHandle);
+        }
+    });
 }
 
 void ULevelTrainerComponent::BeginDestroy()
