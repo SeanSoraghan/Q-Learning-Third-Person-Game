@@ -243,7 +243,7 @@ void AEnemyActor::PositionChanged()
         else
             UpdateMovementForActionType(TargetRoomPosition.DoorAction);
     }
-    else if (WasOnGridEdge())
+    else if (WasOnGridEdge() && !HasReachedTargetRoom())
     {
         ChooseDoorTarget();
         UpdateMovement();

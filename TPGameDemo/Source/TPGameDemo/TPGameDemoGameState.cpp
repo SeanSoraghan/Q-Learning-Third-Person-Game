@@ -277,7 +277,8 @@ TArray<bool> ATPGameDemoGameState::GetNeighbouringRoomStates(FIntPoint roomCoord
     for (int p = 0; p < (int)EDirectionType::NumDirectionTypes; ++p)
     {
         FIntPoint neighbour = GetNeighbouringRoomIndices(roomCoords, (EDirectionType)p);
-        if (RoomXYIndicesValid(neighbour) && RoomStates[neighbour.X][neighbour.Y].RoomStatus == RoomState::Trained)
+        if (RoomXYIndicesValid(neighbour) && (RoomStates[neighbour.X][neighbour.Y].RoomStatus == RoomState::Trained 
+            || RoomStates[neighbour.X][neighbour.Y].RoomStatus == RoomState::Connected))
             neighbouringRoomStates[p] = true;
     }
     return neighbouringRoomStates;
