@@ -57,12 +57,12 @@ void AEnemyActor::Tick( float DeltaTime )
 
 bool AEnemyActor::HasReachedTargetRoom() const
 {
-    return CurrentRoomCoords == TargetRoomCoords;
+    return CurrentRoomCoords == TargetRoomAndPosition.RoomCoords;
 }
 
 bool AEnemyActor::HasReachedTargetPosition() const
 {
-    return TargetRoomPosition.Position.X == GridXPosition && TargetRoomPosition.Position.Y == GridYPosition;
+    return TargetPositionAndAction.Position.X == GridXPosition && TargetPositionAndAction.Position.Y == GridYPosition;
 }
 
 bool AEnemyActor::IsOnDoor(EDirectionType direction) const
@@ -82,6 +82,18 @@ bool AEnemyActor::IsOnDoor(EDirectionType direction) const
     }
     return false;
 }
+
+EDirectionType AEnemyActor::SelectNextAction()
+{
+    ATPGameDemoGameState* gameState = (ATPGameDemoGameState*)GetWorld()->GetGameState();
+    if (gameState != nullptr)
+    {
+        FDirectionSet optimalActions = gameState->GetOptimalActions(CurrentRoomCoords, TargetPositionAndAction.Position, FIntPoint(GridXPosition, GridYPosition));
+        return optimalActions.ChooseDirection();
+    }
+
+    return EDirectionType::NumDirectionTypes;
+}
 //======================================================================================================
 // Movement
 //======================================================================================================
@@ -99,7 +111,7 @@ bool AEnemyActor::IsPositionValid()
 		//if (GridYPosition == gameState->NumGridUnitsY)
 			//return GridXPosition == gameState->GetDoorPositionOnWall(CurrentRoomCoords, EDirectionType::East);
 		ensure(GridXPosition > 0 && GridXPosition < gameState->NumGridUnitsX && GridYPosition > 0 && GridYPosition < gameState->NumGridUnitsY);
-        FDirectionSet optimalActions = gameState->GetOptimalActions(CurrentRoomCoords, TargetRoomPosition.Position, FIntPoint(GridXPosition, GridYPosition));
+        FDirectionSet optimalActions = gameState->GetOptimalActions(CurrentRoomCoords, TargetPositionAndAction.Position, FIntPoint(GridXPosition, GridYPosition));
         return optimalActions.IsValid();
 	}
 	
@@ -124,9 +136,9 @@ void AEnemyActor::PositionChanged()
     FString eventInfo = TEXT("");
     if (IsOnGridEdge())
     {
-        if (HasReachedTargetPosition() && TargetRoomPosition.DoorAction != EDirectionType::NumDirectionTypes)
+        if (HasReachedTargetPosition() && TargetPositionAndAction.DoorAction != EDirectionType::NumDirectionTypes)
         {
-            UpdateMovementForActionType(TargetRoomPosition.DoorAction);
+            UpdateMovementForActionType(TargetPositionAndAction.DoorAction);
         }
         else
         {
@@ -162,58 +174,9 @@ void AEnemyActor::RoomCoordsChanged()
 
 void AEnemyActor::EnteredTargetRoom()
 {
-    TargetRoomPosition.DoorAction = EDirectionType::NumDirectionTypes;
-    TargetRoomPosition.Position = FIntPoint(4, 4);
+    TargetPositionAndAction.DoorAction = EDirectionType::NumDirectionTypes;
+    TargetPositionAndAction.Position = TargetRoomAndPosition.PositionInRoom;
     return;
-}
-
-void AEnemyActor::UpdateMovement()
-{
-#if ENEMY_LIFETIME_LOGS
-	AssertWithErrorLog(IsPositionValid(), TEXT("Position invalid in UpdateMovement!"));
-#else
-    ensure(IsPositionValid());
-#endif
-	if (!IsPositionValid())
-	{
-		Destroy();
-		return;
-	}
-
-    EDirectionType actionType = SelectNextAction();
-#if ENEMY_LIFETIME_LOGS
-    LogLine("Selected action " + DirectionHelpers::GetDisplayString(actionType));
-#endif
-    UpdateMovementForActionType(actionType);
-}
-
-void AEnemyActor::UpdateMovementForActionType(EDirectionType actionType)
-{ 
-    ATPGameDemoGameState* gameState = (ATPGameDemoGameState*) GetWorld()->GetGameState();
-    if (gameState != nullptr)
-    {
-        const float z = GetActorLocation().Z;
-        FRoomPositionPair roomAndPosition = GetTargetRoomAndPositionForDirectionType(actionType);
-#if ENEMY_LIFETIME_LOGS
-        LogEvent(TEXT("Move ") + DirectionHelpers::GetDisplayString(actionType) 
-            + " to " + roomAndPosition.PositionInRoom.ToString() 
-            + " in room " + roomAndPosition.RoomCoords.ToString(), ELogEventType::Info);
-#endif
-        FVector2D targetXY = gameState->GetWorldXYForRoomAndPosition(roomAndPosition);
-        MovementTarget = FVector(targetXY.X, targetXY.Y, z);
-    }
-}
-
-EDirectionType AEnemyActor::SelectNextAction()
-{
-    ATPGameDemoGameState* gameState = (ATPGameDemoGameState*)GetWorld()->GetGameState();
-    if (gameState != nullptr)
-    {
-        FDirectionSet optimalActions = gameState->GetOptimalActions(CurrentRoomCoords, TargetRoomPosition.Position, FIntPoint(GridXPosition, GridYPosition));
-        return optimalActions.ChooseDirection();
-    }
-
-    return EDirectionType::NumDirectionTypes;
 }
 
 FRoomPositionPair AEnemyActor::GetTargetRoomAndPositionForDirectionType(EDirectionType actionType)
@@ -259,75 +222,26 @@ FRoomPositionPair AEnemyActor::GetTargetRoomAndPositionForDirectionType(EDirecti
 //======================================================================================================
 // Behaviour Policy
 //======================================================================================================
-void AEnemyActor::UpdatePolicyForPlayerPosition (int targetX, int targetY)
+void AEnemyActor::TargetPositionInRoom(FIntPoint targetRoomCoords, FIntPoint targetPosition)
 {
-    if (!IsOnGridEdge())
-    {
-#if ENEMY_LIFETIME_LOGS
-        LogEvent("Updating policy for player position", ELogEventType::Info);
-#endif
-        TargetRoomPosition.Position.X = targetX;
-        TargetRoomPosition.Position.Y = targetY;
-        TargetRoomPosition.DoorAction = EDirectionType::NumDirectionTypes;
-        ATPGameDemoGameState* gameState = (ATPGameDemoGameState*) GetWorld()->GetGameState();
-        if (gameState != nullptr)
-        {
-            // If the player is in a doorway, we set the target according to the doorway they are in.
-            // Due to the way rooms overlap, enemies will never recieve a player position changed notification
-            // when the player is in the north or east door, as these are part of the neighbouring rooms.
-            if (targetX == 0)
-            {
-                UpdatePolicyForDoorType(EDirectionType::South, targetY);
-                return;
-            }
-            if (targetY == 0)
-            {
-                UpdatePolicyForDoorType(EDirectionType::West, targetX);
-                return;
-            }
-        }
-        UpdateMovement();
-    }
+    TargetRoomAndPosition = { targetRoomCoords, targetPosition };
+    if (!HasReachedTargetRoom())
+        ChooseDoorTarget();
+    else
+        EnteredTargetRoom();
+    UpdateMovement();
 }
 
-void AEnemyActor::UpdatePolicyForDoorType (EDirectionType doorType, int doorPositionOnWall)
+void AEnemyActor::TargetCenter()
 {
-    ATPGameDemoGameState* gameState = (ATPGameDemoGameState*) GetWorld()->GetGameState();
+    FIntPoint TargetRoom = FIntPoint(0, 0);
+    FIntPoint TargetPosition = FIntPoint(4, 4);
+    ATPGameDemoGameState* gameState = (ATPGameDemoGameState*)GetWorld()->GetGameState();
     if (gameState != nullptr)
     {
-        TargetRoomPosition.DoorAction = doorType;
-#if ENEMY_LIFETIME_LOGS
-        LogEvent("Updating policy for door type " + DirectionHelpers::GetDisplayString(doorType), ELogEventType::Info);
-#endif
-        switch (doorType)
-        {
-            case EDirectionType::North:
-            {
-                TargetRoomPosition.Position.X = gameState->NumGridUnitsX - 1;
-                TargetRoomPosition.Position.Y = doorPositionOnWall;
-                break;
-            }
-            case EDirectionType::East:
-            {
-                TargetRoomPosition.Position.X = doorPositionOnWall;
-                TargetRoomPosition.Position.Y = gameState->NumGridUnitsY - 1;
-                break;
-            }
-            case EDirectionType::South:
-            {
-                TargetRoomPosition.Position.X = 0;
-                TargetRoomPosition.Position.Y = doorPositionOnWall;
-                break;
-            }
-            case EDirectionType::West:
-            {
-                TargetRoomPosition.Position.X = doorPositionOnWall;
-                TargetRoomPosition.Position.Y = 0;
-                break;
-            }
-        }
-        UpdateMovement();
+        TargetPosition = FIntPoint(gameState->NumGridUnitsX / 2, gameState->NumGridUnitsY / 2);
     }
+    TargetPositionInRoom(TargetRoom, TargetPosition);
 }
 
 void AEnemyActor::ChooseDoorTarget()
@@ -411,15 +325,92 @@ void AEnemyActor::ChooseDoorTarget()
         UpdatePolicyForDoorType(doorAction, doorPositionOnWall);
 
         //If the enemy enters a door on a corner which is also a door to a different room, we need to ensure their state is changed here.
-        const bool onTargetGridPosition = TargetRoomPosition.Position.X == GridXPosition && TargetRoomPosition.Position.Y == GridYPosition;
+        const bool onTargetGridPosition = TargetPositionAndAction.Position.X == GridXPosition && TargetPositionAndAction.Position.Y == GridYPosition;
         if (onTargetGridPosition)
         {
 #if ENEMY_LIFETIME_LOGS
             LogLine(">>> Chose door at current grid position! <<<");
 #endif
-            UpdateMovementForActionType(TargetRoomPosition.DoorAction);
+            UpdateMovementForActionType(TargetPositionAndAction.DoorAction);
         }
     }
+}
+
+void AEnemyActor::UpdateMovementForActionType(EDirectionType actionType)
+{
+    ATPGameDemoGameState* gameState = (ATPGameDemoGameState*)GetWorld()->GetGameState();
+    if (gameState != nullptr)
+    {
+        const float z = GetActorLocation().Z;
+        FRoomPositionPair roomAndPosition = GetTargetRoomAndPositionForDirectionType(actionType);
+#if ENEMY_LIFETIME_LOGS
+        LogEvent(TEXT("Move ") + DirectionHelpers::GetDisplayString(actionType)
+            + " to " + roomAndPosition.PositionInRoom.ToString()
+            + " in room " + roomAndPosition.RoomCoords.ToString(), ELogEventType::Info);
+#endif
+        FVector2D targetXY = gameState->GetWorldXYForRoomAndPosition(roomAndPosition);
+        MovementTarget = FVector(targetXY.X, targetXY.Y, z);
+    }
+}
+
+void AEnemyActor::UpdatePolicyForDoorType(EDirectionType doorType, int doorPositionOnWall)
+{
+    ATPGameDemoGameState* gameState = (ATPGameDemoGameState*)GetWorld()->GetGameState();
+    if (gameState != nullptr)
+    {
+        TargetPositionAndAction.DoorAction = doorType;
+#if ENEMY_LIFETIME_LOGS
+        LogEvent("Updating policy for door type " + DirectionHelpers::GetDisplayString(doorType), ELogEventType::Info);
+#endif
+        switch (doorType)
+        {
+        case EDirectionType::North:
+        {
+            TargetPositionAndAction.Position.X = gameState->NumGridUnitsX - 1;
+            TargetPositionAndAction.Position.Y = doorPositionOnWall;
+            break;
+        }
+        case EDirectionType::East:
+        {
+            TargetPositionAndAction.Position.X = doorPositionOnWall;
+            TargetPositionAndAction.Position.Y = gameState->NumGridUnitsY - 1;
+            break;
+        }
+        case EDirectionType::South:
+        {
+            TargetPositionAndAction.Position.X = 0;
+            TargetPositionAndAction.Position.Y = doorPositionOnWall;
+            break;
+        }
+        case EDirectionType::West:
+        {
+            TargetPositionAndAction.Position.X = doorPositionOnWall;
+            TargetPositionAndAction.Position.Y = 0;
+            break;
+        }
+        }
+        UpdateMovement();
+    }
+}
+
+void AEnemyActor::UpdateMovement()
+{
+#if ENEMY_LIFETIME_LOGS
+    AssertWithErrorLog(IsPositionValid(), TEXT("Position invalid in UpdateMovement!"));
+#else
+    ensure(IsPositionValid());
+#endif
+    if (!IsPositionValid())
+    {
+        Destroy();
+        return;
+    }
+
+    EDirectionType actionType = SelectNextAction();
+#if ENEMY_LIFETIME_LOGS
+    LogLine("Selected action " + DirectionHelpers::GetDisplayString(actionType));
+#endif
+    UpdateMovementForActionType(actionType);
 }
 
 #if ENEMY_LIFETIME_LOGS
@@ -442,8 +433,8 @@ void AEnemyActor::LogPosition()
 }
 void AEnemyActor::LogTarget()
 {
-    LogLine("Previous " + TargetAtLastEventLog.ToInfoString() + " | " + TargetRoomPosition.ToInfoString());
-    TargetAtLastEventLog = TargetRoomPosition;
+    LogLine("Previous " + TargetAtLastEventLog.ToInfoString() + " | " + TargetPositionAndAction.ToInfoString());
+    TargetAtLastEventLog = TargetPositionAndAction;
 }
 void AEnemyActor::LogWorldPosition()
 {
@@ -465,7 +456,7 @@ void AEnemyActor::LogDetails()
     {
         LogPosition();
     }
-    if (TargetAtLastEventLog.DoorAction != TargetRoomPosition.DoorAction || TargetAtLastEventLog.Position != TargetRoomPosition.Position)
+    if (TargetAtLastEventLog.DoorAction != TargetPositionAndAction.DoorAction || TargetAtLastEventLog.Position != TargetPositionAndAction.Position)
     {
         LogTarget();
     }

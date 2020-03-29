@@ -168,14 +168,17 @@ ULevelTrainerComponent::ULevelTrainerComponent()
 	PrimaryComponentTick.bCanEverTick = true;
     WorldCleanupHandle = FWorldDelegates::OnWorldCleanup.AddLambda([this](UWorld* world, bool, bool)
     {
-        if (GetWorld() == world)
+        if (IsValid(this))
         {
-            if (TrainerRunnable.IsValid())
+            if (GetWorld() == world)
             {
-                UE_LOG(LogTemp, Warning, TEXT("Exiting training thread."));
-                TrainerRunnable->Exit();
+                if (TrainerRunnable.IsValid())
+                {
+                    UE_LOG(LogTemp, Warning, TEXT("Exiting training thread."));
+                    TrainerRunnable->Exit();
+                }
+                FWorldDelegates::OnWorldCleanup.Remove(WorldCleanupHandle);
             }
-            FWorldDelegates::OnWorldCleanup.Remove(WorldCleanupHandle);
         }
     });
 }
@@ -320,10 +323,14 @@ void ULevelTrainerComponent::TrainNextGoalPosition(int numSimulationsPerStarting
         FString CurrentPositionFileName = LevelBuilderHelpers::LevelsDir() + CurrentLevelName + "/" + CurrentPositionString + ".txt";
         TArray<TArray<FDirectionSet>> envArray = GetBehaviourMap();
         //LevelBuilderHelpers::PrintArray(envArray);
-        ATPGameDemoGameState* gameState = (ATPGameDemoGameState*)GetWorld()->GetGameState();
-        if (gameState != nullptr)
+        UWorld* world = GetWorld();
+        if (IsValid(world))
         {
-            gameState->SetBehaviourMap(RoomCoords, CurrentGoalPosition, envArray);
+            ATPGameDemoGameState* gameState = (ATPGameDemoGameState*)(world->GetGameState());
+            if (gameState != nullptr)
+            {
+                gameState->SetBehaviourMap(RoomCoords, CurrentGoalPosition, envArray);
+            }
         }
 #pragma message("move this to save function in game state.")
         LevelBuilderHelpers::WriteArrayToTextFile(envArray, CurrentPositionFileName);

@@ -83,20 +83,28 @@ public:
     UFUNCTION (BlueprintCallable, Category = "Enemy Movement")
         virtual EDirectionType SelectNextAction();
 
-    UFUNCTION (BlueprintCallable, Category = "Enemy Behaviour")
-        virtual void ChooseDoorTarget();
-
-    UFUNCTION (BlueprintCallable, Category = "Enemy Movement")
-        void UpdateMovementForActionType(EDirectionType actionType);
     //======================================================================================================
     // Behaviour Policy
     //======================================================================================================
+    //UFUNCTION (BlueprintCallable, Category = "Enemy Behaviour")
+    //    virtual void UpdatePolicyForDoorType (EDirectionType doorTypem, int doorPositionOnWall);
 
-    UFUNCTION (BlueprintCallable, Category = "Enemy Movement")
-        virtual void UpdatePolicyForPlayerPosition (int playerX, int playerY);
+    /* Update the TargetRoomAndPosition */
+    UFUNCTION(BlueprintCallable, Category = "Enemy Behaviour")
+        virtual void TargetPositionInRoom (FIntPoint targetRoomCoords, FIntPoint targetPosition);
 
-    UFUNCTION (BlueprintCallable, Category = "Enemy Movement")
-        virtual void UpdatePolicyForDoorType (EDirectionType doorTypem, int doorPositionOnWall);
+    /* Target the very center of the maze grid (centre point in centre room) */
+    UFUNCTION(BlueprintCallable, Category = "Enemy Behaviour")
+        virtual void TargetCenter();
+
+    ///* Move along the given direction, regardless of validity. (This is used to force characters through doors). */
+    //UFUNCTION(BlueprintCallable, Category = "Enemy Movement")
+    //    void UpdateMovementForActionType(EDirectionType actionType);
+
+    /* Choose a door in the current room and update the policy to direct towards that door. */
+    UFUNCTION(BlueprintCallable, Category = "Enemy Behaviour")
+        virtual void ChooseDoorTarget();
+
     //======================================================================================================
     // Movement
     //====================================================================================================== 
@@ -111,10 +119,15 @@ public:
         float RotationSpeed = 0.1f;
 
 private:
-    FTargetPosition       TargetRoomPosition;
-    FIntPoint             TargetRoomCoords = FIntPoint(0, 0); // default to central room.
+    FTargetPosition   TargetPositionAndAction; // Intermediate movement target, while navigating to target room.
+    FRoomPositionPair TargetRoomAndPosition = { FIntPoint(0, 0), FIntPoint(4, 4) }; // default to center of central room.
 
     void EnteredTargetRoom();
+
+    //======================================================================================================
+    // Behaviour Policy
+    //======================================================================================================
+    void UpdatePolicyForDoorType(EDirectionType doorTypem, int doorPositionOnWall);
 
     //======================================================================================================
     // Movement
@@ -123,15 +136,17 @@ private:
     // Returns the room coords and position in room indicated by the given movement direction, determined by the actors current position.
     // If the movement action would cause them to change rooms, roomCoords will indicate which room they would enter.
     FRoomPositionPair GetTargetRoomAndPositionForDirectionType(EDirectionType actionType);
+    /* Move along the given direction, regardless of validity. (This is used to force characters through doors). */
+    void UpdateMovementForActionType(EDirectionType actionType);
 
     /* The door through which the current room was entered */
     EDirectionType PreviousDoor = EDirectionType::NumDirectionTypes;
+
     //======================================================================================================
     // From AMazeActor
     //====================================================================================================== 
     virtual void PositionChanged() override;
     virtual void RoomCoordsChanged() override;
-
 
     //======================================================================================================
     // Logging
