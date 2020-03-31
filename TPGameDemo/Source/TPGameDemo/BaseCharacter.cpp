@@ -4,6 +4,8 @@
 #include "TPGameDemoGameMode.h"
 #include "Kismet/KismetMathLibrary.h"
 
+#define ENABLE_CLOSE_CAMERA 0
+
 //======================================================================================================
 // Initialisation
 //====================================================================================================== 
@@ -145,7 +147,9 @@ void ABaseCharacter::BindInput()
 void ABaseCharacter::EnterCombatControlMode()
 {
     ControlState = EControlState::Combat;
-
+    
+    
+#if ENABLE_CLOSE_CAMERA
     UpdateTimelineTargetRotations();
 
     //VerticalLookRotation = DefaultLookCombatRotation.Pitch;
@@ -154,6 +158,11 @@ void ABaseCharacter::EnterCombatControlMode()
     TimelineContainer->Timeline->PlayFromStart();
 
     BindInput();
+#else
+    GetMesh()->SetRelativeRotation(DefaultMeshRotation);
+
+    BindInput();
+#endif
 }
 
 
@@ -161,11 +170,15 @@ void ABaseCharacter::EnterExploreControlMode()
 {
     ControlState = EControlState::Explore;
 
+#if ENABLE_CLOSE_CAMERA
     //VerticalLookRotation = DefaultLookExploreRotation.Pitch;
     //HorizontalLookRotation = DefaultLookExploreRotation.Yaw;
     UpdateControlRotation();
 
     BindInput();
+#else
+    BindInput();
+#endif
 }
 
 void ABaseCharacter::UpdateMovementControls()
@@ -220,6 +233,7 @@ void ABaseCharacter::SetupExploreMovementControls()
         InputComponent->BindAction ("move-left",      IE_Released, this, &ABaseCharacter::ExploreLeftReleased);
         InputComponent->BindAction ("map-view",       IE_Pressed,  this, &ABaseCharacter::MapViewPressed);
         InputComponent->BindAction ("map-view",       IE_Released, this, &ABaseCharacter::MapViewReleased);
+        InputComponent->BindAction("fire",            IE_Pressed,  this, &ABaseCharacter::PlayerFired);
 
         InputComponent->BindAxis   ("look-right", this, &ABaseCharacter::UpdateHorizontalLookRotation);
         InputComponent->BindAxis   ("follow-camera-zoom", this, &ABaseCharacter::UpdateFollowCameraPosition);
