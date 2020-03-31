@@ -233,7 +233,6 @@ void ABaseCharacter::SetupExploreMovementControls()
         InputComponent->BindAction ("move-left",      IE_Released, this, &ABaseCharacter::ExploreLeftReleased);
         InputComponent->BindAction ("map-view",       IE_Pressed,  this, &ABaseCharacter::MapViewPressed);
         InputComponent->BindAction ("map-view",       IE_Released, this, &ABaseCharacter::MapViewReleased);
-        InputComponent->BindAction("fire",            IE_Pressed,  this, &ABaseCharacter::PlayerFired);
 
         InputComponent->BindAxis   ("look-right", this, &ABaseCharacter::UpdateHorizontalLookRotation);
         InputComponent->BindAxis   ("follow-camera-zoom", this, &ABaseCharacter::UpdateFollowCameraPosition);
