@@ -15,11 +15,16 @@ class TPGAMEDEMO_API ABuildableActor : public AMazeActor
 	GENERATED_BODY()
 	
 public:
+    virtual void EndPlay(const EEndPlayReason::Type EndPlayReason) override;
+
     UFUNCTION(BlueprintCallable, Category = "Buildable Items")
-        bool IsItemBuilt() const;
+        bool IsItemPlaced() const;
 
     UFUNCTION(BlueprintCallable, Category = "Buildable Items Placement")
         void PlaceItem();
+
+    UFUNCTION(BlueprintCallable, Category = "Buildable Items Placement")
+        void UnplaceItem();
 
     UFUNCTION(BlueprintImplementableEvent, Category = "Buildable Items Placement")
         void ItemWasPlaced();
@@ -36,7 +41,13 @@ public:
     UPROPERTY(BlueprintReadWrite, Category = "Buildable Items Resources Cost")
         int ResourceCost;
 
+    UPROPERTY(BlueprintReadWrite, Category = "Buildable Items Resources Cost")
+        FRoomPositionPair AttachmentRoomAndPosition;
+
+    UPROPERTY(BlueprintReadWrite, Category = "Buildable Items Resources Cost")
+        EDirectionType AttachmentDirection;
+
 private:
-	bool IsBuilt = false;
+	bool IsPlaced = false;
     bool CanBePlaced = true;
 };

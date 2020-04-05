@@ -2,16 +2,41 @@
 
 #include "TPGameDemo.h"
 #include "BuildableActor.h"
+#include "TPGameDemoGameState.h"
 
-bool ABuildableActor::IsItemBuilt() const
+void ABuildableActor::EndPlay(const EEndPlayReason::Type EndPlayReason)
 {
-    return IsBuilt;
+    Super::EndPlay(EndPlayReason);
+    if (IsPlaced)
+        UnplaceItem();
+}
+
+bool ABuildableActor::IsItemPlaced() const
+{
+    return IsPlaced;
 }
 
 void ABuildableActor::PlaceItem()
 {
-    IsBuilt = true;
+    IsPlaced = true;
+    UWorld* world = GetWorld();
+    ATPGameDemoGameState* gameState = (ATPGameDemoGameState*)(world->GetGameState());
+    if (gameState != nullptr)
+    {
+        gameState->SetBuildableItemPlaced(AttachmentRoomAndPosition, AttachmentDirection, true);
+    }
     ItemWasPlaced();
+}
+
+void ABuildableActor::UnplaceItem()
+{
+    IsPlaced = false;
+    UWorld* world = GetWorld();
+    ATPGameDemoGameState* gameState = (ATPGameDemoGameState*)(world->GetGameState());
+    if (gameState != nullptr)
+    {
+        gameState->SetBuildableItemPlaced(AttachmentRoomAndPosition, AttachmentDirection, false);
+    }
 }
 
 bool ABuildableActor::CanItemBePlaced() const

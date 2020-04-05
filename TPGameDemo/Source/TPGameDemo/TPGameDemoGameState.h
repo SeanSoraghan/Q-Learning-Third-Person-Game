@@ -308,6 +308,12 @@ public:
     UFUNCTION (BlueprintCallable, Category = "Room Grid Positions")
         FVector2D GetWorldXYForRoomAndPosition(FRoomPositionPair roomPositionPair);
 
+    /** Returns the room and position in room for a given world position. */
+    UFUNCTION(BlueprintCallable, Category = "Room Grid Positions")
+        FRoomPositionPair GetRoomAndPositionForWorldXY(FVector2D worldXY);
+
+    UFUNCTION(BlueprintCallable, Category = "World Rooms States")
+        bool IsBuildableItemPlaced(FRoomPositionPair roomAndPosition, EDirectionType direction);
     // --------------------- room properties -------------------------------------
 
     UFUNCTION(BlueprintCallable, Category = "World Rooms States")
@@ -449,6 +455,9 @@ public:
                           [targetGridPosition.X][targetGridPosition.Y] = behaviourMap;
     }
 
+    UFUNCTION(BlueprintCallable, Category = "World Rooms States")
+        void SetBuildableItemPlaced(FRoomPositionPair roomAndPosition, EDirectionType direction, bool placed);
+
     // --------------------- Room & Wall Initialization / Destruction -------------------------------------
 
     UFUNCTION(BlueprintCallable, Category = "World Rooms States")
@@ -546,6 +555,11 @@ private:
     TArray<TArray<TargetMapsArray>> WorldBehaviourMaps;
     bool LevelPoliciesDirFound = false;
 
+    // An unwrapped '2d' array containing An FDirectionSet for each space in the maze,
+    // indicating if a buildable has been placed facing each direction.
+    // (This is mainly applicable to turrets attached to walls).
+    TArray<FDirectionSet> MazePositionBuildableStates;
+    
     // Struct containing the coordinates of a west/south wall state couple and the specific wall type.
     struct WallPosition
     {

@@ -62,6 +62,14 @@ void ABaseCharacter::UpdateMovement (float deltaTime)
 }
 
 //=========================================================================================
+// Input
+//=========================================================================================
+void  ABaseCharacter::ControlStateChanged()
+{
+    OnControlStateChanged.Broadcast();
+}
+
+//=========================================================================================
 // Movement
 //=========================================================================================
 FRotator ABaseCharacter::GetNormalisedVelocityDeltaRotation()
@@ -163,6 +171,8 @@ void ABaseCharacter::EnterCombatControlMode()
 
     BindInput();
 #endif
+
+    ControlStateChanged();
 }
 
 
@@ -179,6 +189,8 @@ void ABaseCharacter::EnterExploreControlMode()
 #else
     BindInput();
 #endif
+
+    ControlStateChanged();
 }
 
 void ABaseCharacter::UpdateMovementControls()
@@ -215,6 +227,7 @@ void ABaseCharacter::SetupCombatMovementControls()
         InputComponent->BindAxis   ("look-right", this, &ABaseCharacter::UpdateHorizontalLookRotation);
 
         InputComponent->BindAction ("fire", IE_Pressed, this, &ABaseCharacter::PlayerFired);
+        InputComponent->BindAction ("fire", IE_Released, this, &ABaseCharacter::FireReleased);
     }
 }
 
@@ -371,6 +384,7 @@ void ABaseCharacter::ExploreLeftPressed()       { ExploreDirectionPressed  (EMov
 void ABaseCharacter::ExploreLeftReleased()      { ExploreDirectionReleased (EMovementDirectionType::Left); }
 
 void ABaseCharacter::PlayerFired() { OnPlayerFired.Broadcast(); }
+void ABaseCharacter::FireReleased() { OnFireReleased.Broadcast(); }
 //=========================================================================================
 // Timeline
 //=========================================================================================

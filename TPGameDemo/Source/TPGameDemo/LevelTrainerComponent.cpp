@@ -170,15 +170,15 @@ ULevelTrainerComponent::ULevelTrainerComponent()
     {
         if (IsValid(this))
         {
-            if (GetWorld() == world)
-            {
+            //if (GetWorld() == world)
+            //{
                 if (TrainerRunnable.IsValid())
                 {
                     UE_LOG(LogTemp, Warning, TEXT("Exiting training thread."));
                     TrainerRunnable->Exit();
                 }
                 FWorldDelegates::OnWorldCleanup.Remove(WorldCleanupHandle);
-            }
+            //}
         }
     });
 }

@@ -68,7 +68,8 @@ struct SMovementKeysPressedState
 //===========================================================================================
 
 DECLARE_DYNAMIC_MULTICAST_DELEGATE (FPlayerFired);
-
+DECLARE_DYNAMIC_MULTICAST_DELEGATE (FPlayerReleasedFire);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE (FPlayerControlStateChanged);
 DECLARE_DELEGATE_OneParam          (FHotkeyDelegate, int);
 
 /*
@@ -127,6 +128,7 @@ public:
     UFUNCTION(BlueprintImplementableEvent, Category = "Base Character Interaction")
         void InteractPressed();
 
+    void ControlStateChanged();
     //=========================================================================================
     // Camera
     //=========================================================================================
@@ -172,6 +174,12 @@ public:
     //=========================================================================================
     UPROPERTY (BlueprintAssignable, Category = "Base Character Shooting")
         FPlayerFired OnPlayerFired;
+
+    UPROPERTY(BlueprintAssignable, Category = "Base Character Shooting")
+        FPlayerReleasedFire OnFireReleased;
+
+    UPROPERTY(BlueprintAssignable, Category = "Base Character Shooting")
+        FPlayerControlStateChanged OnControlStateChanged;
     
     //=========================================================================================
     // Building
@@ -243,7 +251,7 @@ private:
     // Shooting
     //=========================================================================================
     void PlayerFired();
-    //PlayerFiredEvent OnPlayerFired;
+    void FireReleased();
 
     //=========================================================================================
     // Timeline

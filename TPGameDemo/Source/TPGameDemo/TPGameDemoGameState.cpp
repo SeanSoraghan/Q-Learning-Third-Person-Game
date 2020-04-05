@@ -46,6 +46,7 @@ void ATPGameDemoGameState::InitialiseArrays()
 {
     ATPGameDemoGameMode* gameMode = (ATPGameDemoGameMode*) GetWorld()->GetAuthGameMode();
 
+    MazePositionBuildableStates.SetNum(NumGridsXY * NumGridsXY * GridUnitLengthXCM * GridUnitLengthYCM);
     for (int x = 0; x < NumGridsXY; ++x)
     {
         TArray<WallStateCouple> wallsRow;
@@ -346,6 +347,15 @@ void ATPGameDemoGameState::UpdateSignalStrength(float delta)
     {
         OnSignalLost.Broadcast();
     }
+}
+
+void ATPGameDemoGameState::SetBuildableItemPlaced(FRoomPositionPair roomAndPosition, EDirectionType direction, bool placed)
+{
+    FIntPoint roomIndices = GetRoomXYIndicesChecked(roomAndPosition.RoomCoords);
+    int unwrappedRoomIndex = roomIndices.Y * NumGridsXY + roomIndices.X;
+    int roomSize = NumGridUnitsX * NumGridUnitsY;
+    int unwrappedPositionInRoom = roomAndPosition.PositionInRoom.Y * NumGridUnitsX + roomAndPosition.PositionInRoom.X;
+    MazePositionBuildableStates[unwrappedRoomIndex * roomSize + unwrappedPositionInRoom].EnableDirection(direction);
 }
 
 void ATPGameDemoGameState::SetRoomBuilder(FIntPoint roomCoords, ARoomBuilder* roomBuilderActor)
@@ -705,6 +715,40 @@ FVector2D ATPGameDemoGameState::GetWorldXYForRoomAndPosition(FRoomPositionPair r
     const FIntPoint roomCoords = roomPositionPair.RoomCoords;
     const FIntPoint pos = roomPositionPair.PositionInRoom;
     return GetGridCellWorldPosition(pos.X, pos.Y, roomCoords.X, roomCoords.Y);
+}
+
+FRoomPositionPair ATPGameDemoGameState::GetRoomAndPositionForWorldXY(FVector2D worldXY)
+{
+    const float roomLengthX = NumGridUnitsX * GridUnitLengthXCM;
+    const float roomLengthY = NumGridUnitsY * GridUnitLengthYCM;
+    
+    float worldX = worldXY.X;
+    float worldY = worldXY.Y;
+    if (worldX > 0.0f)
+        worldX += roomLengthX / 2.0f;
+    else if (worldX < 0)
+        worldX -= roomLengthX / 2.0f;
+    if (worldY > 0.0f)
+        worldY += roomLengthY / 2.0f;
+    else if (worldY < 0)
+        worldY -= roomLengthY / 2.0f;
+    FIntPoint roomCoords = FIntPoint((int)(worldX / roomLengthX), (int)(worldY / roomLengthY));
+    FVector2D roomWorldBottomLeft = FVector2D(roomCoords.X, roomCoords.Y) * FVector2D(roomLengthX, roomLengthY) - FVector2D(roomLengthX / 2.0f, roomLengthY / 2.0f);
+    ensure(worldXY.X >= roomWorldBottomLeft.X);
+    ensure(worldXY.Y >= roomWorldBottomLeft.Y);
+    int positionX = floor((worldXY.X - roomWorldBottomLeft.X) / (float)GridUnitLengthXCM);
+    int positionY = floor((worldXY.Y - roomWorldBottomLeft.Y) / (float)GridUnitLengthYCM);
+    FIntPoint positionInRoom(positionX, positionY);
+    return  { roomCoords, positionInRoom };
+}
+
+bool ATPGameDemoGameState::IsBuildableItemPlaced(FRoomPositionPair roomAndPosition, EDirectionType direction)
+{
+    FIntPoint roomIndices = GetRoomXYIndicesChecked(roomAndPosition.RoomCoords);
+    int unwrappedRoomIndex = roomIndices.Y * NumGridsXY + roomIndices.X;
+    int roomSize = NumGridUnitsX * NumGridUnitsY;
+    int unwrappedPositionInRoom = roomAndPosition.PositionInRoom.Y * NumGridUnitsX + roomAndPosition.PositionInRoom.X;
+    return MazePositionBuildableStates[unwrappedRoomIndex * roomSize + unwrappedPositionInRoom].CheckDirection(direction);
 }
 
 WallState& ATPGameDemoGameState::GetWallState(FIntPoint roomCoords, EDirectionType direction)
