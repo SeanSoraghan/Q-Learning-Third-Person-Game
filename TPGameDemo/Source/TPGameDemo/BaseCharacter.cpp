@@ -143,6 +143,8 @@ void ABaseCharacter::BindInput()
         InputComponent->BindAction ("aim", IE_Pressed,  this, &ABaseCharacter::EnterCombatControlMode);
         InputComponent->BindAction ("aim", IE_Released, this, &ABaseCharacter::EnterExploreControlMode);
         InputComponent->BindAction ("interact", IE_Pressed, this, &ABaseCharacter::InteractPressed);
+        InputComponent->BindAction("follow-camera-zoom-out", IE_Pressed, this, &ABaseCharacter::ZoomOut);
+        InputComponent->BindAction("follow-camera-zoom-in", IE_Pressed, this, &ABaseCharacter::ZoomIn);
         for (int i = (int)EBuildableActorType::None; i < (int)EBuildableActorType::NumBuildables; ++i)
         {
             InputComponent->BindAction<FHotkeyDelegate> (*(FString("item-hotkey-") + FString::FromInt(i)), IE_Pressed, this, &ABaseCharacter::ItemHotkeyPressed, i);
@@ -168,7 +170,6 @@ void ABaseCharacter::EnterCombatControlMode()
     BindInput();
 #else
     GetMesh()->SetRelativeRotation(DefaultMeshRotation);
-
     BindInput();
 #endif
 

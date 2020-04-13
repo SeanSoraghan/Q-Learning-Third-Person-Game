@@ -142,6 +142,10 @@ public:
     UFUNCTION(BlueprintImplementableEvent, Category = "Base Character Camera Movement")
         void UpdateFollowCameraPosition (float delta);
     UFUNCTION(BlueprintImplementableEvent, Category = "Base Character Camera Movement")
+        void ZoomOut();
+    UFUNCTION(BlueprintImplementableEvent, Category = "Base Character Camera Movement")
+        void ZoomIn();
+    UFUNCTION(BlueprintImplementableEvent, Category = "Base Character Camera Movement")
         void MapViewPressed();
     UFUNCTION(BlueprintImplementableEvent, Category = "Base Character Camera Movement")
         void MapViewReleased();
