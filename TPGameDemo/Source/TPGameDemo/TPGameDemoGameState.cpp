@@ -734,8 +734,8 @@ FRoomPositionPair ATPGameDemoGameState::GetRoomAndPositionForWorldXY(FVector2D w
         worldY -= roomLengthY / 2.0f;
     FIntPoint roomCoords = FIntPoint((int)(worldX / roomLengthX), (int)(worldY / roomLengthY));
     FVector2D roomWorldBottomLeft = FVector2D(roomCoords.X, roomCoords.Y) * FVector2D(roomLengthX, roomLengthY) - FVector2D(roomLengthX / 2.0f, roomLengthY / 2.0f);
-    int positionX = (int)((worldXY.X - roomWorldBottomLeft.X) / (float)GridUnitLengthXCM);
-    int positionY = (int)((worldXY.Y - roomWorldBottomLeft.Y) / (float)GridUnitLengthYCM);
+    int positionX = (int)((worldXY.X - (GridUnitLengthXCM / 2.0f) - roomWorldBottomLeft.X) / (float)GridUnitLengthXCM);
+    int positionY = (int)((worldXY.Y - (GridUnitLengthYCM / 2.0f) - roomWorldBottomLeft.Y) / (float)GridUnitLengthYCM);
     FIntPoint positionInRoom(positionX, positionY);
     return  { roomCoords, positionInRoom };
 }
