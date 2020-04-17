@@ -4,7 +4,7 @@
 #include "TPGameDemoGameMode.h"
 #include "Kismet/KismetMathLibrary.h"
 
-#define ENABLE_CLOSE_CAMERA 0
+#define ENABLE_CLOSE_CAMERA 1
 
 //======================================================================================================
 // Initialisation
@@ -454,13 +454,13 @@ void ABaseCharacter::InterpolateControlRotationToMeshRotation (float deltaTime)
         interpSpeed = gameMode->Camera_Animation_Speed;
 
     /* To interpolate to mesh forward rotation */
-    //FRotator newRotation = UKismetMathLibrary::RInterpTo (GetNormalizedLookRotation(), TimelineTargetLookRotation, deltaTime, interpSpeed);
-    //
+    FRotator newRotation = UKismetMathLibrary::RInterpTo (GetNormalizedLookRotation(), TimelineTargetLookRotation, deltaTime, interpSpeed);
+    
     //VerticalLookRotation = DefaultLookCombatPitch;
-    //HorizontalLookRotation = newRotation.Yaw;
-    //LimitVerticalLookRotation();
-    //LimitHorizontalLookRotation();
-    //UpdateControlRotation();
+    HorizontalLookRotation = newRotation.Yaw;
+    LimitVerticalLookRotation();
+    LimitHorizontalLookRotation();
+    UpdateControlRotation();
 
     GetMesh()->SetRelativeRotation (UKismetMathLibrary::RInterpTo (GetNormalizedRelativeMeshRotation(), TimelineTargetMeshRotation, deltaTime, interpSpeed));
 }
