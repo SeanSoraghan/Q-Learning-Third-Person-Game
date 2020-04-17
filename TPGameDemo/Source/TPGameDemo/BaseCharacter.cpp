@@ -158,20 +158,22 @@ void ABaseCharacter::EnterCombatControlMode()
 {
     ControlState = EControlState::Combat;
     
-    
-#if ENABLE_CLOSE_CAMERA
-    UpdateTimelineTargetRotations();
+    if (CameraControlType == ECameraControlType::RotateCamera)
+    {
+        UpdateTimelineTargetRotations();
 
-    //VerticalLookRotation = DefaultLookCombatRotation.Pitch;
-    //HorizontalLookRotation = DefaultLookCombatRotation.Yaw;
-    UpdateControlRotation();
-    TimelineContainer->Timeline->PlayFromStart();
+        //VerticalLookRotation = DefaultLookCombatRotation.Pitch;
+        //HorizontalLookRotation = DefaultLookCombatRotation.Yaw;
+        UpdateControlRotation();
+        TimelineContainer->Timeline->PlayFromStart();
 
-    BindInput();
-#else
-    GetMesh()->SetRelativeRotation(DefaultMeshRotation);
-    BindInput();
-#endif
+        BindInput();
+    }
+    else
+    {
+        GetMesh()->SetRelativeRotation(DefaultMeshRotation);
+        BindInput();
+    }
 
     ControlStateChanged();
 }
@@ -181,15 +183,18 @@ void ABaseCharacter::EnterExploreControlMode()
 {
     ControlState = EControlState::Explore;
 
-#if ENABLE_CLOSE_CAMERA
-    //VerticalLookRotation = DefaultLookExploreRotation.Pitch;
-    //HorizontalLookRotation = DefaultLookExploreRotation.Yaw;
-    UpdateControlRotation();
+    if (CameraControlType == ECameraControlType::RotateCamera)
+    {
+        //VerticalLookRotation = DefaultLookExploreRotation.Pitch;
+        //HorizontalLookRotation = DefaultLookExploreRotation.Yaw;
+        UpdateControlRotation();
 
-    BindInput();
-#else
-    BindInput();
-#endif
+        BindInput();
+    }
+    else
+    {
+        BindInput();
+    }
 
     ControlStateChanged();
 }

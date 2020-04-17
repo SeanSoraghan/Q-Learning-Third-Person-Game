@@ -25,6 +25,14 @@ enum class EControlState : uint8
 };
 
 UENUM(BlueprintType)
+enum class ECameraControlType : uint8
+{
+    RotateCamera  UMETA(DisplayName = "Rotate Camera"),
+    RotatePlayer UMETA(DisplayName = "Rotate Player"),
+    NumTypes
+};
+
+UENUM(BlueprintType)
 enum class EBuildableActorType : uint8
 {
     None    UMETA (DisplayName = "None"),
@@ -127,6 +135,9 @@ public:
 	virtual void SetupPlayerInputComponent (class UInputComponent* inputComponent) override;
     UFUNCTION(BlueprintImplementableEvent, Category = "Base Character Interaction")
         void InteractPressed();
+
+    UPROPERTY(BlueprintReadWrite, EditAnywhere, Category = "Base Character Camera Movement")
+        ECameraControlType CameraControlType = ECameraControlType::RotatePlayer;
 
     void ControlStateChanged();
     //=========================================================================================
