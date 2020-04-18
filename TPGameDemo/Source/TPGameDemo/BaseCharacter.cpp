@@ -364,14 +364,18 @@ void ABaseCharacter::RotateMeshToMousePosition()
     APlayerController* PController = GetWorld()->GetFirstPlayerController();
     if (PController != nullptr)
     {
-        FVector MouseWorldLocation;
-        FVector Direction;
-        PController->DeprojectMousePositionToWorld(MouseWorldLocation, Direction);
-        MouseWorldLocation += Direction * 1000.0f;
-        FVector ActorLocation = GetActorLocation();
-        MouseWorldLocation.Z = ActorLocation.Z;
-        FRotator Rotator = UKismetMathLibrary::FindLookAtRotation(ActorLocation, MouseWorldLocation);
-        GetMesh()->SetRelativeRotation((Rotator + DefaultMeshRotation).Quaternion());
+        FVector ProjectedPoint, Direction;
+        PController->DeprojectMousePositionToWorld(ProjectedPoint, Direction);
+        FPlane ZPlane(FVector::ZeroVector, FVector::UpVector);
+        FVector MouseWorldLocation = FVector::ZeroVector;
+        float T = 0.0f;
+        if (UKismetMathLibrary::LinePlaneIntersection(ProjectedPoint, ProjectedPoint + Direction * 10000.0f, ZPlane, T, MouseWorldLocation))
+        {
+            FVector ActorLocation = GetActorLocation();
+            MouseWorldLocation.Z = ActorLocation.Z;
+            FRotator Rotator = UKismetMathLibrary::FindLookAtRotation(ActorLocation, MouseWorldLocation);
+            GetMesh()->SetRelativeRotation((Rotator + DefaultMeshRotation).Quaternion());
+        }
     }
 }
 
