@@ -69,6 +69,15 @@ void  ABaseCharacter::ControlStateChanged()
     OnControlStateChanged.Broadcast();
 }
 
+ECameraControlType  ABaseCharacter::GetCameraControlType()
+{
+    ATPGameDemoGameMode* gameMode = (ATPGameDemoGameMode*)GetWorld()->GetAuthGameMode();
+
+    if (gameMode != nullptr)
+        return gameMode->CameraControlType;
+
+    return ECameraControlType::RotatePlayer;
+}
 //=========================================================================================
 // Movement
 //=========================================================================================
@@ -158,21 +167,31 @@ void ABaseCharacter::EnterCombatControlMode()
 {
     ControlState = EControlState::Combat;
     
-    if (CameraControlType == ECameraControlType::RotateCamera)
+    switch (GetCameraControlType())
     {
-        UpdateTimelineTargetRotations();
+        case ECameraControlType::RotateCamera:
+        {
+            UpdateTimelineTargetRotations();
 
-        //VerticalLookRotation = DefaultLookCombatRotation.Pitch;
-        //HorizontalLookRotation = DefaultLookCombatRotation.Yaw;
-        UpdateControlRotation();
-        TimelineContainer->Timeline->PlayFromStart();
+            //VerticalLookRotation = DefaultLookCombatRotation.Pitch;
+            //HorizontalLookRotation = DefaultLookCombatRotation.Yaw;
+            UpdateControlRotation();
+            TimelineContainer->Timeline->PlayFromStart();
 
-        BindInput();
-    }
-    else
-    {
-        GetMesh()->SetRelativeRotation(DefaultMeshRotation);
-        BindInput();
+            BindInput();
+            break;
+        }
+        case ECameraControlType::RotatePlayer:
+        {
+            GetMesh()->SetRelativeRotation(DefaultMeshRotation);
+            BindInput();
+            break;
+        }
+        case ECameraControlType::TwinStick:
+        {    
+            break;
+        }
+        default: break;
     }
 
     ControlStateChanged();
@@ -183,17 +202,27 @@ void ABaseCharacter::EnterExploreControlMode()
 {
     ControlState = EControlState::Explore;
 
-    if (CameraControlType == ECameraControlType::RotateCamera)
+    switch (GetCameraControlType())
     {
-        //VerticalLookRotation = DefaultLookExploreRotation.Pitch;
-        //HorizontalLookRotation = DefaultLookExploreRotation.Yaw;
-        UpdateControlRotation();
+        case ECameraControlType::RotateCamera:
+        {
+            //VerticalLookRotation = DefaultLookExploreRotation.Pitch;
+            //HorizontalLookRotation = DefaultLookExploreRotation.Yaw;
+            UpdateControlRotation();
 
-        BindInput();
-    }
-    else
-    {
-        BindInput();
+            BindInput();
+            break;
+        }
+        case ECameraControlType::RotatePlayer:
+        {
+            BindInput();
+            break;
+        }
+        case ECameraControlType::TwinStick:
+        {
+            break;
+        }
+        default: break;
     }
 
     ControlStateChanged();
@@ -201,18 +230,33 @@ void ABaseCharacter::EnterExploreControlMode()
 
 void ABaseCharacter::UpdateMovementControls()
 {
-    switch (ControlState)
+    switch (GetCameraControlType())
     {
-        case EControlState::Explore:
+        /*Intentional fallthrough*/
+        case ECameraControlType::RotateCamera:
+        case ECameraControlType::RotatePlayer:
         {
-            SetupExploreMovementControls();
+            switch (ControlState)
+            {
+                case EControlState::Explore:
+                {
+                    SetupExploreMovementControls();
+                    break;
+                }
+                case EControlState::Combat:
+                {
+                    SetupCombatMovementControls();
+                    break;
+                }
+            }
             break;
         }
-        case EControlState::Combat:
+        case ECameraControlType::TwinStick:
         {
-            SetupCombatMovementControls();
+            SetupTwinStickControls();
             break;
         }
+        default: break;
     }
 }
 
@@ -258,6 +302,27 @@ void ABaseCharacter::SetupExploreMovementControls()
     }
 }
 
+void ABaseCharacter::SetupTwinStickControls()
+{
+    if (InputComponent != nullptr)
+    {
+        InputComponent->BindAction("move-forward", IE_Pressed, this, &ABaseCharacter::CombatForwardPressed);
+        InputComponent->BindAction("move-forward", IE_Released, this, &ABaseCharacter::CombatForwardReleased);
+        InputComponent->BindAction("move-backwards", IE_Pressed, this, &ABaseCharacter::CombatBackwardsPressed);
+        InputComponent->BindAction("move-backwards", IE_Released, this, &ABaseCharacter::CombatBackwardsReleased);
+        InputComponent->BindAction("move-right", IE_Pressed, this, &ABaseCharacter::CombatRightPressed);
+        InputComponent->BindAction("move-right", IE_Released, this, &ABaseCharacter::CombatRightReleased);
+        InputComponent->BindAction("move-left", IE_Pressed, this, &ABaseCharacter::CombatLeftPressed);
+        InputComponent->BindAction("move-left", IE_Released, this, &ABaseCharacter::CombatLeftReleased);
+
+        InputComponent->BindAxis("move-cursor-up", this, &ABaseCharacter::MoveCursorUp);
+        InputComponent->BindAxis("move-cursor-right", this, &ABaseCharacter::MoveCursorRight);
+
+        InputComponent->BindAction("fire", IE_Pressed, this, &ABaseCharacter::PlayerFired);
+        InputComponent->BindAction("fire", IE_Released, this, &ABaseCharacter::FireReleased);
+    }
+}
+
 //=========================================================================================
 // Input Responders
 //=========================================================================================
@@ -279,6 +344,32 @@ void ABaseCharacter::UpdateHorizontalLookRotation (float delta)
         LimitHorizontalLookRotation();
         UpdateControlRotation();
     }
+}
+
+void ABaseCharacter::MoveCursorUp (float delta)
+{
+#pragma message("This should NOT happen in this class. Should probably be setup as part of the game mode, or something ...")
+    APlayerController* PController = GetWorld()->GetFirstPlayerController();
+    if (PController != nullptr)
+    {
+        FViewport* Viewport = CastChecked<ULocalPlayer>(PController->Player)->ViewportClient->Viewport;
+        if (Viewport != nullptr)
+            Viewport->SetMouse(Viewport->GetMouseX(), Viewport->GetMouseY() + delta);
+    }
+    OnMoveCursorUp (delta);
+}
+
+void ABaseCharacter::MoveCursorRight(float delta)
+{
+#pragma message("This should NOT happen in this class. Should probably be setup as part of the game mode, or something ...")
+    APlayerController* PController = GetWorld()->GetFirstPlayerController();
+    if (PController != nullptr)
+    {
+        FViewport* Viewport = CastChecked<ULocalPlayer>(PController->Player)->ViewportClient->Viewport;
+        if (Viewport != nullptr)
+            Viewport->SetMouse(Viewport->GetMouseX() + delta, Viewport->GetMouseY());
+    }
+    OnMoveCursorRight (delta);
 }
 
 void ABaseCharacter::UpdateControlRotation()

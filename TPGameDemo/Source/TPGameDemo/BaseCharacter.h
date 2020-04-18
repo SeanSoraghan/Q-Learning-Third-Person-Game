@@ -1,6 +1,7 @@
 // Fill out your copyright notice in the Description page of Project Settings.
 
 #pragma once
+#include "TPGameDemoGameMode.h"
 #include "TimelineContainerComponent.h"
 #include "MazeActor.h"
 #include "BaseCharacter.generated.h"
@@ -22,14 +23,6 @@ enum class EControlState : uint8
     Combat  UMETA (DisplayName = "Combat"),
     Explore UMETA (DisplayName = "Explore"),
     NumStates
-};
-
-UENUM(BlueprintType)
-enum class ECameraControlType : uint8
-{
-    RotateCamera  UMETA(DisplayName = "Rotate Camera"),
-    RotatePlayer UMETA(DisplayName = "Rotate Player"),
-    NumTypes
 };
 
 UENUM(BlueprintType)
@@ -136,10 +129,16 @@ public:
     UFUNCTION(BlueprintImplementableEvent, Category = "Base Character Interaction")
         void InteractPressed();
 
-    UPROPERTY(BlueprintReadWrite, EditAnywhere, Category = "Base Character Camera Movement")
-        ECameraControlType CameraControlType = ECameraControlType::RotatePlayer;
+    UFUNCTION(BlueprintImplementableEvent, Category = "Base Character Movement")
+        void OnMoveCursorUp (float delta);
+
+    UFUNCTION(BlueprintImplementableEvent, Category = "Base Character Movement")
+        void OnMoveCursorRight (float delta);
 
     void ControlStateChanged();
+
+    UFUNCTION(BlueprintCallable, Category = "Base Character Movement")
+        ECameraControlType GetCameraControlType();
     //=========================================================================================
     // Camera
     //=========================================================================================
@@ -216,6 +215,7 @@ private:
 
     void SetupCombatMovementControls();
     void SetupExploreMovementControls();
+    void SetupTwinStickControls();
 
     void UpdateMovementForcesForDirectionKey (EMovementDirectionType direction, bool pressed);
 
@@ -251,6 +251,9 @@ private:
 
     void UpdateVerticalLookRotation   (float delta);
     void UpdateHorizontalLookRotation (float delta);
+
+    void MoveCursorUp    (float delta);
+    void MoveCursorRight (float delta);
     
     //=========================================================================================
     // Movement Forces

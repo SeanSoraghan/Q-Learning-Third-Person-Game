@@ -4,7 +4,14 @@
 #include "GameFramework/GameMode.h"
 #include "TPGameDemoGameMode.generated.h"
 
-
+UENUM(BlueprintType)
+enum class ECameraControlType : uint8
+{
+    RotateCamera  UMETA(DisplayName = "Rotate Camera"),
+    RotatePlayer UMETA(DisplayName = "Rotate Player"),
+    TwinStick UMETA(DisplayName = "Twin Stick"),
+    NumTypes
+};
 
 /**
  * 
@@ -38,4 +45,7 @@ public:
 
     UPROPERTY (BlueprintReadWrite, EditAnywhere, Category = "Maze Actor Properties")
         float DefaultMaxHealth = 100.0f;
+
+    UPROPERTY(BlueprintReadWrite, EditAnywhere, Category = "Character Camera Movement")
+        ECameraControlType CameraControlType = ECameraControlType::RotatePlayer;
 };
