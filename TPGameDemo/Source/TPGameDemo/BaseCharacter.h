@@ -180,6 +180,9 @@ public:
     UFUNCTION (BlueprintImplementableEvent, Category = "Base Character Movement")
         void OnPlayerControlRotationUpdated();
 
+    UFUNCTION (BlueprintCallable, Category = "Base Character Movement")
+        void RotateMeshToMousePosition();
+
     UPROPERTY(BlueprintReadOnly, VisibleAnywhere, Category="Base Character Movement")
         EControlState ControlState = EControlState::Explore;
 
@@ -215,7 +218,6 @@ private:
 
     void SetupCombatMovementControls();
     void SetupExploreMovementControls();
-    void SetupTwinStickControls();
 
     void UpdateMovementForcesForDirectionKey (EMovementDirectionType direction, bool pressed);
 

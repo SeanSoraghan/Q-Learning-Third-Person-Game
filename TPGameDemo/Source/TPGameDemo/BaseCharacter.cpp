@@ -37,7 +37,9 @@ void ABaseCharacter::BeginPlay()
 //=========================================================================================
 void ABaseCharacter::Tick (float deltaTime)
 {
-	Super::Tick    (deltaTime);
+	Super::Tick (deltaTime);
+    if (GetCameraControlType() == ECameraControlType::TwinStick && ControlState == EControlState::Combat)
+        RotateMeshToMousePosition();
     UpdateMovement (deltaTime);
 }
 
@@ -151,6 +153,11 @@ void ABaseCharacter::BindInput()
         
         InputComponent->BindAction ("aim", IE_Pressed,  this, &ABaseCharacter::EnterCombatControlMode);
         InputComponent->BindAction ("aim", IE_Released, this, &ABaseCharacter::EnterExploreControlMode);
+        if (GetCameraControlType() == ECameraControlType::TwinStick)
+        {
+            InputComponent->BindAxis("move-cursor-up", this, &ABaseCharacter::MoveCursorUp);
+            InputComponent->BindAxis("move-cursor-right", this, &ABaseCharacter::MoveCursorRight);
+        }
         InputComponent->BindAction ("interact", IE_Pressed, this, &ABaseCharacter::InteractPressed);
         InputComponent->BindAction("follow-camera-zoom-out", IE_Pressed, this, &ABaseCharacter::ZoomOut);
         InputComponent->BindAction("follow-camera-zoom-in", IE_Pressed, this, &ABaseCharacter::ZoomIn);
@@ -177,14 +184,11 @@ void ABaseCharacter::EnterCombatControlMode()
             //HorizontalLookRotation = DefaultLookCombatRotation.Yaw;
             UpdateControlRotation();
             TimelineContainer->Timeline->PlayFromStart();
-
-            BindInput();
             break;
         }
         case ECameraControlType::RotatePlayer:
         {
             GetMesh()->SetRelativeRotation(DefaultMeshRotation);
-            BindInput();
             break;
         }
         case ECameraControlType::TwinStick:
@@ -193,7 +197,7 @@ void ABaseCharacter::EnterCombatControlMode()
         }
         default: break;
     }
-
+    BindInput();
     ControlStateChanged();
 }
 
@@ -209,13 +213,10 @@ void ABaseCharacter::EnterExploreControlMode()
             //VerticalLookRotation = DefaultLookExploreRotation.Pitch;
             //HorizontalLookRotation = DefaultLookExploreRotation.Yaw;
             UpdateControlRotation();
-
-            BindInput();
             break;
         }
         case ECameraControlType::RotatePlayer:
         {
-            BindInput();
             break;
         }
         case ECameraControlType::TwinStick:
@@ -224,39 +225,24 @@ void ABaseCharacter::EnterExploreControlMode()
         }
         default: break;
     }
-
+    BindInput();
     ControlStateChanged();
 }
 
 void ABaseCharacter::UpdateMovementControls()
 {
-    switch (GetCameraControlType())
+    switch (ControlState)
     {
-        /*Intentional fallthrough*/
-        case ECameraControlType::RotateCamera:
-        case ECameraControlType::RotatePlayer:
+        case EControlState::Explore:
         {
-            switch (ControlState)
-            {
-                case EControlState::Explore:
-                {
-                    SetupExploreMovementControls();
-                    break;
-                }
-                case EControlState::Combat:
-                {
-                    SetupCombatMovementControls();
-                    break;
-                }
-            }
+            SetupExploreMovementControls();
             break;
         }
-        case ECameraControlType::TwinStick:
+        case EControlState::Combat:
         {
-            SetupTwinStickControls();
+            SetupCombatMovementControls();
             break;
         }
-        default: break;
     }
 }
 
@@ -273,8 +259,11 @@ void ABaseCharacter::SetupCombatMovementControls()
         InputComponent->BindAction ("move-left",      IE_Pressed,  this, &ABaseCharacter::CombatLeftPressed);
         InputComponent->BindAction ("move-left",      IE_Released, this, &ABaseCharacter::CombatLeftReleased);
 
-        InputComponent->BindAxis   ("look-up",    this, &ABaseCharacter::UpdateVerticalLookRotation);
-        InputComponent->BindAxis   ("look-right", this, &ABaseCharacter::UpdateHorizontalLookRotation);
+        if (GetCameraControlType() != ECameraControlType::TwinStick)
+        {
+            InputComponent->BindAxis("look-up", this, &ABaseCharacter::UpdateVerticalLookRotation);
+            InputComponent->BindAxis("look-right", this, &ABaseCharacter::UpdateHorizontalLookRotation);
+        }
 
         InputComponent->BindAction ("fire", IE_Pressed, this, &ABaseCharacter::PlayerFired);
         InputComponent->BindAction ("fire", IE_Released, this, &ABaseCharacter::FireReleased);
@@ -297,29 +286,11 @@ void ABaseCharacter::SetupExploreMovementControls()
         InputComponent->BindAction ("map-view",       IE_Pressed,  this, &ABaseCharacter::MapViewPressed);
         InputComponent->BindAction ("map-view",       IE_Released, this, &ABaseCharacter::MapViewReleased);
 
-        InputComponent->BindAxis   ("look-right", this, &ABaseCharacter::UpdateHorizontalLookRotation);
+        if (GetCameraControlType() != ECameraControlType::TwinStick)
+        {
+            InputComponent->BindAxis("look-right", this, &ABaseCharacter::UpdateHorizontalLookRotation);
+        }
         InputComponent->BindAxis   ("follow-camera-zoom", this, &ABaseCharacter::UpdateFollowCameraPosition);
-    }
-}
-
-void ABaseCharacter::SetupTwinStickControls()
-{
-    if (InputComponent != nullptr)
-    {
-        InputComponent->BindAction("move-forward", IE_Pressed, this, &ABaseCharacter::CombatForwardPressed);
-        InputComponent->BindAction("move-forward", IE_Released, this, &ABaseCharacter::CombatForwardReleased);
-        InputComponent->BindAction("move-backwards", IE_Pressed, this, &ABaseCharacter::CombatBackwardsPressed);
-        InputComponent->BindAction("move-backwards", IE_Released, this, &ABaseCharacter::CombatBackwardsReleased);
-        InputComponent->BindAction("move-right", IE_Pressed, this, &ABaseCharacter::CombatRightPressed);
-        InputComponent->BindAction("move-right", IE_Released, this, &ABaseCharacter::CombatRightReleased);
-        InputComponent->BindAction("move-left", IE_Pressed, this, &ABaseCharacter::CombatLeftPressed);
-        InputComponent->BindAction("move-left", IE_Released, this, &ABaseCharacter::CombatLeftReleased);
-
-        InputComponent->BindAxis("move-cursor-up", this, &ABaseCharacter::MoveCursorUp);
-        InputComponent->BindAxis("move-cursor-right", this, &ABaseCharacter::MoveCursorRight);
-
-        InputComponent->BindAction("fire", IE_Pressed, this, &ABaseCharacter::PlayerFired);
-        InputComponent->BindAction("fire", IE_Released, this, &ABaseCharacter::FireReleased);
     }
 }
 
@@ -349,27 +320,33 @@ void ABaseCharacter::UpdateHorizontalLookRotation (float delta)
 void ABaseCharacter::MoveCursorUp (float delta)
 {
 #pragma message("This should NOT happen in this class. Should probably be setup as part of the game mode, or something ...")
-    APlayerController* PController = GetWorld()->GetFirstPlayerController();
-    if (PController != nullptr)
+    if (delta != 0.0f)
     {
-        FViewport* Viewport = CastChecked<ULocalPlayer>(PController->Player)->ViewportClient->Viewport;
-        if (Viewport != nullptr)
-            Viewport->SetMouse(Viewport->GetMouseX(), Viewport->GetMouseY() + delta);
+        APlayerController* PController = GetWorld()->GetFirstPlayerController();
+        if (PController != nullptr)
+        {
+            FViewport* Viewport = CastChecked<ULocalPlayer>(PController->Player)->ViewportClient->Viewport;
+            if (Viewport != nullptr)
+                Viewport->SetMouse(Viewport->GetMouseX(), Viewport->GetMouseY() + delta);
+        }
+        OnMoveCursorUp(delta);
     }
-    OnMoveCursorUp (delta);
 }
 
 void ABaseCharacter::MoveCursorRight(float delta)
 {
 #pragma message("This should NOT happen in this class. Should probably be setup as part of the game mode, or something ...")
-    APlayerController* PController = GetWorld()->GetFirstPlayerController();
-    if (PController != nullptr)
+    if (delta != 0.0f)
     {
-        FViewport* Viewport = CastChecked<ULocalPlayer>(PController->Player)->ViewportClient->Viewport;
-        if (Viewport != nullptr)
-            Viewport->SetMouse(Viewport->GetMouseX() + delta, Viewport->GetMouseY());
+        APlayerController* PController = GetWorld()->GetFirstPlayerController();
+        if (PController != nullptr)
+        {
+            FViewport* Viewport = CastChecked<ULocalPlayer>(PController->Player)->ViewportClient->Viewport;
+            if (Viewport != nullptr)
+                Viewport->SetMouse(Viewport->GetMouseX() + delta, Viewport->GetMouseY());
+        }
+        OnMoveCursorRight(delta);
     }
-    OnMoveCursorRight (delta);
 }
 
 void ABaseCharacter::UpdateControlRotation()
@@ -380,6 +357,22 @@ void ABaseCharacter::UpdateControlRotation()
     if (GetController() != nullptr)
         GetController()->SetControlRotation (newLookRotation);
     OnPlayerControlRotationUpdated();
+}
+
+void ABaseCharacter::RotateMeshToMousePosition()
+{
+    APlayerController* PController = GetWorld()->GetFirstPlayerController();
+    if (PController != nullptr)
+    {
+        FVector MouseWorldLocation;
+        FVector Direction;
+        PController->DeprojectMousePositionToWorld(MouseWorldLocation, Direction);
+        MouseWorldLocation += Direction * 1000.0f;
+        FVector ActorLocation = GetActorLocation();
+        MouseWorldLocation.Z = ActorLocation.Z;
+        FRotator Rotator = UKismetMathLibrary::FindLookAtRotation(ActorLocation, MouseWorldLocation);
+        GetMesh()->SetRelativeRotation((Rotator + DefaultMeshRotation).Quaternion());
+    }
 }
 
 void ABaseCharacter::CombatDirectionPressed (EMovementDirectionType direction)
