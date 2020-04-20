@@ -857,6 +857,17 @@ int ATPGameDemoGameState::GetNumRoomsOnPerimeter()
     return CurrentPerimeter * 8;
 }
 
+int ATPGameDemoGameState::GetNumRoomsOnPerimeterSide()
+{
+#pragma message("Assumes square rooms")
+    return 3 + (CurrentPerimeter - 1) * 2;
+}
+
+int ATPGameDemoGameState::GetPerimeterSideLength()
+{
+#pragma message("Assumes square rooms")
+    return GetNumRoomsOnPerimeterSide() * NumGridUnitsX * GridUnitLengthXCM;
+}
 //Should call this in tick room update, if the room in question is connected. That would probably require managing an array of connected perimeter rooms, 
 // so we could then check if the room is contained first before adding it. 
 void ATPGameDemoGameState::RoomWasConnected(FIntPoint roomCoords)

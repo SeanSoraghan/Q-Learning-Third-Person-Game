@@ -496,6 +496,17 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "World Rooms States")
 		void ConnectPerimeterRooms();
 
+    UFUNCTION(BlueprintCallable, Category = "World Perimeter State")
+    int GetNumRoomsOnPerimeter();
+
+    /** Assumes square rooms */
+    UFUNCTION(BlueprintCallable, Category = "World Perimeter State")
+    int GetNumRoomsOnPerimeterSide();
+
+    /** Assumes square rooms */
+    UFUNCTION(BlueprintCallable, Category = "World Perimeter State")
+    int GetPerimeterSideLength();
+
     // --------------------- Door Interaction -------------------------------------
 
     UFUNCTION(BlueprintCallable, Category = "Door Interaction")
@@ -589,7 +600,6 @@ private:
 
     int CurrentPerimeter = 1;
     int NumPerimeterRoomsConnected = 0;
-    int GetNumRoomsOnPerimeter();
     void RoomWasConnected(FIntPoint roomCoords);
     void LockDoorIfOnPerimeter(FIntPoint roomCoords);
     void UnlockPerimeterDoors();
