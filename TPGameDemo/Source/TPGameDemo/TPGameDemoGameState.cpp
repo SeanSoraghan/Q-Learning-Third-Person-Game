@@ -651,6 +651,20 @@ void ATPGameDemoGameState::RegisterPerimeterCompleteCallback(const FOnPerimeterC
     });
 }
 
+void ATPGameDemoGameState::RegisterEnemiesPausedCallback(const FOnEnemiesPausedChanged& Callback)
+{
+    EnemiesPausedChanged.AddLambda([Callback]()
+    {
+        Callback.ExecuteIfBound();
+    });
+}
+void ATPGameDemoGameState::SetEnemyMovementPaused(bool MovementPaused)
+{
+    const bool PausedStateChanged = (EnemyMovementPaused != MovementPaused);
+    EnemyMovementPaused = MovementPaused;
+    if (PausedStateChanged)
+        EnemiesPausedChanged.Broadcast();
+}
 //============================================================================
 //============================================================================
 

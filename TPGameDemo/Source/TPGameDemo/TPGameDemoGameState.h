@@ -256,6 +256,8 @@ DECLARE_EVENT(ATPGameDemoGameState, SignalLostEvent);
 DECLARE_DYNAMIC_DELEGATE(FOnSignalLost);
 DECLARE_EVENT(ATPGameDemoGameState, PerimeterCompleteEvent);
 DECLARE_DYNAMIC_DELEGATE(FOnPerimeterComplete);
+DECLARE_EVENT(ATPGameDemoGameState, EnemiesPausedChangedEvent);
+DECLARE_DYNAMIC_DELEGATE(FOnEnemiesPausedChanged);
 
 /**
  * 
@@ -524,7 +526,8 @@ public:
         void RegisterSignalLostCallback(const FOnSignalLost& Callback);
     UFUNCTION(BlueprintCallable, Category = "World Perimeter State")
         void RegisterPerimeterCompleteCallback(const FOnPerimeterComplete& Callback);
-
+    UFUNCTION(BlueprintCallable, Category = "World Perimeter State")
+        void RegisterEnemiesPausedCallback(const FOnEnemiesPausedChanged& Callback);
     //============================================================================
     // Properties
     //============================================================================
@@ -554,6 +557,14 @@ public:
     UPROPERTY(BlueprintReadWrite, EditAnywhere, Category = "World Room Health")
         float MaxSignalStrength = 100.0f;
 
+    //============================================================================
+    // Enemy Movement
+    //============================================================================        
+    UFUNCTION(BlueprintCallable, Category = "Enemy Movement")
+        void SetEnemyMovementPaused(bool MovementPaused);
+
+    UPROPERTY(BlueprintReadOnly, EditAnywhere, Category = "Enemy Movement")
+        bool EnemyMovementPaused = false;
 
 private:
     TArray<TArray<ARoomBuilder*>> RoomBuilders;
@@ -566,6 +577,8 @@ private:
     TArray<TArray<TargetMapsArray>> WorldBehaviourMaps;
     bool LevelPoliciesDirFound = false;
 
+    EnemiesPausedChangedEvent EnemiesPausedChanged;
+    
     // An unwrapped '2d' array containing An FDirectionSet for each space in the maze,
     // indicating if a buildable has been placed facing each direction.
     // (This is mainly applicable to turrets attached to walls).
