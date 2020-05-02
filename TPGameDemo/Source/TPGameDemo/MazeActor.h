@@ -96,10 +96,7 @@ public:
         bool WasOnGridEdge() const;
 
     UFUNCTION(BlueprintCallable, Category = "Maze Actor Impulse")
-        void AddImpulseForce(FVector Direction, float normedForce);
-
-    UPROPERTY(BlueprintReadWrite, EditAnywhere, Category = "Maze Actor Impulse")
-        float ImpulseForceOverTimeSeconds = 0.5f;
+        void AddImpulseForce(FVector direction, float duration, float normedForce = 1.0f);
 
     UFUNCTION(BlueprintCallable, Category = "Maze Actor Impulse")
         bool UndergoingImpulse() const;
@@ -126,5 +123,6 @@ private:
     float CurrentImpulseStrength = 0.0f;
     float InitialImpulseStrength = 0.0f;
     float SecondsSinceLastImpulse = 0.0f;
+    float CurrentImpulseDuration = 0.0f;
     void UpdateImpulseStrength(float deltaTime);
 };

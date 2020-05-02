@@ -173,10 +173,11 @@ bool AMazeActor::WasOnGridEdge() const
     return false;
 }
 
-void AMazeActor::AddImpulseForce(FVector Direction, float normedForce)
+void AMazeActor::AddImpulseForce(FVector direction, float duration, float normedForce)
 {
     GetCharacterMovement()->SetMovementMode(ImpulseMovement);
-    ImpulseDirection = Direction;
+    ImpulseDirection = direction;
+    CurrentImpulseDuration = duration;
     InitialImpulseStrength = FMath::Clamp(normedForce, -1.0f, 1.0f);
     CurrentImpulseStrength = InitialImpulseStrength;
     SecondsSinceLastImpulse = 0.0f;
@@ -185,7 +186,7 @@ void AMazeActor::AddImpulseForce(FVector Direction, float normedForce)
 void AMazeActor::UpdateImpulseStrength(float deltaTime)
 {
     SecondsSinceLastImpulse = SecondsSinceLastImpulse + deltaTime;
-    float animPos = FMath::Loge(9.0f * (SecondsSinceLastImpulse / ImpulseForceOverTimeSeconds) + 1.0f);
+    float animPos = FMath::Loge(9.0f * (SecondsSinceLastImpulse / CurrentImpulseDuration) + 1.0f);
     if (animPos >= 1.0f)
     {
         CurrentImpulseStrength = 0.0f;
