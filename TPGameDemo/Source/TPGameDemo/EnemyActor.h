@@ -114,8 +114,6 @@ public:
 	UPROPERTY(BlueprintReadOnly, VisibleAnywhere, Category = "Enemy Movement")
         FVector MovementTarget = FVector::ZeroVector;
     UPROPERTY(BlueprintReadWrite, EditAnywhere, Category = "Enemy Movement")
-        float MovementSpeed = 1.0f;
-    UPROPERTY(BlueprintReadWrite, EditAnywhere, Category = "Enemy Movement")
         float RotationSpeed = 0.1f;
 
 private:

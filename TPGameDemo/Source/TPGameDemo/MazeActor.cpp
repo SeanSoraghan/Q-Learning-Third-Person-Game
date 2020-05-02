@@ -144,6 +144,11 @@ void AMazeActor::Tick( float DeltaTime )
 {
 	Super::Tick( DeltaTime );
     UpdatePosition();
+    if (UndergoingImpulse())
+    {
+        UpdateImpulseStrength(DeltaTime);
+        AddMovementInput(ImpulseDirection, CurrentImpulseStrength);
+    }
 }
 
 bool AMazeActor::IsOnGridEdge() const
@@ -167,6 +172,32 @@ bool AMazeActor::WasOnGridEdge() const
     }
     return false;
 }
+
+void AMazeActor::AddImpulseForce(FVector Direction, float normedForce)
+{
+    GetCharacterMovement()->SetMovementMode(ImpulseMovement);
+    ImpulseDirection = Direction;
+    InitialImpulseStrength = FMath::Clamp(normedForce, -1.0f, 1.0f);
+    CurrentImpulseStrength = InitialImpulseStrength;
+    SecondsSinceLastImpulse = 0.0f;
+}
+
+void AMazeActor::UpdateImpulseStrength(float deltaTime)
+{
+    SecondsSinceLastImpulse = SecondsSinceLastImpulse + deltaTime;
+    float animPos = FMath::Loge(9.0f * (SecondsSinceLastImpulse / ImpulseForceOverTimeSeconds) + 1.0f);
+    if (animPos >= 1.0f)
+    {
+        CurrentImpulseStrength = 0.0f;
+        GetCharacterMovement()->SetMovementMode(EMovementMode::MOVE_Walking);
+    }
+    else
+    {
+        CurrentImpulseStrength = FMath::Lerp(InitialImpulseStrength, 0.0f, animPos);
+    }
+}
+
+bool AMazeActor::UndergoingImpulse() const { return GetCharacterMovement()->MovementMode == ImpulseMovement; }
 
 void AMazeActor::PositionChanged(){}
 void AMazeActor::RoomCoordsChanged(){}

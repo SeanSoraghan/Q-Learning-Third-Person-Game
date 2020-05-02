@@ -25,8 +25,11 @@ For example, the player character will broadcast when their position has changed
 UCLASS()
 class TPGAMEDEMO_API AMazeActor : public ACharacter
 {
-	GENERATED_BODY()
-	
+    GENERATED_BODY()
+
+    // Hijacking the flying movement mode to implement knockback movement.
+    static const EMovementMode ImpulseMovement = EMovementMode::MOVE_Flying;
+
 public:	
 	// Sets default values for this actor's properties
 	AMazeActor (const FObjectInitializer& ObjectInitializer);
@@ -92,6 +95,15 @@ public:
     UFUNCTION(BlueprintCallable, Category = "Maze Actor Position")
         bool WasOnGridEdge() const;
 
+    UFUNCTION(BlueprintCallable, Category = "Maze Actor Impulse")
+        void AddImpulseForce(FVector Direction, float normedForce);
+
+    UPROPERTY(BlueprintReadWrite, EditAnywhere, Category = "Maze Actor Impulse")
+        float ImpulseForceOverTimeSeconds = 0.5f;
+
+    UFUNCTION(BlueprintCallable, Category = "Maze Actor Impulse")
+        bool UndergoingImpulse() const;
+
     FIntPoint GetPreviousRoomCoords() const { return PreviousRoomCoords; }
 
 private:
@@ -108,4 +120,11 @@ private:
     int PreviousGridYPosition         = 0;
     FIntPoint PreviousRoomCoords      = FIntPoint(0,0);
     bool bOccupyCells = true;
+
+    /** An impulse direction that is used to add impulse force every frame when the actor takes impulses */
+    FVector ImpulseDirection = FVector::ZeroVector;
+    float CurrentImpulseStrength = 0.0f;
+    float InitialImpulseStrength = 0.0f;
+    float SecondsSinceLastImpulse = 0.0f;
+    void UpdateImpulseStrength(float deltaTime);
 };

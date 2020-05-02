@@ -52,7 +52,8 @@ void AEnemyActor::Tick( float DeltaTime )
     FRotator CurrentRotation = GetActorForwardVector().Rotation();
     FRotator ToTarget = UKismetMathLibrary::NormalizedDeltaRotator(CurrentRotation, MovementVector.Rotation());
     SetActorRotation (UKismetMathLibrary::RLerp(CurrentRotation, MovementVector.Rotation(), RotationSpeed/*Linear*/, true));
-    AddMovementInput(MovementVector * MovementSpeed);
+    if (!(UndergoingImpulse()))
+        AddMovementInput(MovementVector);
 }
 
 bool AEnemyActor::HasReachedTargetRoom() const
