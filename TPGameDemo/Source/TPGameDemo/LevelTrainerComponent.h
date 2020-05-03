@@ -92,7 +92,8 @@ private:
 
     BehaviourMap GetBehaviourMap();
     void ClearEnvironment();
-	TArray<TArray<NavigationState>> Environment;
+    NavigationEnvironment Environment;
+    RoomTargetsNavSets NavSets;
     void InitTrainerThread();
     void TrainNextGoalPosition(int numSimulationsPerStartingPosition, int maxNumActionsPerSimulation);
     // Simulate a run through the while keepting track of the average deltaQ and the num actions taken. (these will be used to measure convergence)
@@ -100,7 +101,6 @@ private:
     void IncrementGoalPosition();
     FThreadSafeCounter TrainingPosition = 0;
     FThreadSafeCounter MaxTrainingPosition = 0;
-    NavigationState& GetState(FIntPoint statePosition);
     FIntPoint CurrentGoalPosition {0,0};
 
     LevelTrainedEvent OnLevelTrained;

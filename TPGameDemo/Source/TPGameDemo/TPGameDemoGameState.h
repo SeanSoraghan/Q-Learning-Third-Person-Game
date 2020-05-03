@@ -9,220 +9,6 @@
 #include <memory>
 #include "TPGameDemoGameState.generated.h"
 
-UENUM(BlueprintType)
-enum class EQuadrantType : uint8
-{
-    NorthEast,
-    SouthEast,
-    SouthWest,
-    NorthWest,
-    NumQuadrants
-};
-
-UENUM(BlueprintType)
-enum class EDoorState : uint8
-{
-    Open,
-    Closed,
-    Locked,
-    Opening,
-    Closing,
-    NumStates
-};
-
-//====================================================================================================
-// NavigationState State
-//====================================================================================================
-
-namespace GridTrainingConstants
-{
-    static const float GoalReward = 1.0f;
-    static const float MovementCost = -0.04f;
-    static const float LearningRate = 0.5f;
-    static const float DiscountFactor = 0.9f;
-};
-
-/* QLearning qvalues, rewards, and action targets, for a position in a room. Actions are North, East, South, West. Action targets are FIntPoint positions. */
-class NavigationState
-{
-public:
-    const TArray<float> GetQValues() const;
-    const TArray<float> GetRewards() const;
-
-    const float GetOptimalQValueAndActions(FDirectionSet& Actions) const;
-
-    void UpdateQValue(EDirectionType actionType, float deltaQ);
-    void ResetQValues();
-
-    void SetIsGoal(bool isGoal);
-    bool IsGoalState() const;
-
-    FIntPoint GetActionTarget(EDirectionType actionType) const;
-
-    void SetValid(bool valid);
-    bool IsStateValid();
-
-    void SetActionTarget(EDirectionType actionType, FIntPoint position);
-private:
-    bool IsGoal = false;
-    bool IsValid = true;
-    TArray<float> ActionQValues{ 0.0f, 0.0f, 0.0f, 0.0f };
-    TArray<float> ActionRewards{ GridTrainingConstants::MovementCost, GridTrainingConstants::MovementCost,
-                                 GridTrainingConstants::MovementCost, GridTrainingConstants::MovementCost };
-    TArray<FIntPoint> ActionTargets{ {0,0}, {0,0}, {0,0}, {0,0} };
-};
-
-struct WallState
-{
-
-    WallState(){}
-    ~WallState(){}
-
-    void InitializeWall()
-    {
-        bWallExists = true;
-        bDoorExists = true;
-    }
-
-    void DisableWall()
-    {
-        bWallExists = false;
-        bDoorExists = false;
-    }
-
-    void InitializeDoor()
-    {
-        bDoorExists = true;
-    }
-
-    void DisableDoor()
-    {
-        if (DoorState != EDoorState::Locked)
-        {
-            DoorState = EDoorState::Open;
-            bDoorExists = false;
-        }
-    }
-
-    void LockDoor()
-    {
-        DoorState = EDoorState::Locked;
-    }
-
-    void UnlockDoor()
-    {
-        DoorState = EDoorState::Closed;
-    }
-
-    bool HasDoor() const
-    {
-        return DoorPosition != -1;
-    }
-
-    void GenerateRandomDoorPosition(int doorPositionMax)
-    {
-        DoorPosition = FMath::RandRange(1, doorPositionMax);
-    }
-
-    EDoorState DoorState = EDoorState::Closed;
-    int DoorPosition = -1;
-    bool bWallExists = false;
-    bool bDoorExists = false;
-};
-
-// The game state manages a 2D array of WallStateCouple structs that is the same size as the 2D rooms array.
-struct WallStateCouple
-{
-    WallState WestWall;
-    WallState SouthWall;
-};
-
-struct RoomState
-{
-    enum Status : uint8
-    {
-        Dead,
-        Training,
-        Trained,
-        Connected
-    };
-
-    RoomState(){}
-
-    RoomState(FIntPoint roomDimensions)
-    {
-        for (int x = 0; x < roomDimensions.X; ++x)
-        {
-            TArray<FThreadSafeCounter> states;
-            states.AddDefaulted(roomDimensions.Y);
-            TileActorCounters.Add(states);
-        }
-    }
-
-    ~RoomState()
-    {}
-
-    void InitializeRoom(float health, float complexity = 0.0f, float density = 0.0f)
-    {
-        RoomStatus = Training;
-        TrainingProgress = 0.0f;
-        RoomHealth = health;
-        Complexity = complexity;
-        Density = density;
-    }
-
-    void SetRoomTrained()
-    {
-        RoomStatus = Trained;
-    }
-
-    void DisableRoom();
-    
-
-    void SetRoomConnected()
-    {
-        RoomStatus = Connected;
-    }
-
-    bool RoomExists() const
-    {
-        return RoomStatus != Dead;
-    }
-
-    bool IsRoomConnected() const
-    {
-        return RoomStatus == Connected;
-    }
-
-    bool TileIsEmpty(FIntPoint TilePosition) const
-    {
-        return TileActorCounters[TilePosition.X][TilePosition.Y].GetValue() == 0;
-    }
-
-    void ActorEnteredTilePosition(FIntPoint TilePosition)
-    {
-        TileActorCounters[TilePosition.X][TilePosition.Y].Increment();
-    }
-
-    void ActorExitedTilePosition(FIntPoint TilePosition)
-    {
-        TileActorCounters[TilePosition.X][TilePosition.Y].Decrement();
-    }
-
-    void FillNavigationStateForLevel(TArray<TArray<int>> LevelStructure);
-
-    float RoomHealth = 100.0f;
-    float Complexity = 0.0f;
-    float Density = 0.0f;
-    Status RoomStatus = Dead;
-    float TrainingProgress = 0.0f;
-    FIntPoint SignalPoint = FIntPoint(-1,-1);
-    /** Count of the number of actors occupying each grid position in the room. */
-    TArray<TArray<FThreadSafeCounter>> TileActorCounters;
-    /** Navigation state for each position in room */
-    TArray<TArray<NavigationState>> PositionNavStates;
-};
-
 /**
  * 
  */
@@ -364,7 +150,8 @@ public:
         bool IsBuildableItemPlaced(FRoomPositionPair roomAndPosition, EDirectionType direction);
 
     // --------------------- room properties -------------------------------------
-    const TArray<TArray<NavigationState>>& GetRoomNavigationState(FIntPoint RoomCoords);
+    const RoomTargetsNavSets& GetRoomNavSets(FIntPoint roomCoords);
+    const NavigationSet& GetRoomNavigationSetForTargetPosition(FIntPoint roomCoords, FIntPoint targetPosition);
 
     UFUNCTION(BlueprintCallable, Category = "World Rooms States")
         bool DoesRoomExist(FIntPoint roomCoords) const;
@@ -440,7 +227,7 @@ public:
             [currentGridPosition.X][currentGridPosition.Y];
     }
 
-    BehaviourMap GetBehaviourMap(FIntPoint roomCoords, FIntPoint targetGridPosition)
+    BehaviourMap& GetBehaviourMap(FIntPoint roomCoords, FIntPoint targetGridPosition)
     {
         FIntPoint indices = GetRoomXYIndicesChecked(roomCoords);
         return WorldBehaviourMaps[indices.X][indices.Y]
@@ -528,9 +315,13 @@ public:
     UFUNCTION(BlueprintCallable, Category = "World Rooms Training")
         void SetRoomTrained(FIntPoint roomCoords);
 
-    void UpdateRoomNavigationStateForLevel(FIntPoint roomCoords, TArray<TArray<int>> levelStructure);
-
-    void SetRoomNavigationState(FIntPoint RoomCoords, const TArray<TArray<NavigationState>>& navState);
+    /* Update the qvalue for an action from a given position in a given room. Return true if the action leads somewhere. */
+    bool SimulateAction(FRoomPositionPair roomAndPosition, EDirectionType actionToTake, FIntPoint targetPosition);
+    /* Set the action targets for the room, given the cell state structure */
+    void UpdateRoomNavEnvironmentForStructure(FIntPoint roomCoords, TArray<TArray<int>> roomStructure);
+    void UpdateRoomNavEnvironment(FIntPoint roomCoords, const NavigationEnvironment& navEnvironment);
+    /* Set the navigation set for a target position in a room. */
+    void SetRoomNavigationSet(FIntPoint RoomCoords, FIntPoint targetPosition, const NavigationSet& navSet);
 
     UFUNCTION(BlueprintCallable, Category = "World Rooms States")
         void EnableWallState(FIntPoint roomCoords, EDirectionType wallType);
@@ -623,6 +414,11 @@ private:
     TArray<TArray<AWallBuilder*>> WallBuilders;
 	TArray<TArray<RoomState>> RoomStates;
     TArray<TArray<WallStateCouple>> WallStates;
+
+    NavigationEnvironment& GetNavEnvironment(FIntPoint roomCoords);
+    NavPositionState& GetNavPositionState(FRoomPositionPair roomAndPosition);
+    NavigationSet& GetNavSet(FIntPoint roomCoords, FIntPoint targetPosition);
+    NavigationState& GetNavState(FRoomPositionPair roomAndPosition, FIntPoint targetPosition);
 
     // A 2D array (each room in the world) of 2D arrays (each target position in the room) 
     // of 2D arrays (the optimal action at each position)

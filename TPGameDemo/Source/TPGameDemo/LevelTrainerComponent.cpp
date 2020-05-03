@@ -128,11 +128,6 @@ void ULevelTrainerComponent::TickComponent( float DeltaTime, ELevelTick TickType
     if (LevelTrained)
     {
         while(TrainerRunnable.IsValid() && TrainerRunnable->IsTraining){}            
-        ATPGameDemoGameState * gameState = (ATPGameDemoGameState*)(GetWorld()->GetGameState());
-        if (gameState != nullptr)
-        {
-            gameState->SetRoomNavigationState(RoomCoords, Environment);
-        }
         OnLevelTrained.Broadcast();
         LevelTrained = false;
     }
@@ -185,11 +180,12 @@ void ULevelTrainerComponent::UpdateEnvironmentForLevel(FString levelName)
     const int sizeX = LevelStructure.Num();
     const int sizeY = LevelStructure[0].Num();
     MaxTrainingPosition.Set(sizeX * sizeY - 1.0f);
+    Environment = GetNavigationEnvironmentForRoom(LevelStructure);
     ATPGameDemoGameState* gameState = (ATPGameDemoGameState*)(GetWorld()->GetGameState());
     if (gameState != nullptr)
     {
-        gameState->UpdateRoomNavigationStateForLevel(RoomCoords, LevelStructure);
-        Environment = gameState->GetRoomNavigationState(RoomCoords);
+        NavSets = gameState->GetRoomNavSets(RoomCoords);
+        gameState->UpdateRoomNavEnvironment(RoomCoords, Environment);
     }
 }
 
@@ -197,14 +193,14 @@ void ULevelTrainerComponent::TrainNextGoalPosition(int numSimulationsPerStarting
 {
     ClearEnvironment();
     float maxGoalDistance = sqrt(pow((Environment.Num() - 1), 2.0f) + pow((Environment[0].Num() - 1), 2.0f));
-    if (GetState(CurrentGoalPosition).IsStateValid())
+    if (GetPosState(Environment, CurrentGoalPosition).IsStateValid())
     {
-        GetState(CurrentGoalPosition).SetIsGoal(true);
+        GetPosState(Environment, CurrentGoalPosition).SetIsGoal(true);
         for(int x = 0; x < Environment.Num(); ++x)
         {
             for(int y = 0; y < Environment[0].Num(); ++y)
             {
-                if (GetState(FIntPoint(x, y)).IsStateValid() && FIntPoint(x, y) != CurrentGoalPosition)
+                if (GetPosState(Environment, FIntPoint(x, y)).IsStateValid() && FIntPoint(x, y) != CurrentGoalPosition)
                 {
                     bool deltaQConverged = false;
                     int s = 0;
@@ -233,12 +229,13 @@ void ULevelTrainerComponent::TrainNextGoalPosition(int numSimulationsPerStarting
             ATPGameDemoGameState* gameState = (ATPGameDemoGameState*)(world->GetGameState());
             if (gameState != nullptr)
             {
+                gameState->SetRoomNavigationSet(RoomCoords, CurrentGoalPosition, GetRoomNavSet(NavSets, CurrentGoalPosition));
                 gameState->SetBehaviourMap(RoomCoords, CurrentGoalPosition, envArray);
             }
         }
 #pragma message("move this to save function in game state.")
         LevelBuilderHelpers::WriteArrayToTextFile(envArray, CurrentPositionFileName);
-        GetState(CurrentGoalPosition).SetIsGoal(false);
+        GetPosState(Environment, CurrentGoalPosition).SetIsGoal(false);
     }
     IncrementGoalPosition();
 }
@@ -260,9 +257,9 @@ BehaviourMap ULevelTrainerComponent::GetBehaviourMap()
             outArray[x].Add(FDirectionSet());
             FDirectionSet& directionSet = outArray[x][y];
             directionSet.Clear();
-            if (GetState(FIntPoint(x, y)).IsStateValid())
+            if (GetPosState(Environment, FIntPoint(x, y)).IsStateValid())
             {
-                GetState(FIntPoint(x, y)).GetOptimalQValueAndActions(directionSet);
+                GetNavStateForGoalPosition(NavSets, CurrentGoalPosition, FIntPoint(x, y)).GetOptimalQValueAndActions(directionSet);
                 ensure(directionSet.IsValid());
             }
         }
@@ -276,23 +273,24 @@ void ULevelTrainerComponent::ClearEnvironment()
     {
         for(int y = 0; y < Environment[0].Num(); ++y)
         {
-            GetState(FIntPoint(x,y)).ResetQValues();
+            NavigationState& navState = GetNavStateForGoalPosition(NavSets, CurrentGoalPosition, FIntPoint(x, y));
+            navState.ResetQValues();
             // Move in from edges if on an edge.
             if (x == 0)
             {
-                GetState(FIntPoint(x,y)).UpdateQValue(EDirectionType::North, 100.0f);
+                navState.UpdateQValue(EDirectionType::North, 100.0f);
             }
             else if (y == 0)
             {
-                GetState(FIntPoint(x,y)).UpdateQValue(EDirectionType::East, 100.0f);
+                navState.UpdateQValue(EDirectionType::East, 100.0f);
             }
             else if (x == Environment.Num() - 1)
             {
-                GetState(FIntPoint(x,y)).UpdateQValue(EDirectionType::South, 100.0f);
+                navState.UpdateQValue(EDirectionType::South, 100.0f);
             }
             else if (y == Environment[0].Num() - 1)
             {
-                GetState(FIntPoint(x,y)).UpdateQValue(EDirectionType::West, 100.0f);
+                navState.UpdateQValue(EDirectionType::West, 100.0f);
             }
         }
     }
@@ -303,27 +301,28 @@ void ULevelTrainerComponent::SimulateRun(FIntPoint startingStatePosition, int ma
     numActionsTaken = 0;
     averageDeltaQ = 0.0f;
     bool goalReached = false;
-    if (GetState(startingStatePosition).IsGoalState())
+    if (GetPosState(Environment, startingStatePosition).IsGoalState())
         goalReached = true;
     FIntPoint currentPosition = startingStatePosition;
     while (numActionsTaken < maxNumActions && !goalReached)
     {
         FDirectionSet optimalActions;
-        NavigationState& currentState = GetState(currentPosition);
-        currentState.GetOptimalQValueAndActions(optimalActions);
+        NavigationState& currentNavState = GetNavStateForGoalPosition(NavSets, CurrentGoalPosition, currentPosition);
+        NavPositionState& currentPosState = GetPosState(Environment, currentPosition);
+        currentNavState.GetOptimalQValueAndActions(optimalActions);
         ensure(optimalActions.IsValid());
         EDirectionType actionToTake = optimalActions.ChooseDirection();
         FDirectionSet dummyNextActions;
-        const float maxNextReward = GetState(currentState.GetActionTarget(actionToTake)).GetOptimalQValueAndActions(dummyNextActions);
-        const float currentQValue = currentState.GetQValues()[(int)actionToTake];
+        const float maxNextReward = GetNavStateForGoalPosition(NavSets, CurrentGoalPosition, currentPosState.GetActionTarget(actionToTake)).GetOptimalQValueAndActions(dummyNextActions);
+        const float currentQValue = currentNavState.GetQValues()[(int)actionToTake];
         const float discountedNextReward = GridTrainingConstants::DiscountFactor * maxNextReward;
-        const float immediateReward = currentState.GetRewards()[(int)actionToTake];
+        const float immediateReward = currentNavState.GetRewards()[(int)actionToTake];
         const float deltaQ = GridTrainingConstants::LearningRate * (immediateReward + discountedNextReward - currentQValue);
         averageDeltaQ += deltaQ;
-        currentState.UpdateQValue(actionToTake, deltaQ);
-        currentPosition = currentState.GetActionTarget(actionToTake);
+        currentNavState.UpdateQValue(actionToTake, deltaQ);
+        currentPosition = currentPosState.GetActionTarget(actionToTake);
         ++numActionsTaken;
-        if (GetState(currentPosition).IsGoalState())
+        if (GetPosState(Environment, currentPosition).IsGoalState())
             goalReached = true;
     }
     averageDeltaQ /= (float)numActionsTaken;
@@ -357,13 +356,6 @@ float ULevelTrainerComponent::GetTrainingProgress()
     ensure(MaxTrainingPosition.GetValue() != 0);
     //UE_LOG(LogTemp, Warning, TEXT("X: %d | Y: %d || Current: %d || Max: %d"),CurrentGoalPosition.X, CurrentGoalPosition.Y, TrainingPosition.GetValue(), MaxTrainingPosition.GetValue());
     return trainingPosition / MaxTrainingPosition.GetValue();
-}
-
-NavigationState& ULevelTrainerComponent::GetState(FIntPoint statePosition)
-{
-    ensure(Environment.Num() > statePosition.X && statePosition.X >= 0 &&
-           Environment[1].Num() > statePosition.Y && statePosition.Y >= 0);
-    return Environment[statePosition.X][statePosition.Y];
 }
 
 

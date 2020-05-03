@@ -216,3 +216,88 @@ void LevelBuilderHelpers::PrintArray(TArray<TArray<int>>& arrayRef)
         //GEngine->AddOnScreenDebugMessage(-1, 1000.f, FColor::Red, s);
     }
 }
+
+//====================================================================================================
+// NavigationState
+//====================================================================================================
+
+const TArray<float> NavigationState::GetQValues() const
+{
+    return ActionQValues;
+}
+
+const TArray<float> NavigationState::GetRewards() const
+{
+    return ActionRewards;
+}
+
+const float NavigationState::GetOptimalQValueAndActions(FDirectionSet& Actions) const
+{
+    ensure(ActionQValues.Num() == (int)EDirectionType::NumDirectionTypes);
+    float optimalQValue = ActionQValues[0];
+    Actions.EnableDirection((EDirectionType)0);
+    for (int i = 1; i < ActionQValues.Num(); ++i)
+    {
+        float currentV = ActionQValues[i];
+        if (currentV >= optimalQValue)
+        {
+            if (currentV > optimalQValue)
+            {
+                Actions.Clear();
+                optimalQValue = currentV;
+            }
+            Actions.EnableDirection((EDirectionType)i);
+        }
+    }
+    return optimalQValue;
+}
+
+FIntPoint NavPositionState::GetActionTarget(EDirectionType actionType) const
+{
+    return ActionTargets[(int)actionType];
+}
+
+void NavigationState::ResetQValues()
+{
+    for (int actionType = 0; actionType < (int)EDirectionType::NumDirectionTypes; ++actionType)
+        ActionQValues[actionType] = 0.0f;
+}
+
+void NavigationState::UpdateQValue(EDirectionType actionType, float deltaQ)
+{
+    ActionQValues[(int)actionType] += deltaQ;
+}
+
+bool NavPositionState::IsGoalState() const
+{
+    return IsGoal;
+}
+
+void NavPositionState::SetIsGoal(bool isGoal)
+{
+    IsGoal = isGoal;
+}
+
+void NavPositionState::SetValid(bool valid)
+{
+    IsValid = valid;
+}
+
+bool NavPositionState::IsStateValid()
+{
+    return IsValid;
+}
+
+void NavPositionState::SetActionTarget(EDirectionType actionType, FIntPoint position)
+{
+    ensure(ActionTargets.Num() == (int)EDirectionType::NumDirectionTypes);
+    ActionTargets[(int)actionType] = position;
+}
+
+//====================================================================================================
+// RoomState
+//====================================================================================================
+void RoomState::DisableRoom()
+{
+    RoomStatus = RoomState::Status::Dead;
+}
