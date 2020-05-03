@@ -4,11 +4,130 @@
 #include <functional>
 #include "TPGameDemoGameState.h"
 
+//====================================================================================================
+// NavigationState
+//====================================================================================================
+
+const TArray<float> NavigationState::GetQValues() const
+{
+    return ActionQValues;
+}
+
+const TArray<float> NavigationState::GetRewards() const
+{
+    return ActionRewards;
+}
+
+const float NavigationState::GetOptimalQValueAndActions(FDirectionSet& Actions) const
+{
+    ensure(ActionQValues.Num() == (int)EDirectionType::NumDirectionTypes);
+    float optimalQValue = ActionQValues[0];
+    Actions.EnableDirection((EDirectionType)0);
+    for (int i = 1; i < ActionQValues.Num(); ++i)
+    {
+        float currentV = ActionQValues[i];
+        if (currentV >= optimalQValue)
+        {
+            if (currentV > optimalQValue)
+            {
+                Actions.Clear();
+                optimalQValue = currentV;
+            }
+            Actions.EnableDirection((EDirectionType)i);
+        }
+    }
+    return optimalQValue;
+}
+
+FIntPoint NavigationState::GetActionTarget(EDirectionType actionType) const
+{
+    return ActionTargets[(int)actionType];
+}
+
+void NavigationState::ResetQValues()
+{
+    for (int actionType = 0; actionType < (int)EDirectionType::NumDirectionTypes; ++actionType)
+        ActionQValues[actionType] = 0.0f;
+}
+
+void NavigationState::UpdateQValue(EDirectionType actionType, float deltaQ)
+{
+    ActionQValues[(int)actionType] += deltaQ;
+}
+
+bool NavigationState::IsGoalState() const
+{
+    return IsGoal;
+}
+
+void NavigationState::SetIsGoal(bool isGoal)
+{
+    IsGoal = isGoal;
+    if (IsGoal)
+        ActionRewards = { GridTrainingConstants::GoalReward, GridTrainingConstants::GoalReward,
+                         GridTrainingConstants::GoalReward, GridTrainingConstants::GoalReward };
+    else
+        ActionRewards = { GridTrainingConstants::MovementCost, GridTrainingConstants::MovementCost,
+                         GridTrainingConstants::MovementCost, GridTrainingConstants::MovementCost };
+}
+
+void NavigationState::SetValid(bool valid)
+{
+    IsValid = valid;
+}
+
+bool NavigationState::IsStateValid()
+{
+    return IsValid;
+}
+
+void NavigationState::SetActionTarget(EDirectionType actionType, FIntPoint position)
+{
+    ensure(ActionTargets.Num() == (int)EDirectionType::NumDirectionTypes);
+    ActionTargets[(int)actionType] = position;
+}
+
+//====================================================================================================
+// RoomState
+//====================================================================================================
 void RoomState::DisableRoom()
 {
     RoomStatus = RoomState::Status::Dead;
 }
 
+void RoomState::FillNavigationStateForLevel(TArray<TArray<int>> LevelStructure)
+{
+    PositionNavStates.Empty();
+    const int sizeX = LevelStructure.Num();
+    const int sizeY = LevelStructure[0].Num();
+    for (int x = 0; x < sizeX; ++x)
+    {
+        PositionNavStates.Add(TArray<NavigationState>());
+        TArray<NavigationState>& row = PositionNavStates[x];
+        for (int y = 0; y < sizeY; ++y)
+        {
+            row.Add(NavigationState());
+            NavigationState& state = row[y];
+            state.SetValid(LevelStructure[x][y] == (int)ECellState::Open || LevelStructure[x][y] == (int)ECellState::Door);
+            if (state.IsStateValid())
+            {
+                for (int a = 0; a < (int)EDirectionType::NumDirectionTypes; ++a)
+                {
+                    EDirectionType actionType = EDirectionType(a);
+                    FIntPoint targetPoint = LevelBuilderHelpers::GetTargetPointForAction(FIntPoint(x, y), actionType);
+
+                    const bool targetValid = LevelBuilderHelpers::GridPositionIsValid(targetPoint, sizeX, sizeY) &&
+                        (LevelStructure[targetPoint.X][targetPoint.Y] == (int)ECellState::Open || LevelStructure[targetPoint.X][targetPoint.Y] == (int)ECellState::Door);
+
+                    state.SetActionTarget(actionType, targetValid ? targetPoint : FIntPoint(x, y));
+                }
+            }
+        }
+    }
+}
+//====================================================================================================
+// ATPGameDemoGameState
+//====================================================================================================
 ATPGameDemoGameState::ATPGameDemoGameState(const FObjectInitializer& ObjectInitializer)
 {
 	PrimaryActorTick.bCanEverTick = true;
@@ -131,6 +250,12 @@ void ATPGameDemoGameState::Tick( float DeltaTime )
 //============================================================================
 // Acessors
 //============================================================================
+
+const TArray<TArray<NavigationState>>& ATPGameDemoGameState::GetRoomNavigationState(FIntPoint roomCoords)
+{
+    FIntPoint roomIndices = GetRoomXYIndicesChecked(roomCoords);
+    return RoomStates[roomIndices.X][roomIndices.Y].PositionNavStates;
+}
 
 bool ATPGameDemoGameState::DoesRoomExist(FIntPoint roomCoords) const
 {
@@ -462,6 +587,18 @@ void ATPGameDemoGameState::SetRoomTrainingProgress(FIntPoint roomCoords, float p
             }
         }
     }
+}
+
+void ATPGameDemoGameState::SetRoomNavigationState(FIntPoint roomCoords, const TArray<TArray<NavigationState>>& navState)
+{
+    FIntPoint roomIndices = GetRoomXYIndicesChecked(roomCoords);
+    RoomStates[roomIndices.X][roomIndices.Y].PositionNavStates = navState;
+}
+
+void ATPGameDemoGameState::UpdateRoomNavigationStateForLevel(FIntPoint roomCoords, TArray<TArray<int>> LevelStructure)
+{
+    FIntPoint roomIndices = GetRoomXYIndicesChecked(roomCoords);
+    RoomStates[roomIndices.X][roomIndices.Y].FillNavigationStateForLevel(LevelStructure);
 }
 
 void ATPGameDemoGameState::EnableWallState(FIntPoint roomCoords, EDirectionType wallType)

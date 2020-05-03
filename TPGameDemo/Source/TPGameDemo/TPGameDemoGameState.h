@@ -30,6 +30,48 @@ enum class EDoorState : uint8
     NumStates
 };
 
+//====================================================================================================
+// NavigationState State
+//====================================================================================================
+
+namespace GridTrainingConstants
+{
+    static const float GoalReward = 1.0f;
+    static const float MovementCost = -0.04f;
+    static const float LearningRate = 0.5f;
+    static const float DiscountFactor = 0.9f;
+};
+
+/* QLearning qvalues, rewards, and action targets, for a position in a room. Actions are North, East, South, West. Action targets are FIntPoint positions. */
+class NavigationState
+{
+public:
+    const TArray<float> GetQValues() const;
+    const TArray<float> GetRewards() const;
+
+    const float GetOptimalQValueAndActions(FDirectionSet& Actions) const;
+
+    void UpdateQValue(EDirectionType actionType, float deltaQ);
+    void ResetQValues();
+
+    void SetIsGoal(bool isGoal);
+    bool IsGoalState() const;
+
+    FIntPoint GetActionTarget(EDirectionType actionType) const;
+
+    void SetValid(bool valid);
+    bool IsStateValid();
+
+    void SetActionTarget(EDirectionType actionType, FIntPoint position);
+private:
+    bool IsGoal = false;
+    bool IsValid = true;
+    TArray<float> ActionQValues{ 0.0f, 0.0f, 0.0f, 0.0f };
+    TArray<float> ActionRewards{ GridTrainingConstants::MovementCost, GridTrainingConstants::MovementCost,
+                                 GridTrainingConstants::MovementCost, GridTrainingConstants::MovementCost };
+    TArray<FIntPoint> ActionTargets{ {0,0}, {0,0}, {0,0}, {0,0} };
+};
+
 struct WallState
 {
 
@@ -167,6 +209,8 @@ struct RoomState
         TileActorCounters[TilePosition.X][TilePosition.Y].Decrement();
     }
 
+    void FillNavigationStateForLevel(TArray<TArray<int>> LevelStructure);
+
     float RoomHealth = 100.0f;
     float Complexity = 0.0f;
     float Density = 0.0f;
@@ -175,6 +219,8 @@ struct RoomState
     FIntPoint SignalPoint = FIntPoint(-1,-1);
     /** Count of the number of actors occupying each grid position in the room. */
     TArray<TArray<FThreadSafeCounter>> TileActorCounters;
+    /** Navigation state for each position in room */
+    TArray<TArray<NavigationState>> PositionNavStates;
 };
 
 /**
@@ -316,7 +362,9 @@ public:
 
     UFUNCTION(BlueprintCallable, Category = "World Rooms States")
         bool IsBuildableItemPlaced(FRoomPositionPair roomAndPosition, EDirectionType direction);
+
     // --------------------- room properties -------------------------------------
+    const TArray<TArray<NavigationState>>& GetRoomNavigationState(FIntPoint RoomCoords);
 
     UFUNCTION(BlueprintCallable, Category = "World Rooms States")
         bool DoesRoomExist(FIntPoint roomCoords) const;
@@ -479,6 +527,10 @@ public:
 
     UFUNCTION(BlueprintCallable, Category = "World Rooms Training")
         void SetRoomTrained(FIntPoint roomCoords);
+
+    void UpdateRoomNavigationStateForLevel(FIntPoint roomCoords, TArray<TArray<int>> levelStructure);
+
+    void SetRoomNavigationState(FIntPoint RoomCoords, const TArray<TArray<NavigationState>>& navState);
 
     UFUNCTION(BlueprintCallable, Category = "World Rooms States")
         void EnableWallState(FIntPoint roomCoords, EDirectionType wallType);

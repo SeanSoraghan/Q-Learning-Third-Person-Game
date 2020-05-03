@@ -75,89 +75,6 @@ void LevelTrainerRunnable::Exit()
 }
 
 //====================================================================================================
-// GridState
-//====================================================================================================
-
-const TArray<float> GridState::GetQValues() const 
-{
-    return ActionQValues;
-}
-
-const TArray<float> GridState::GetRewards() const 
-{
-    return ActionRewards;
-}
-
-const float GridState::GetOptimalQValueAndActions(FDirectionSet& Actions) const 
-{
-    ensure(ActionQValues.Num() == (int)EDirectionType::NumDirectionTypes);
-    float optimalQValue = ActionQValues[0];
-    Actions.EnableDirection((EDirectionType)0);
-    for (int i = 1; i < ActionQValues.Num(); ++i)
-    {
-        float currentV = ActionQValues[i];
-        if (currentV >= optimalQValue)
-        {
-            if (currentV > optimalQValue)
-            {
-                Actions.Clear();
-                optimalQValue = currentV;
-            }
-            Actions.EnableDirection((EDirectionType)i);
-        }
-    }
-    return optimalQValue;
-} 
-
-FIntPoint GridState::GetActionTarget(EDirectionType actionType) const
-{
-    return ActionTargets[(int)actionType];
-}
-
-void GridState::ResetQValues()
-{
-    for (int actionType = 0; actionType < (int)EDirectionType::NumDirectionTypes; ++actionType)
-        ActionQValues[actionType] = 0.0f;
-}
-
-void GridState::UpdateQValue(EDirectionType actionType, float deltaQ) 
-{
-    ActionQValues[(int)actionType] += deltaQ;
-}
-
-bool GridState::IsGoalState() const
-{
-    return IsGoal;
-}
-
-void GridState::SetIsGoal(bool isGoal)
-{
-    IsGoal = isGoal;
-    if (IsGoal)
-        ActionRewards = {GridTrainingConstants::GoalReward, GridTrainingConstants::GoalReward,
-                         GridTrainingConstants::GoalReward, GridTrainingConstants::GoalReward};
-    else
-        ActionRewards = {GridTrainingConstants::MovementCost, GridTrainingConstants::MovementCost,
-                         GridTrainingConstants::MovementCost, GridTrainingConstants::MovementCost};
-}
-
-void GridState::SetValid(bool valid)
-{
-    IsValid = valid;
-}
-
-bool GridState::IsStateValid()
-{
-    return IsValid;
-}
-
-void GridState::SetActionTarget(EDirectionType actionType, FIntPoint position)
-{
-    ensure(ActionTargets.Num() == (int)EDirectionType::NumDirectionTypes);
-    ActionTargets[(int)actionType] = position;
-}
-
-//====================================================================================================
 // ULevelTrainerComponent
 //====================================================================================================
 
@@ -210,7 +127,12 @@ void ULevelTrainerComponent::TickComponent( float DeltaTime, ELevelTick TickType
 {
     if (LevelTrained)
     {
-        while(TrainerRunnable.IsValid() && TrainerRunnable->IsTraining){}
+        while(TrainerRunnable.IsValid() && TrainerRunnable->IsTraining){}            
+        ATPGameDemoGameState * gameState = (ATPGameDemoGameState*)(GetWorld()->GetGameState());
+        if (gameState != nullptr)
+        {
+            gameState->SetRoomNavigationState(RoomCoords, Environment);
+        }
         OnLevelTrained.Broadcast();
         LevelTrained = false;
     }
@@ -255,37 +177,19 @@ void ULevelTrainerComponent::RegisterLevelTrainedCallback(const FOnLevelTrained&
 
 void ULevelTrainerComponent::UpdateEnvironmentForLevel(FString levelName)
 {
+    //This is called from the room builder BP in OnBuildRoom, after the walls have been spawned (BuildGeneratedRoom). The game state should hold the qvalues, so that we can build on them if the room structure changes.
     CurrentLevelName = levelName;
     FString CurrentLevelPath = LevelBuilderHelpers::LevelsDir() + CurrentLevelName + ".txt";
     TArray<TArray<int>> LevelStructure;
     LevelBuilderHelpers::FillArrayFromTextFile (CurrentLevelPath, LevelStructure);
-    Environment.Empty();
     const int sizeX = LevelStructure.Num();
     const int sizeY = LevelStructure[0].Num();
     MaxTrainingPosition.Set(sizeX * sizeY - 1.0f);
-    for (int x = 0; x < sizeX; ++x)
+    ATPGameDemoGameState* gameState = (ATPGameDemoGameState*)(GetWorld()->GetGameState());
+    if (gameState != nullptr)
     {
-        Environment.Add(TArray<GridState>());
-        TArray<GridState>& row = Environment[x];
-        for (int y = 0; y < sizeY; ++y)
-        {
-            row.Add(GridState());
-            GridState& state = row[y];
-            state.SetValid(LevelStructure[x][y] == (int)ECellState::Open || LevelStructure[x][y] == (int)ECellState::Door);
-            if (state.IsStateValid())
-            {
-                for (int a = 0; a < (int)EDirectionType::NumDirectionTypes; ++a)
-                {
-                    EDirectionType actionType = EDirectionType(a);
-                    FIntPoint targetPoint = LevelBuilderHelpers::GetTargetPointForAction(FIntPoint(x,y), actionType);
-                    
-                    const bool targetValid = LevelBuilderHelpers::GridPositionIsValid(targetPoint, sizeX, sizeY) &&
-                                             (LevelStructure[targetPoint.X][targetPoint.Y] == (int)ECellState::Open || LevelStructure[targetPoint.X][targetPoint.Y] == (int)ECellState::Door);
-
-                    state.SetActionTarget(actionType, targetValid ? targetPoint : FIntPoint(x,y));
-                }
-            }
-        }
+        gameState->UpdateRoomNavigationStateForLevel(RoomCoords, LevelStructure);
+        Environment = gameState->GetRoomNavigationState(RoomCoords);
     }
 }
 
@@ -405,7 +309,7 @@ void ULevelTrainerComponent::SimulateRun(FIntPoint startingStatePosition, int ma
     while (numActionsTaken < maxNumActions && !goalReached)
     {
         FDirectionSet optimalActions;
-        GridState& currentState = GetState(currentPosition);
+        NavigationState& currentState = GetState(currentPosition);
         currentState.GetOptimalQValueAndActions(optimalActions);
         ensure(optimalActions.IsValid());
         EDirectionType actionToTake = optimalActions.ChooseDirection();
@@ -455,7 +359,7 @@ float ULevelTrainerComponent::GetTrainingProgress()
     return trainingPosition / MaxTrainingPosition.GetValue();
 }
 
-GridState& ULevelTrainerComponent::GetState(FIntPoint statePosition)
+NavigationState& ULevelTrainerComponent::GetState(FIntPoint statePosition)
 {
     ensure(Environment.Num() > statePosition.X && statePosition.X >= 0 &&
            Environment[1].Num() > statePosition.Y && statePosition.Y >= 0);

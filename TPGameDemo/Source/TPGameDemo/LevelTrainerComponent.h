@@ -41,47 +41,6 @@ private:
     FCriticalSection TrainSection;
 };
 
-namespace GridTrainingConstants
-{
-    static const float GoalReward = 1.0f;
-    static const float MovementCost = -0.04f;
-    static const float LearningRate = 0.5f;
-    static const float DiscountFactor = 0.9f;
-};
-
-//====================================================================================================
-// Grid State
-//====================================================================================================
-
-class GridState
-{
-public:
-    const TArray<float> GetQValues() const;
-    const TArray<float> GetRewards() const;
-
-    const float GetOptimalQValueAndActions(FDirectionSet& Actions) const;
-
-    void UpdateQValue(EDirectionType actionType, float deltaQ);
-    void ResetQValues();
-
-    void SetIsGoal(bool isGoal);
-    bool IsGoalState() const;
-
-    FIntPoint GetActionTarget(EDirectionType actionType) const;
-
-    void SetValid(bool valid);
-    bool IsStateValid();
-
-    void SetActionTarget(EDirectionType actionType, FIntPoint position);
-private:
-    bool IsGoal = false;
-    bool IsValid = true;
-    TArray<float> ActionQValues {0.0f, 0.0f, 0.0f, 0.0f};
-    TArray<float> ActionRewards {GridTrainingConstants::MovementCost, GridTrainingConstants::MovementCost, 
-                                 GridTrainingConstants::MovementCost, GridTrainingConstants::MovementCost};
-    TArray<FIntPoint> ActionTargets {{0,0}, {0,0}, {0,0}, {0,0}};
-};
-
 //====================================================================================================
 // ULevelTrainerComponent
 //====================================================================================================
@@ -133,7 +92,7 @@ private:
 
     BehaviourMap GetBehaviourMap();
     void ClearEnvironment();
-	TArray<TArray<GridState>> Environment;
+	TArray<TArray<NavigationState>> Environment;
     void InitTrainerThread();
     void TrainNextGoalPosition(int numSimulationsPerStartingPosition, int maxNumActionsPerSimulation);
     // Simulate a run through the while keepting track of the average deltaQ and the num actions taken. (these will be used to measure convergence)
@@ -141,7 +100,7 @@ private:
     void IncrementGoalPosition();
     FThreadSafeCounter TrainingPosition = 0;
     FThreadSafeCounter MaxTrainingPosition = 0;
-    GridState& GetState(FIntPoint statePosition);
+    NavigationState& GetState(FIntPoint statePosition);
     FIntPoint CurrentGoalPosition {0,0};
 
     LevelTrainedEvent OnLevelTrained;
