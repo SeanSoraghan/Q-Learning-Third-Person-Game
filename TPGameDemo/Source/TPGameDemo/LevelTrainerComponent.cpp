@@ -230,7 +230,6 @@ void ULevelTrainerComponent::TrainNextGoalPosition(int numSimulationsPerStarting
             if (gameState != nullptr)
             {
                 gameState->SetRoomNavigationSet(RoomCoords, CurrentGoalPosition, GetRoomNavSet(NavSets, CurrentGoalPosition));
-                gameState->SetBehaviourMap(RoomCoords, CurrentGoalPosition, envArray);
             }
         }
 #pragma message("move this to save function in game state.")
