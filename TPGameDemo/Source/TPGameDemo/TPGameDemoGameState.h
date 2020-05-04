@@ -222,17 +222,11 @@ public:
     FDirectionSet GetOptimalActions(FIntPoint roomCoords, FIntPoint targetGridPosition, FIntPoint currentGridPosition)
     {
         FIntPoint indices = GetRoomXYIndicesChecked(roomCoords);
-        return WorldBehaviourMaps[indices.X][indices.Y]
-            [targetGridPosition.X][targetGridPosition.Y]
-            [currentGridPosition.X][currentGridPosition.Y];
+        FDirectionSet directionSet;
+        GetNavState({ roomCoords, currentGridPosition }, targetGridPosition).GetOptimalQValueAndActions(directionSet);
+        return directionSet;
     }
 
-    BehaviourMap& GetBehaviourMap(FIntPoint roomCoords, FIntPoint targetGridPosition)
-    {
-        FIntPoint indices = GetRoomXYIndicesChecked(roomCoords);
-        return WorldBehaviourMaps[indices.X][indices.Y]
-                                 [targetGridPosition.X][targetGridPosition.Y];
-    }
     //============================================================================
     // Modifiers
     //============================================================================
@@ -284,13 +278,6 @@ public:
 
     UFUNCTION(BlueprintCallable, Category = "World Rooms States")
         void UpdateSignalStrength(float delta);
-
-    void SetBehaviourMap(FIntPoint roomCoords, FIntPoint targetGridPosition, BehaviourMap behaviourMap)
-    {
-        FIntPoint indices = GetRoomXYIndicesChecked(roomCoords);
-        WorldBehaviourMaps[indices.X][indices.Y]
-                          [targetGridPosition.X][targetGridPosition.Y] = behaviourMap;
-    }
 
     UFUNCTION(BlueprintCallable, Category = "World Rooms States")
         void SetBuildableItemPlaced(FRoomPositionPair roomAndPosition, EDirectionType direction, bool placed);
@@ -420,9 +407,6 @@ private:
     NavigationSet& GetNavSet(FIntPoint roomCoords, FIntPoint targetPosition);
     NavigationState& GetNavState(FRoomPositionPair roomAndPosition, FIntPoint targetPosition);
 
-    // A 2D array (each room in the world) of 2D arrays (each target position in the room) 
-    // of 2D arrays (the optimal action at each position)
-    TArray<TArray<TargetMapsArray>> WorldBehaviourMaps;
     bool LevelPoliciesDirFound = false;
 
     EnemiesPausedChangedEvent EnemiesPausedChanged;

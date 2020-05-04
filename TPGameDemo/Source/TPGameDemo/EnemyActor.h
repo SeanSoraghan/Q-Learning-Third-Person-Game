@@ -140,6 +140,7 @@ private:
     /* The door through which the current room was entered */
     EDirectionType PreviousDoor = EDirectionType::NumDirectionTypes;
 
+    bool PreviousActionWasInvalid = false;
     //======================================================================================================
     // From AMazeActor
     //====================================================================================================== 

@@ -47,6 +47,8 @@ void AEnemyActor::EndPlay (const EEndPlayReason::Type EndPlayReason)
 void AEnemyActor::Tick( float DeltaTime )
 {
 	Super::Tick( DeltaTime );
+    if (PreviousActionWasInvalid)
+        UpdateMovement();
     FVector MovementVector = MovementTarget - GetActorLocation();
     MovementVector.Normalize();
     FRotator CurrentRotation = GetActorForwardVector().Rotation();
@@ -349,6 +351,18 @@ void AEnemyActor::UpdateMovementForActionType(EDirectionType actionType)
             + " to " + roomAndPosition.PositionInRoom.ToString()
             + " in room " + roomAndPosition.RoomCoords.ToString(), ELogEventType::Info);
 #endif
+        if (roomAndPosition.RoomCoords == CurrentRoomCoords)
+        {
+            ATPGameDemoGameState* gameState = (ATPGameDemoGameState*)GetWorld()->GetGameState();
+            if (gameState != nullptr)
+            {
+                PreviousActionWasInvalid = gameState->SimulateAction({ CurrentRoomCoords, {GridXPosition, GridYPosition } }, actionType, TargetPositionAndAction.Position);
+            }
+        }
+        else
+        {
+            PreviousActionWasInvalid = false;
+        }
         FVector2D targetXY = gameState->GetWorldXYForRoomAndPosition(roomAndPosition);
         MovementTarget = FVector(targetXY.X, targetXY.Y, z);
     }
