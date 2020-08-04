@@ -6,7 +6,8 @@
 #include "TPGameDemoGameState.h"
 #include "EnemyActor.generated.h"
 
-#define ENEMY_LIFETIME_LOGS 0
+
+#define ENEMY_LIFETIME_LOGS 1
 
 /*
 The base class for an enemy actor. Enemies behave according to `level policies' which are action-value tables that have been trained using Q-Learning.
@@ -101,10 +102,19 @@ public:
     //UFUNCTION(BlueprintCallable, Category = "Enemy Movement")
     //    void UpdateMovementForActionType(EDirectionType actionType);
 
-    /* Choose a door in the current room and update the policy to direct towards that door. */
+    /* Choose a door in the current room and update the policy to direct towards that door. 
+        return true if the door chosen is the current position
+    */
     UFUNCTION(BlueprintCallable, Category = "Enemy Behaviour")
-        virtual void ChooseDoorTarget();
+        virtual void ChooseDoorTarget(bool& movementTargetUpdated);
 
+    /** Determines whether the enemy should augment the reward of state actions when it receives damage or dies */
+    UPROPERTY(EditAnywhere, Category = "Enemy Behaviour")
+        bool AccumulateReward = false;
+
+    /** Determines whether the enemy should update the qvalue table after every action */
+    UPROPERTY(EditAnywhere, Category = "Enemy Behaviour")
+        bool UpdateQValue = true;
     //======================================================================================================
     // Movement
     //====================================================================================================== 
@@ -117,16 +127,43 @@ public:
         float RotationSpeed = 0.1f;
 
 private:
+    ATPGameDemoGameState* GameState;
+
     FTargetPosition   TargetPositionAndAction; // Intermediate movement target, while navigating to target room.
     FRoomPositionPair TargetRoomAndPosition = { FIntPoint(0, 0), FIntPoint(4, 4) }; // default to center of central room.
 
+    void SetTargetPositionAndAction(FTargetPosition);
     void EnteredTargetRoom();
 
+    void ActorDied() override;
     //======================================================================================================
     // Behaviour Policy
     //======================================================================================================
     void UpdatePolicyForDoorType(EDirectionType doorTypem, int doorPositionOnWall);
-
+    // Data to store for updating the state-action qvalues. The qvalues are only updated for an action when taking the subsequent action.
+    // This is so that rewards can be accumulated while in a state, and then applied to the qvalue when moving out of that state.
+    // (It's an attempt to introduce variable rewards. For example, getting shot, or dying, will accumulate negative reward).
+    FRoomPositionPair PrevActionStartPos;
+    EDirectionType PrevActionType = EDirectionType::NumDirectionTypes;
+    FIntPoint PrevActionTarget;
+    float PrevActionAccumulatedReward = 0.0f;
+    struct RoomPosition
+    {
+        int RoomSideLength;
+        FIntPoint Position;
+    };
+    struct RoomPosition_ComparePositive
+    {
+        bool operator() (const RoomPosition& lhs, const RoomPosition& rhs) const
+        {
+            return (lhs.Position.X * lhs.RoomSideLength + lhs.Position.Y) < (rhs.Position.X * rhs.RoomSideLength + rhs.Position.Y);
+            if (lhs.Position.X < rhs.Position.X)
+                return lhs.Position.Y < rhs.Position.Y;
+            return false;
+        }
+    };
+    // Used to deter loops - punish repeated positions (for the same destination target position)
+    std::set<RoomPosition, RoomPosition_ComparePositive> VisitedPositions;
     //======================================================================================================
     // Movement
     //====================================================================================================== 
@@ -134,19 +171,18 @@ private:
     // Returns the room coords and position in room indicated by the given movement direction, determined by the actors current position.
     // If the movement action would cause them to change rooms, roomCoords will indicate which room they would enter.
     FRoomPositionPair GetTargetRoomAndPositionForDirectionType(EDirectionType actionType);
-    /* Move along the given direction, regardless of validity. (This is used to force characters through doors). */
-    void UpdateMovementForActionType(EDirectionType actionType);
-
+    /* Move along the given direction if possible. This may be called recursively if an invalid action is chosen. */
+    void UpdateMovementForActionType(EDirectionType actionType, int numCalls = 0);
+    bool ShouldUpdateQValue() const;
     /* The door through which the current room was entered */
     EDirectionType PreviousDoor = EDirectionType::NumDirectionTypes;
 
-    bool PreviousActionWasInvalid = false;
     //======================================================================================================
     // From AMazeActor
     //====================================================================================================== 
     virtual void PositionChanged() override;
     virtual void RoomCoordsChanged() override;
-
+    virtual void TakeDamage(float damageAmount) override;
     //======================================================================================================
     // Logging
     //======================================================================================================

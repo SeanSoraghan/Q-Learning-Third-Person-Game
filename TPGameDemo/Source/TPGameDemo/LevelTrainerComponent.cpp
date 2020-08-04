@@ -5,9 +5,6 @@
 #include "TextParserComponent.h"
 #include "LevelTrainerComponent.h"
 
-#define DELTA_Q_CONVERGENCE_THRESHOLD 0.01f
-#define CONVERGENCE_NUM_ACTIONS_MIN 100
-#define CONVERGENCE_NUM_ACTIONS_MAX 300
 //====================================================================================================
 // LevelTrainerRunnable
 //====================================================================================================
@@ -44,7 +41,7 @@ uint32 LevelTrainerRunnable::Run()
     {
         if (ShouldTrain)
         {
-            TrainerComponent.TrainNextGoalPosition(300, 300); //int numSimulationsPerStartingPosition, int maxNumActionsPerSimulation
+            TrainerComponent.TrainNextGoalPosition(NUM_TRAINING_SIMULATIONS, MAX_NUM_MOVEMENTS_PER_SIMULATION);
             if (TrainerComponent.LevelTrained)
                 ThreadShouldExit = true;
         }
@@ -180,7 +177,7 @@ void ULevelTrainerComponent::UpdateEnvironmentForLevel(FString levelName)
     const int sizeX = LevelStructure.Num();
     const int sizeY = LevelStructure[0].Num();
     MaxTrainingPosition.Set(sizeX * sizeY - 1.0f);
-    Environment = GetNavigationEnvironmentForRoom(LevelStructure);
+    Environment = GetNavigationEnvironmentForRoom(LevelStructure, RoomCoords);
     ATPGameDemoGameState* gameState = (ATPGameDemoGameState*)(GetWorld()->GetGameState());
     if (gameState != nullptr)
     {
@@ -275,7 +272,7 @@ void ULevelTrainerComponent::ClearEnvironment()
             NavigationState& navState = GetNavStateForGoalPosition(NavSets, CurrentGoalPosition, FIntPoint(x, y));
             navState.ResetQValues();
             // Move in from edges if on an edge.
-            if (x == 0)
+            /*if (x == 0)
             {
                 navState.UpdateQValue(EDirectionType::North, 100.0f);
             }
@@ -290,7 +287,7 @@ void ULevelTrainerComponent::ClearEnvironment()
             else if (y == Environment[0].Num() - 1)
             {
                 navState.UpdateQValue(EDirectionType::West, 100.0f);
-            }
+            }*/
         }
     }
 }
@@ -312,14 +309,16 @@ void ULevelTrainerComponent::SimulateRun(FIntPoint startingStatePosition, int ma
         ensure(optimalActions.IsValid());
         EDirectionType actionToTake = optimalActions.ChooseDirection();
         FDirectionSet dummyNextActions;
-        const float maxNextReward = GetNavStateForGoalPosition(NavSets, CurrentGoalPosition, currentPosState.GetActionTarget(actionToTake)).GetOptimalQValueAndActions(dummyNextActions);
+        FRoomPositionPair actionTarget = currentPosState.GetActionTarget(actionToTake);
+        const float maxNextReward = GetNavStateForGoalPosition(NavSets, CurrentGoalPosition, actionTarget.PositionInRoom).GetOptimalQValueAndActions(dummyNextActions);
         const float currentQValue = currentNavState.GetQValues()[(int)actionToTake];
-        const float discountedNextReward = GridTrainingConstants::DiscountFactor * maxNextReward;
+        const float discountedNextReward = GridTrainingConstants::SimDiscountFactor * maxNextReward;
         const float immediateReward = currentNavState.GetRewards()[(int)actionToTake];
-        const float deltaQ = GridTrainingConstants::LearningRate * (immediateReward + discountedNextReward - currentQValue);
+        const float deltaQ = GridTrainingConstants::SimLearningRate * (immediateReward + discountedNextReward - currentQValue);
         averageDeltaQ += deltaQ;
-        currentNavState.UpdateQValue(actionToTake, deltaQ);
-        currentPosition = currentPosState.GetActionTarget(actionToTake);
+        currentNavState.UpdateQValue(actionToTake, GridTrainingConstants::SimLearningRate, deltaQ);
+#pragma message("Careful here! This assumes the room never changes, during training. If we come back and train a room again after the doors have been unlocked, the actionTarget's RoomCoords may be different here!")
+        currentPosition = actionTarget.PositionInRoom;
         ++numActionsTaken;
         if (GetPosState(Environment, currentPosition).IsGoalState())
             goalReached = true;

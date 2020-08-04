@@ -142,6 +142,13 @@ public:
     UFUNCTION (BlueprintCallable, Category = "Room Grid Positions")
         FVector2D GetWorldXYForRoomAndPosition(FRoomPositionPair roomPositionPair);
 
+    /** Returns true if the given position is on the edge of a room. */
+    UFUNCTION(BlueprintCallable, Category = "Room Grid Positions")
+        bool IsOnGridEdge(const FIntPoint& positionInRoom) const;
+
+    UFUNCTION(BlueprintCallable, Category = "Room Grid Positions")
+        EDirectionType GetWallTypeForPosition(const FIntPoint& positionInRoom) const;
+
     /** Returns the room and position in room for a given world position. */
     UFUNCTION(BlueprintCallable, Category = "Room Grid Positions")
         FRoomPositionPair GetRoomAndPositionForWorldXY(FVector2D worldXY);
@@ -176,6 +183,9 @@ public:
 
     UFUNCTION(BlueprintCallable, Category = "World Room States")
         int GetDoorPositionOnWall(FIntPoint roomCoords, EDirectionType wallType); 
+
+    UFUNCTION(BlueprintCallable, Category = "World Room States")
+        FRoomPositionPair GetDoorPosition(FIntPoint roomCoords, EDirectionType wallType);
 
     UFUNCTION(BlueprintCallable, Category = "World Door States")
         bool IsDoorUnlocked(FIntPoint roomCoords, EDirectionType wallDirection);
@@ -221,12 +231,40 @@ public:
 
     FDirectionSet GetOptimalActions(FIntPoint roomCoords, FIntPoint targetGridPosition, FIntPoint currentGridPosition)
     {
-        FIntPoint indices = GetRoomXYIndicesChecked(roomCoords);
-        FDirectionSet directionSet;
-        GetNavState({ roomCoords, currentGridPosition }, targetGridPosition).GetOptimalQValueAndActions(directionSet);
+        FDirectionSet directionSet = GetValidActions({roomCoords, currentGridPosition});
+        GetNavState({ roomCoords, currentGridPosition }, targetGridPosition).GetOptimalQValueAndActions_Valid(directionSet);
         return directionSet;
     }
 
+    float GetExploreProbability(FIntPoint roomCoords, FIntPoint targetGridPosition, FIntPoint currentGridPosition)
+    {
+        return GetNavState({ roomCoords, currentGridPosition }, targetGridPosition).GetExploreProbability();
+    }
+
+    void IncrementExploreCount(FIntPoint roomCoords, FIntPoint targetGridPosition, FIntPoint currentGridPosition)
+    {
+        GetNavState({ roomCoords, currentGridPosition }, targetGridPosition).IncrementExplorations();
+    }
+
+    UFUNCTION(BlueprintCallable, Category = "World Room Building")
+        FRoomPositionPair GetTargetRoomAndPositionForDirectionType(FRoomPositionPair startingRoomAndPosition, EDirectionType actionType);
+
+    FDirectionSet GetValidActions(FRoomPositionPair roomAndPosition)
+    {
+        const NavigationEnvironment& environment = GetNavEnvironment(roomAndPosition.RoomCoords);
+        FDirectionSet directions;
+        directions.Clear();
+        for (int i = (int)EDirectionType::North; i < (int)EDirectionType::NumDirectionTypes; ++i)
+        {
+            FIntPoint position = roomAndPosition.PositionInRoom;
+            FRoomPositionPair actionTarget = environment[position.X][position.Y].GetActionTarget((EDirectionType)i);
+            WrapRoomPositionPair(actionTarget);
+            FIntPoint targetPos = actionTarget.PositionInRoom;
+            if (targetPos != roomAndPosition.PositionInRoom || actionTarget.RoomCoords != roomAndPosition.RoomCoords)
+                directions.EnableDirection((EDirectionType)i);
+        }
+        return directions;
+    }
     //============================================================================
     // Modifiers
     //============================================================================
@@ -302,8 +340,10 @@ public:
     UFUNCTION(BlueprintCallable, Category = "World Rooms Training")
         void SetRoomTrained(FIntPoint roomCoords);
 
-    /* Update the qvalue for an action from a given position in a given room. Return true if the action leads somewhere. */
-    bool SimulateAction(FRoomPositionPair roomAndPosition, EDirectionType actionToTake, FIntPoint targetPosition);
+    /* Return true if the action leads somewhere. */
+    bool SimulateAction(FRoomPositionPair& roomAndPosition, EDirectionType actionToTake, FIntPoint targetPosition);
+    /* Update the qvalue for an action from a given position in a given room.*/
+    void UpdateQValue(FRoomPositionPair& roomAndPosition, EDirectionType actionToTake, FIntPoint targetPosition, float accumulatedReward, float learningRate);
     /* Set the action targets for the room, given the cell state structure */
     void UpdateRoomNavEnvironmentForStructure(FIntPoint roomCoords, TArray<TArray<int>> roomStructure);
     void UpdateRoomNavEnvironment(FIntPoint roomCoords, const NavigationEnvironment& navEnvironment);

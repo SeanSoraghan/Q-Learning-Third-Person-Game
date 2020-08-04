@@ -80,6 +80,8 @@ public:
     UPROPERTY (BlueprintReadWrite, Category = "Maze Actor Health")
         bool IsAlive;
 
+    virtual void ActorDied();
+
     UFUNCTION (BlueprintCallable, Category = "Maze Actor Health")
         virtual void CheckDeath();
 

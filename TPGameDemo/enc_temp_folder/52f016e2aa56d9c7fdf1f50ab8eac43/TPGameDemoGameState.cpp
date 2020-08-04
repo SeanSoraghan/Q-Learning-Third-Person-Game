@@ -104,10 +104,28 @@ void ATPGameDemoGameState::Tick( float DeltaTime )
 		if (roomTrained && neighbourTrained)
 		{
 			DisableDoorState(roomCoords, wallType);
-			// Movement action targets: Update the action targets in the nav position states.
+			// Update the action targets in the nav position states.
+#pragma message("Maybe do this in tick, because I ran into a problem where moving out of a door was invalid, so enemies got stuck ... The action target hadnt been updated correctly.")
 			FRoomPositionPair doorPos = GetDoorPosition(roomCoords, wallType);
 			FRoomPositionPair targetPos = GetTargetRoomAndPositionForDirectionType(doorPos, wallType);
 			GetPosState(GetNavEnvironment(roomCoords), doorPos.PositionInRoom).SetActionTarget(wallType, targetPos);
+
+			//FRoomPositionPair tTest = GetPosState(GetNavEnvironment(roomCoords), doorPos.PositionInRoom).GetActionTarget(wallDirection);
+			//WrapRoomPositionPair(tTest);
+			//if (tTest.RoomCoords == roomCoords)
+			//{
+			//	UE_LOG(LogTemp, Warning, TEXT("Door target failed to update!"));
+			//}
+			//// It can only be these two, due to the way rooms overlap.
+			//ensure(wallDirection == EDirectionType::South || wallDirection == EDirectionType::West);
+			//EDirectionType otherDirection = wallDirection == EDirectionType::South ? EDirectionType::West : EDirectionType::South;
+			//FIntPoint neighbourRoomCoords = GetRoomCoords(GetNeighbouringRoomIndices(roomCoords, otherDirection));
+			//if (IsRoomTrained(neighbourRoomCoords))
+			//{
+			//	FRoomPositionPair doorPos = GetDoorPosition(roomCoords, otherDirection);
+			//	FRoomPositionPair targetPos = GetTargetRoomAndPositionForDirectionType(doorPos, otherDirection);
+			//	GetPosState(GetNavEnvironment(roomCoords), doorPos.PositionInRoom).SetActionTarget(otherDirection, targetPos);
+			//}
 		}
 		else
 		{
@@ -749,8 +767,14 @@ void ATPGameDemoGameState::DoorOpened(FIntPoint roomCoords, EDirectionType wallD
             EnableRoomState(neighbourRoomCoords, complexity, density);
         }
 
-		// This ensures the navigation state is updated - that enemy movement targets are updated correctly for newly opened doors.
 		FlagWallsForUpdate(roomCoords);
+#pragma message("Not necessary due to the way rooms overlap")
+        /*EDirectionType directionFromNeighbour = DirectionHelpers::GetOppositeDirection(wallDirection);
+        FRoomPositionPair neighbourDoorPos = GetDoorPosition(neighbourRoomCoords, directionFromNeighbour);
+        FRoomPositionPair neighbourTargetPos = GetTargetRoomAndPositionForDirectionType(doorPos, directionFromNeighbour);
+        ensure(neighbourDoorPos.RoomCoords == targetPos.RoomCoords && neighbourDoorPos.PositionInRoom == targetPos.PositionInRoom);
+        ensure(neighbourTargetPos.RoomCoords == roomCoords && neighbourTargetPos.PositionInRoom == doorPos.PositionInRoom);
+        GetPosState(GetNavEnvironment(neighbourRoomCoords), neighbourDoorPos.PositionInRoom).SetActionTarget(directionFromNeighbour, neighbourTargetPos);*/
     }
 }
 

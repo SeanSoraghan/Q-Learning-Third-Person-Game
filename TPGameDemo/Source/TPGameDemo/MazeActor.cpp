@@ -71,9 +71,13 @@ void AMazeActor::CheckDeath()
         {
             gameState->ActorExitedTilePosition(CurrentRoomCoords, FIntPoint(GridXPosition, GridYPosition));
         }
+        ActorDied();
         OnActorDied.Broadcast();
     }
 }
+
+void AMazeActor::ActorDied()
+{}
 
 void AMazeActor::UpdateMazeDimensions()
 {
@@ -154,22 +158,16 @@ void AMazeActor::Tick( float DeltaTime )
 bool AMazeActor::IsOnGridEdge() const
 {
     if (ATPGameDemoGameState* gameState = (ATPGameDemoGameState*) GetWorld()->GetGameState())
-    {
-        const int numUnitsX = gameState->NumGridUnitsX;
-        const int numUnitsY = gameState->NumGridUnitsY;
-        return GridXPosition == 0 || GridXPosition == numUnitsX - 1 || GridYPosition == 0 || GridYPosition == numUnitsY - 1;
-    }
+        return gameState->IsOnGridEdge(FIntPoint(GridXPosition, GridYPosition));
+
     return false;
 }
 
 bool AMazeActor::WasOnGridEdge() const
 {
     if (ATPGameDemoGameState* gameState = (ATPGameDemoGameState*)GetWorld()->GetGameState())
-    {
-        const int numUnitsX = gameState->NumGridUnitsX;
-        const int numUnitsY = gameState->NumGridUnitsY;
-        return PreviousGridXPosition == 0 || PreviousGridXPosition == numUnitsX - 1 || PreviousGridYPosition == 0 || PreviousGridYPosition == numUnitsY - 1;
-    }
+        return gameState->IsOnGridEdge(FIntPoint(PreviousGridXPosition, PreviousGridYPosition));
+    
     return false;
 }
 

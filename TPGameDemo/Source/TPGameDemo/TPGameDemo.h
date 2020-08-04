@@ -7,6 +7,11 @@
 #include "TPGameDemo.generated.h"
 
 #define ON_SCREEN_DEBUGGING 0
+#define DELTA_Q_CONVERGENCE_THRESHOLD 0.01f
+#define CONVERGENCE_NUM_ACTIONS_MIN 100
+#define CONVERGENCE_NUM_ACTIONS_MAX 300
+#define NUM_TRAINING_SIMULATIONS 50
+#define MAX_NUM_MOVEMENTS_PER_SIMULATION 100
 
 UENUM(BlueprintType)
 enum class EDirectionType : uint8
@@ -97,6 +102,16 @@ struct FDirectionSet
     { 
         DirectionsMask &= (~(1 << (int)direction));
         DirectionSelectionSet.erase(direction);
+    }
+
+    /** return a copy if all directions are valid. */
+    FDirectionSet GetInverse()
+    {
+        if (DirectionSelectionSet.size() == (int)EDirectionType::NumDirectionTypes)
+        {
+            return FDirectionSet(DirectionsMask);
+        }
+        return FDirectionSet(~DirectionsMask);
     }
 
     FString ToString(bool padSpaces = false) 
@@ -304,8 +319,15 @@ namespace GridTrainingConstants
 {
     static const float GoalReward = 1.0f;
     static const float MovementCost = -0.04f;
-    static const float LearningRate = 0.5f;
-    static const float DiscountFactor = 0.9f;
+    static const float LoopCost = -1.0f;
+    static const float DamageCost = -1.0f;
+    static const float SimLearningRate = 0.5f;
+    static const float ActorLearningRate = 0.5f;
+    static const float SimDiscountFactor = 0.9f;
+    static const float ActorDiscountFactor = 0.9f;
+    /* The chances of exploration from a certain position for a certain target will get smaller and smaller until this many explorations have been carried out, 
+    at which point exploration will never occur.*/
+    static const float ExploreCount = 100.0f;
 };
 
 /* Action targets for actions taken from a given position. Action targets are FIntPoint positions. Actions are North, East, South, West. */
@@ -315,41 +337,85 @@ public:
     void SetIsGoal(bool isGoal);
     bool IsGoalState() const;
 
-    FIntPoint GetActionTarget(EDirectionType actionType) const;
+    FRoomPositionPair GetActionTarget(EDirectionType actionType) const;
 
     void SetValid(bool valid);
-    bool IsStateValid();
+    bool IsStateValid() const;
 
-    void SetActionTarget(EDirectionType actionType, FIntPoint position);
+    void SetActionTarget(EDirectionType actionType, FRoomPositionPair roomAndPosition);
 
 private:
     bool IsGoal = false;
     bool IsValid = true;
     
-    TArray<FIntPoint> ActionTargets{ {0,0}, {0,0}, {0,0}, {0,0} };
+    TArray<FRoomPositionPair> ActionTargets{ {{0,0},{0,0}}, {{0,0},{0,0}}, {{0,0},{0,0}}, {{0,0},{0,0}} };
 };
 
 /* QLearning qvalues and rewards for actions taken from a position in a room (for a specific target). Actions are North, East, South, West. */
 class NavigationState
 {
 public:
+    struct RewardTracker
+    {
+        float GetAverage() const
+        {
+            return AverageReward;
+        }
+
+        void AddObservation(float value)
+        {
+            if (ObservationCount >= MAX_FLT - 1.0f)
+            {
+                ObservationCount = 1.0f;
+                ObservationSum = value;
+                return;
+            }
+            ++ObservationCount;
+            ObservationSum += value;
+            AverageReward = ObservationSum / ObservationCount;
+        }
+
+    private:
+        float ObservationSum = 0.0f;
+        float ObservationCount = 0.0f;
+        float AverageReward = 0.0f;
+    };
+
     const TArray<float> GetQValues() const;
     const TArray<float> GetRewards() const;
 
     const float GetOptimalQValueAndActions(FDirectionSet& Actions) const;
 
-    void UpdateQValue(EDirectionType actionType, float deltaQ);
+    const float GetOptimalQValueAndActions_Valid(FDirectionSet& Actions) const;
+
+    void UpdateQValue(EDirectionType actionType, float learningRate, float deltaQ);
     void ResetQValues();
 
-    void SetAsGoal() 
+    void SetActionReward(EDirectionType movementDirection, float reward)
+    {
+        ActionRewards[(int)movementDirection] = reward;
+    }
+
+    void SetAsGoal()
     {
         ActionRewards = { GridTrainingConstants::GoalReward, GridTrainingConstants::GoalReward,
                           GridTrainingConstants::GoalReward, GridTrainingConstants::GoalReward };
     }
+
+    void AddActionRewardObservation(EDirectionType action, float reward)
+    {
+        ActionRewardTrackers[(int)action].AddObservation(reward);
+    }
+
+    void IncrementExplorations() { ++NumExplorations; }
+    float GetExploreProbability() const { return FMath::Clamp(1.0f - (NumExplorations / GridTrainingConstants::ExploreCount), 0.0f, 1.0f); }
 private:
     TArray<float> ActionQValues{ 0.0f, 0.0f, 0.0f, 0.0f };
     TArray<float> ActionRewards{ GridTrainingConstants::MovementCost, GridTrainingConstants::MovementCost,
                                  GridTrainingConstants::MovementCost, GridTrainingConstants::MovementCost };
+
+    TArray<RewardTracker> ActionRewardTrackers{RewardTracker(), RewardTracker(), RewardTracker(), RewardTracker()};
+    float NumExplorations = (float)NUM_TRAINING_SIMULATIONS;
 };
 
 namespace
@@ -394,12 +460,20 @@ namespace
             {
                 targetNavSets[x].Add(NavigationSet());
                 InitialiseNavigationSet(targetNavSets[x][y], numX, numY);
-                targetNavSets[x][y][x][y].SetAsGoal();
+                if (x > 0)
+                    targetNavSets[x][y][x - 1][y].SetActionReward(EDirectionType::North, GridTrainingConstants::GoalReward);
+                if (y > 0)
+                    targetNavSets[x][y][x][y - 1].SetActionReward(EDirectionType::East, GridTrainingConstants::GoalReward);
+                if (x < numX - 1)
+                    targetNavSets[x][y][x + 1][y].SetActionReward(EDirectionType::South, GridTrainingConstants::GoalReward);
+                if (y < numY - 1)
+                    targetNavSets[x][y][x][y + 1].SetActionReward(EDirectionType::West, GridTrainingConstants::GoalReward);
+                //targetNavSets[x][y][x][y].SetAsGoal();
             }
         }
     }
 
-    NavigationEnvironment GetNavigationEnvironmentForRoom(TArray<TArray<int>> roomStructure)
+    NavigationEnvironment GetNavigationEnvironmentForRoom(TArray<TArray<int>> roomStructure, FIntPoint roomCoords)
     {
         const int sizeX = roomStructure.Num();
         const int sizeY = roomStructure[0].Num();
@@ -420,10 +494,15 @@ namespace
                         EDirectionType actionType = EDirectionType(a);
                         FIntPoint targetPoint = LevelBuilderHelpers::GetTargetPointForAction(FIntPoint(x, y), actionType);
 
+                        FRoomPositionPair actionTarget = {roomCoords, targetPoint};
+
                         const bool targetValid = LevelBuilderHelpers::GridPositionIsValid(targetPoint, sizeX, sizeY) &&
                             (roomStructure[targetPoint.X][targetPoint.Y] == (int)ECellState::Open || roomStructure[targetPoint.X][targetPoint.Y] == (int)ECellState::Door);
 
-                        state.SetActionTarget(actionType, targetValid ? targetPoint : FIntPoint(x, y));
+                        if (!targetValid)
+                            actionTarget = {roomCoords, FIntPoint(x, y) };
+                        
+                        state.SetActionTarget(actionType, actionTarget);
                     }
                 }
             }
