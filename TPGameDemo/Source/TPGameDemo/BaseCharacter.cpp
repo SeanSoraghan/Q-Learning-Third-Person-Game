@@ -21,7 +21,7 @@ ABaseCharacter::ABaseCharacter (const FObjectInitializer& ObjectInitializer) : S
 void ABaseCharacter::BeginPlay()
 {
 	Super::BeginPlay();
-	DefaultMeshRotation = GetMesh()->RelativeRotation;
+	DefaultMeshRotation = GetMesh()->GetRelativeRotation();
 
     //======================================================================================================
     // Timeline
@@ -108,7 +108,7 @@ FRotator ABaseCharacter::GetNormalizedMovementRotation()
 
 FRotator ABaseCharacter::GetNormalizedMeshWorldForwardRotation()
 {
-    FRotator relativeMeshRotation = GetMesh()->RelativeRotation;
+    FRotator relativeMeshRotation = GetMesh()->GetRelativeRotation();
     FRotator meshDeltaRotation    = UKismetMathLibrary::NormalizedDeltaRotator (relativeMeshRotation, DefaultMeshRotation);
     FRotator meshForwardRotation;
     if (GetController() != nullptr)
@@ -120,7 +120,7 @@ FRotator ABaseCharacter::GetNormalizedMeshWorldForwardRotation()
 
 FRotator ABaseCharacter::GetNormalizedRelativeMeshRotation()
 {
-    FRotator normalizedRelativeMeshRotation = GetMesh()->RelativeRotation;
+    FRotator normalizedRelativeMeshRotation = GetMesh()->GetRelativeRotation();
     normalizedRelativeMeshRotation.Normalize();
     return normalizedRelativeMeshRotation;
 }
