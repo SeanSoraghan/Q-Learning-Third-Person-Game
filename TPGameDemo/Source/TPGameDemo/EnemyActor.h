@@ -7,7 +7,7 @@
 #include "EnemyActor.generated.h"
 
 
-#define ENEMY_LIFETIME_LOGS 1
+#define ENEMY_LIFETIME_LOGS 0
 
 /*
 The base class for an enemy actor. Enemies behave according to `level policies' which are action-value tables that have been trained using Q-Learning.
