@@ -87,7 +87,7 @@ private:
     FString CurrentLevelName = FString("");
     TSharedPtr<FRunnableThread> TrainerThread;
 
-    TSharedPtr<LevelTrainerRunnable> TrainerRunnable;
+    TSharedPtr<LevelTrainerRunnable> TrainerRunnable = nullptr;
     FCriticalSection ClientSection;
 
     BehaviourMap GetBehaviourMap();

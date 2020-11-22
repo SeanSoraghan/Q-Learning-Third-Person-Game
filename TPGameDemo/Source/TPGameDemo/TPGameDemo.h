@@ -4,7 +4,12 @@
 
 #include <set>
 #include "Engine.h"
+#include "Runtime/Launch/Resources/Version.h"
 #include "TPGameDemo.generated.h"
+
+
+#define UE_4_24_OR_LATER (ENGINE_MAJOR_VERSION >= 4 && ENGINE_MINOR_VERSION >= 24)
+#define UE_4_25_OR_LATER (ENGINE_MAJOR_VERSION >= 4 && ENGINE_MINOR_VERSION >= 25)
 
 #define ON_SCREEN_DEBUGGING 0
 #define DELTA_Q_CONVERGENCE_THRESHOLD 0.01f

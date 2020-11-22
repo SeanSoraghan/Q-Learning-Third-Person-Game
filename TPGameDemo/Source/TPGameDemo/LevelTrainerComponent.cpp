@@ -90,6 +90,8 @@ ULevelTrainerComponent::ULevelTrainerComponent()
                 {
                     UE_LOG(LogTemp, Warning, TEXT("Exiting training thread."));
                     TrainerRunnable->Exit();
+                    TrainerRunnable->Wake();
+                    while (TrainerRunnable->IsTraining) {}
                 }
                 FWorldDelegates::OnWorldCleanup.Remove(WorldCleanupHandle);
             //}
@@ -116,7 +118,8 @@ void ULevelTrainerComponent::BeginDestroy()
     {
         while (TrainerRunnable->IsTraining){}
     }
-    
+    TrainerRunnable = nullptr;
+    FWorldDelegates::OnWorldCleanup.Remove(WorldCleanupHandle);
     Super::BeginDestroy();
 }
 
