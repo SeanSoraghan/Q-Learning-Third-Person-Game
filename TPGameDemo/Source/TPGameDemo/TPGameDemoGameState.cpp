@@ -81,6 +81,17 @@ void ATPGameDemoGameState::InitialiseArrays()
 
 void ATPGameDemoGameState::Tick( float DeltaTime )
 {
+    if (PerimeterDoorsNeedUnlocked)
+    {
+        UnlockPerimeterDoors();
+        ++CurrentPerimeter;
+        NumPerimeterRoomsConnected = 0;
+        PerimeterDoorsNeedUnlocked = false;
+        ATPGameDemoGameMode* gameMode = (ATPGameDemoGameMode*)GetWorld()->GetAuthGameMode();
+        UpdateSignalStrength(gameMode->DefaultSignalStrength);
+        OnPerimeterComplete.Broadcast();
+    }
+
     for (auto wallPosition : WallsToUpdate)
     {
         auto roomCoords = wallPosition.WallCoupleCoords;
@@ -116,16 +127,6 @@ void ATPGameDemoGameState::Tick( float DeltaTime )
         // Door Locked State:
         UpdateDoorLockedStateForNeighbouringRooms(roomCoords, neighbourCoords, wallType);
         LockDoorIfOnPerimeter(roomCoords);
-        if (PerimeterDoorsNeedUnlocked)
-        {
-            UnlockPerimeterDoors();
-            ++CurrentPerimeter;
-            NumPerimeterRoomsConnected = 0;
-            PerimeterDoorsNeedUnlocked = false;
-            ATPGameDemoGameMode* gameMode = (ATPGameDemoGameMode*) GetWorld()->GetAuthGameMode();
-            UpdateSignalStrength(gameMode->DefaultSignalStrength);
-            OnPerimeterComplete.Broadcast();
-        }
     }
     WallsToUpdate.Empty();
 }
@@ -513,7 +514,9 @@ void ATPGameDemoGameState::SetRoomTrained(FIntPoint roomCoords)
     FIntPoint roomIndices = GetRoomXYIndicesChecked(roomCoords);
     if (DoesRoomExist(roomCoords))
     {
-        RoomStates[roomIndices.X][roomIndices.Y].SetRoomTrained();
+        // Slight hack: When generating an entire perimeter of rooms, their status will be 'connected' before the complete training.
+        if (RoomStates[roomIndices.X][roomIndices.Y].RoomStatus != RoomState::Status::Connected)
+            RoomStates[roomIndices.X][roomIndices.Y].SetRoomTrained();
         FlagWallsForUpdate(roomCoords);
     }
 }
