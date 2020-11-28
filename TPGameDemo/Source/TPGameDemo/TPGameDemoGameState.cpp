@@ -118,7 +118,7 @@ void ATPGameDemoGameState::Tick( float DeltaTime )
 			// Movement action targets: Update the action targets in the nav position states.
 			FRoomPositionPair doorPos = GetDoorPosition(roomCoords, wallType);
 			FRoomPositionPair targetPos = GetTargetRoomAndPositionForDirectionType(doorPos, wallType);
-			GetPosState(GetNavEnvironment(roomCoords), doorPos.PositionInRoom).SetActionTarget(wallType, targetPos);
+			Get_mActionTargets(GetmNavEnvironment(roomCoords), doorPos.PositionInRoom).SetActionTarget(wallType, targetPos);
 		}
 		else
 		{
@@ -134,13 +134,13 @@ void ATPGameDemoGameState::Tick( float DeltaTime )
 //============================================================================
 // Acessors
 //============================================================================
-const RoomTargetsNavSets& ATPGameDemoGameState::GetRoomNavSets(FIntPoint roomCoords)
+const RoomTargetsQValuesRewardsSets& ATPGameDemoGameState::GetRoomQValuesRewardsSets(FIntPoint roomCoords)
 {
     FIntPoint roomIndices = GetRoomXYIndicesChecked(roomCoords);
-    return RoomStates[roomIndices.X][roomIndices.Y].TargetNavSets;
+    return RoomStates[roomIndices.X][roomIndices.Y].QValuesRewardsSets;
 }
 
-const NavigationSet& ATPGameDemoGameState::GetRoomNavigationSetForTargetPosition(FIntPoint roomCoords, FIntPoint targetPosition)
+const QValuesRewardsSet& ATPGameDemoGameState::GetRoomQValuesRewardsSetForTargetPosition(FIntPoint roomCoords, FIntPoint targetPosition)
 {
     return GetNavSet(roomCoords, targetPosition);
 }
@@ -545,10 +545,10 @@ void ATPGameDemoGameState::SetRoomTrainingProgress(FIntPoint roomCoords, float p
 
 bool ATPGameDemoGameState::SimulateAction(FRoomPositionPair& roomAndPosition, EDirectionType actionToTake, FIntPoint targetPosition)
 {
-    NavPositionState& currentPosState = GetNavPositionState(roomAndPosition);
+    ActionTargets& currentPosState = GetActionTargets(roomAndPosition);
     FRoomPositionPair actionTarget = currentPosState.GetActionTarget(actionToTake);
     WrapRoomPositionPair(actionTarget);
-    //UpdateQValue(roomAndPosition, actionToTake, targetPosition, 0.0f);
+    //UpdateQValueRealtime(roomAndPosition, actionToTake, targetPosition, 0.0f);
 
     if (actionTarget.PositionInRoom == roomAndPosition.PositionInRoom && actionTarget.RoomCoords == roomAndPosition.RoomCoords)
         return false;
@@ -564,9 +564,9 @@ bool ATPGameDemoGameState::SimulateAction(FRoomPositionPair& roomAndPosition, ED
     return DoesRoomExist(roomAndPosition.RoomCoords) && InnerRoomPositionValid(roomAndPosition.PositionInRoom);
 }
 
-void ATPGameDemoGameState::UpdateQValue(FRoomPositionPair& roomAndPosition, EDirectionType actionToTake, FIntPoint targetPosition, float accumulatedReward, float learningRate)
+void ATPGameDemoGameState::UpdateQValueRealtime(FRoomPositionPair& roomAndPosition, EDirectionType actionToTake, FIntPoint targetPosition, float accumulatedReward, float learningRate)
 {
-    NavPositionState& currentPosState = GetNavPositionState(roomAndPosition);
+    ActionTargets& currentPosState = GetActionTargets(roomAndPosition);
     FRoomPositionPair actionTarget = currentPosState.GetActionTarget(actionToTake);
     WrapRoomPositionPair(actionTarget);
     bool movingFromTarget = roomAndPosition.PositionInRoom == targetPosition;
@@ -579,13 +579,13 @@ void ATPGameDemoGameState::UpdateQValue(FRoomPositionPair& roomAndPosition, EDir
         if (actionLeadsToSameRoom)
         {
             FDirectionSet nextValidActions = GetValidActions(roomAndPosition);
-            maxNextReward = GetNavState(actionTarget, targetPosition).GetOptimalQValueAndActions_Valid(nextValidActions);
+            maxNextReward = GetActionQValuesRewards(actionTarget, targetPosition).GetOptimalQValueAndActions_Valid(nextValidActions);
         }
         else
         {
             maxNextReward = -1.0f; // leaving room without reaching target
         }
-        NavigationState& currentNavState = GetNavState(roomAndPosition, targetPosition);
+        ActionQValuesAndRewards& currentNavState = GetActionQValuesRewards(roomAndPosition, targetPosition);
         currentNavState.AddActionRewardObservation(actionToTake, accumulatedReward);
         const float currentQValue = currentNavState.GetQValues()[(int)actionToTake];
         const float discountedNextReward = GridTrainingConstants::ActorDiscountFactor * maxNextReward;
@@ -595,20 +595,61 @@ void ATPGameDemoGameState::UpdateQValue(FRoomPositionPair& roomAndPosition, EDir
     }
 }
 
+void ATPGameDemoGameState::UpdateQValue(const FRoomPositionPair& roomAndPosition, FIntPoint goalPosition, EDirectionType actionToTake, float learningRate, float deltaQ)
+{
+    ActionQValuesAndRewards& currentNavState = GetActionQValuesRewards(roomAndPosition, goalPosition);
+    currentNavState.UpdateQValue(actionToTake, learningRate, deltaQ);
+}
+
 void ATPGameDemoGameState::UpdateRoomNavEnvironmentForStructure(FIntPoint roomCoords, TArray<TArray<int>> roomStructure)
 {
-    GetNavEnvironment(roomCoords) = GetNavigationEnvironmentForRoom(roomStructure, roomCoords);
+    GetNavigationEnvironmentForRoom(roomStructure, roomCoords, GetmNavEnvironment(roomCoords));
 }
 
 void ATPGameDemoGameState::UpdateRoomNavEnvironment(FIntPoint roomCoords, const NavigationEnvironment& navEnvironment)
 {
-    GetNavEnvironment(roomCoords) = navEnvironment;
+    GetmNavEnvironment(roomCoords) = navEnvironment;
 }
 
-void ATPGameDemoGameState::SetRoomNavigationSet(FIntPoint roomCoords, FIntPoint targetPosition, const NavigationSet& navSet)
+void ATPGameDemoGameState::SetRoomQValuesRewardsSet(FIntPoint roomCoords, FIntPoint targetPosition, const QValuesRewardsSet& navSet)
 {
     FIntPoint roomIndices = GetRoomXYIndicesChecked(roomCoords);
     RoomStates[roomIndices.X][roomIndices.Y].SetNavSetForTarget(targetPosition, navSet);
+}
+
+void ATPGameDemoGameState::ClearQValuesAndRewards(FIntPoint RoomCoords, FIntPoint GoalPosition)
+{
+    FIntPoint roomIndices = GetRoomXYIndicesChecked(RoomCoords);
+    QValuesRewardsSet& set = RoomStates[roomIndices.X][roomIndices.Y].QValuesRewardsSets[GoalPosition.X][GoalPosition.Y];
+    for (int x = 0; x < set.Num(); ++x)
+    {
+        for (int y = 0; y < set[0].Num(); ++y)
+        {
+            set[x][y].ResetQValues();
+            // Could also enforce behaviour where you move in from the edges:
+            /*if (x == 0)
+            {
+                set[x][y].UpdateQValue(EDirectionType::North, 100.0f);
+            }
+            else if (y == 0)
+            {
+                set[x][y].UpdateQValue(EDirectionType::East, 100.0f);
+            }
+            else if (x == Environment.Num() - 1)
+            {
+                set[x][y].UpdateQValue(EDirectionType::South, 100.0f);
+            }
+            else if (y == Environment[0].Num() - 1)
+            {
+                set[x][y].UpdateQValue(EDirectionType::West, 100.0f);
+            }*/
+        }
+    }
+}
+
+void ATPGameDemoGameState::SetPositionIsGoal(FIntPoint RoomCoords, FIntPoint GoalPosition, bool isGoal)
+{
+    GetmNavEnvironment(RoomCoords)[GoalPosition.X][GoalPosition.Y].SetIsGoal(isGoal);
 }
 
 void ATPGameDemoGameState::EnableWallState(FIntPoint roomCoords, EDirectionType wallType)
@@ -817,26 +858,32 @@ void ATPGameDemoGameState::SetEnemyMovementPaused(bool MovementPaused)
 }
 //============================================================================
 //============================================================================
-NavigationEnvironment& ATPGameDemoGameState::GetNavEnvironment(FIntPoint roomCoords)
+const NavigationEnvironment& ATPGameDemoGameState::GetNavEnvironment(FIntPoint roomCoords) const
 {
     FIntPoint roomIndices = GetRoomXYIndicesChecked(roomCoords);
     return RoomStates[roomIndices.X][roomIndices.Y].NavEnvironment;
 }
 
-NavPositionState& ATPGameDemoGameState::GetNavPositionState(FRoomPositionPair roomAndPosition)
-{
-    return GetPosState(GetNavEnvironment(roomAndPosition.RoomCoords), roomAndPosition.PositionInRoom);
-}
-
-NavigationSet& ATPGameDemoGameState::GetNavSet(FIntPoint roomCoords, FIntPoint targetPosition)
+NavigationEnvironment& ATPGameDemoGameState::GetmNavEnvironment(FIntPoint roomCoords)
 {
     FIntPoint roomIndices = GetRoomXYIndicesChecked(roomCoords);
-    return GetRoomNavSet(RoomStates[roomIndices.X][roomIndices.Y].TargetNavSets, targetPosition);
+    return RoomStates[roomIndices.X][roomIndices.Y].NavEnvironment;
 }
 
-NavigationState& ATPGameDemoGameState::GetNavState(FRoomPositionPair roomAndPosition, FIntPoint targetPosition)
+ActionTargets& ATPGameDemoGameState::GetActionTargets(FRoomPositionPair roomAndPosition)
 {
-    return ::GetNavState(GetNavSet(roomAndPosition.RoomCoords, targetPosition), roomAndPosition.PositionInRoom);
+    return Get_mActionTargets(GetmNavEnvironment(roomAndPosition.RoomCoords), roomAndPosition.PositionInRoom);
+}
+
+QValuesRewardsSet& ATPGameDemoGameState::GetNavSet(FIntPoint roomCoords, FIntPoint targetPosition)
+{
+    FIntPoint roomIndices = GetRoomXYIndicesChecked(roomCoords);
+    return Get_mQValuesRewardsSet_For_GoalPosition(RoomStates[roomIndices.X][roomIndices.Y].QValuesRewardsSets, targetPosition);
+}
+
+ActionQValuesAndRewards& ATPGameDemoGameState::GetActionQValuesRewards(const FRoomPositionPair& roomAndPosition, FIntPoint targetPosition)
+{
+    return ::Get_mActionQValuesAndRewards(GetNavSet(roomAndPosition.RoomCoords, targetPosition), roomAndPosition.PositionInRoom);
 }
 
 FIntPoint ATPGameDemoGameState::GetRoomXYIndicesChecked(FIntPoint roomCoords) const

@@ -218,20 +218,20 @@ void LevelBuilderHelpers::PrintArray(TArray<TArray<int>>& arrayRef)
 }
 
 //====================================================================================================
-// NavigationState
+// ActionQValuesAndRewards
 //====================================================================================================
 
-const TArray<float> NavigationState::GetQValues() const
+const TArray<float> ActionQValuesAndRewards::GetQValues() const
 {
     return ActionQValues;
 }
 
-const TArray<float> NavigationState::GetRewards() const
+const TArray<float> ActionQValuesAndRewards::GetRewards() const
 {
     return ActionRewards;
 }
 
-const float NavigationState::GetOptimalQValueAndActions(FDirectionSet& Actions) const
+const float ActionQValuesAndRewards::GetOptimalQValueAndActions(FDirectionSet& Actions) const
 {
     ensure(ActionQValues.Num() == (int)EDirectionType::NumDirectionTypes);
     float optimalQValue = ActionQValues[0] + ActionRewardTrackers[0].GetAverage();
@@ -252,7 +252,7 @@ const float NavigationState::GetOptimalQValueAndActions(FDirectionSet& Actions) 
     return optimalQValue;
 }
 
-const float NavigationState::GetOptimalQValueAndActions_Valid(FDirectionSet& ValidActions) const
+const float ActionQValuesAndRewards::GetOptimalQValueAndActions_Valid(FDirectionSet& ValidActions) const
 {
     ensure(ActionQValues.Num() == (int)EDirectionType::NumDirectionTypes);
     EDirectionType direction = EDirectionType::North;
@@ -283,47 +283,47 @@ const float NavigationState::GetOptimalQValueAndActions_Valid(FDirectionSet& Val
     return optimalQValue;
 }
 
-FRoomPositionPair NavPositionState::GetActionTarget(EDirectionType actionType) const
+FRoomPositionPair ActionTargets::GetActionTarget(EDirectionType actionType) const
 {
-    return ActionTargets[(int)actionType];
+    return Targets[(int)actionType];
 }
 
-void NavigationState::ResetQValues()
+void ActionQValuesAndRewards::ResetQValues()
 {
     for (int actionType = 0; actionType < (int)EDirectionType::NumDirectionTypes; ++actionType)
         ActionQValues[actionType] = 0.0f;
 }
 
-void NavigationState::UpdateQValue(EDirectionType actionType, float learningRate, float deltaQ)
+void ActionQValuesAndRewards::UpdateQValue(EDirectionType actionType, float learningRate, float deltaQ)
 {
     float currentQValue = ActionQValues[(int)actionType];
     ActionQValues[(int)actionType] = (1.0f - learningRate) * currentQValue + deltaQ;
 }
 
-bool NavPositionState::IsGoalState() const
+bool ActionTargets::IsGoalState() const
 {
     return IsGoal;
 }
 
-void NavPositionState::SetIsGoal(bool isGoal)
+void ActionTargets::SetIsGoal(bool isGoal)
 {
     IsGoal = isGoal;
 }
 
-void NavPositionState::SetValid(bool valid)
+void ActionTargets::SetValid(bool valid)
 {
     IsValid = valid;
 }
 
-bool NavPositionState::IsStateValid() const
+bool ActionTargets::IsStateValid() const
 {
     return IsValid;
 }
 
-void NavPositionState::SetActionTarget(EDirectionType actionType, FRoomPositionPair roomAndPosition)
+void ActionTargets::SetActionTarget(EDirectionType actionType, FRoomPositionPair roomAndPosition)
 {
-    ensure(ActionTargets.Num() == (int)EDirectionType::NumDirectionTypes);
-    ActionTargets[(int)actionType] = roomAndPosition;
+    ensure(Targets.Num() == (int)EDirectionType::NumDirectionTypes);
+    Targets[(int)actionType] = roomAndPosition;
 }
 
 //====================================================================================================

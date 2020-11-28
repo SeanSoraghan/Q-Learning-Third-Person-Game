@@ -92,8 +92,9 @@ private:
 
     BehaviourMap GetBehaviourMap();
     void ClearEnvironment();
-    NavigationEnvironment Environment;
-    RoomTargetsNavSets NavSets;
+
+    const NavigationEnvironment& GetNavEnvironment() const;
+    const RoomTargetsQValuesRewardsSets& GetNavSets() const;
     void InitTrainerThread();
     void TrainNextGoalPosition(int numSimulationsPerStartingPosition, int maxNumActionsPerSimulation);
     // Simulate a run through the while keepting track of the average deltaQ and the num actions taken. (these will be used to measure convergence)

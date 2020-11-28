@@ -317,7 +317,7 @@ namespace LevelBuilderHelpers
 };
 
 //====================================================================================================
-// NavigationState State
+// ActionQValuesAndRewards State
 //====================================================================================================
 
 namespace GridTrainingConstants
@@ -336,7 +336,7 @@ namespace GridTrainingConstants
 };
 
 /* Action targets for actions taken from a given position. Action targets are FIntPoint positions. Actions are North, East, South, West. */
-class NavPositionState
+class ActionTargets
 {
 public:
     void SetIsGoal(bool isGoal);
@@ -353,11 +353,11 @@ private:
     bool IsGoal = false;
     bool IsValid = true;
     
-    TArray<FRoomPositionPair> ActionTargets{ {{0,0},{0,0}}, {{0,0},{0,0}}, {{0,0},{0,0}}, {{0,0},{0,0}} };
+    TArray<FRoomPositionPair> Targets{ {{0,0},{0,0}}, {{0,0},{0,0}}, {{0,0},{0,0}}, {{0,0},{0,0}} };
 };
 
 /* QLearning qvalues and rewards for actions taken from a position in a room (for a specific target). Actions are North, East, South, West. */
-class NavigationState
+class ActionQValuesAndRewards
 {
 public:
     struct RewardTracker
@@ -425,72 +425,80 @@ private:
 
 namespace
 {
-    /* Nav position states for each position in a room. */
-    typedef TArray<TArray<NavPositionState>> NavigationEnvironment;
-    /* Navigation states for each position in a room (for a fixed target position). */
-    typedef TArray<TArray<NavigationState>> NavigationSet;
-    /* Navigation states for each position in a room for each target position in the room. */
-    typedef TArray<TArray<NavigationSet>> RoomTargetsNavSets;
+    /* Action targets for each position in a room. */
+    typedef TArray<TArray<ActionTargets>> NavigationEnvironment;
+    /* ActionQValuesAndRewards for each position in a room (for a fixed target position). */
+    typedef TArray<TArray<ActionQValuesAndRewards>> QValuesRewardsSet;
+    /* ActionQValuesAndRewards for each position in a room for each target position in the room. */
+    typedef TArray<TArray<QValuesRewardsSet>> RoomTargetsQValuesRewardsSets;
 
-    NavPositionState& GetPosState(NavigationEnvironment& navEnvironment, FIntPoint position) { return navEnvironment[position.X][position.Y]; }
-    NavigationState& GetNavState(NavigationSet& navSet, FIntPoint position) { return navSet[position.X][position.Y]; }
-    NavigationSet& GetRoomNavSet(RoomTargetsNavSets& roomNavSets, FIntPoint goalPosition) { return roomNavSets[goalPosition.X][goalPosition.Y]; }
-    NavigationState& GetNavStateForGoalPosition(RoomTargetsNavSets& roomNavSets, FIntPoint goalPosition, FIntPoint position)
+    const ActionTargets& Get_ActionTargets(const NavigationEnvironment& navEnvironment, FIntPoint position) { return navEnvironment[position.X][position.Y]; }
+    const ActionQValuesAndRewards& Get_ActionQValuesAndRewards(const QValuesRewardsSet& qValuesRewards , FIntPoint position) { return qValuesRewards[position.X][position.Y]; }
+    const QValuesRewardsSet& Get_QValuesRewardsSet_For_GoalPosition(const RoomTargetsQValuesRewardsSets& roomQValuesRewards, FIntPoint goalPosition) { return roomQValuesRewards[goalPosition.X][goalPosition.Y]; }
+    const ActionQValuesAndRewards& Get_ActionQValuesAndRewards_FromRoom(const RoomTargetsQValuesRewardsSets& roomQValuesRewards, FIntPoint goalPosition, FIntPoint currentPosition)
     {
-        return GetNavState(GetRoomNavSet(roomNavSets, goalPosition), position);
+        return Get_ActionQValuesAndRewards(Get_QValuesRewardsSet_For_GoalPosition(roomQValuesRewards, goalPosition), currentPosition);
+    }
+
+    ActionTargets& Get_mActionTargets(NavigationEnvironment& navEnvironment, FIntPoint position) { return navEnvironment[position.X][position.Y]; }
+    ActionQValuesAndRewards& Get_mActionQValuesAndRewards(QValuesRewardsSet& navSet, FIntPoint position) { return navSet[position.X][position.Y]; }
+    QValuesRewardsSet& Get_mQValuesRewardsSet_For_GoalPosition(RoomTargetsQValuesRewardsSets& roomNavSets, FIntPoint goalPosition) { return roomNavSets[goalPosition.X][goalPosition.Y]; }
+    ActionQValuesAndRewards& Get_mActionQValuesAndRewards_FromRoom(RoomTargetsQValuesRewardsSets& roomNavSets, FIntPoint goalPosition, FIntPoint position)
+    {
+        return Get_mActionQValuesAndRewards(Get_mQValuesRewardsSet_For_GoalPosition(roomNavSets, goalPosition), position);
     }
 
     void InitialiseNavEnvironment(NavigationEnvironment& navSet, int numX, int numY)
     {
         for (int x = 0; x < numX; ++x)
         {
-            navSet.Add(TArray<NavPositionState>());
+            navSet.Add(TArray<ActionTargets>());
             navSet[x].AddDefaulted(numY);
         }
     }
-    void InitialiseNavigationSet(NavigationSet& navSet, int numX, int numY)
+    void InitialiseQValuesRewardsSet(QValuesRewardsSet& navSet, int numX, int numY)
     {
         for (int x = 0; x < numX; ++x)
         {
-            navSet.Add(TArray<NavigationState>());
+            navSet.Add(TArray<ActionQValuesAndRewards>());
             navSet[x].AddDefaulted(numY);
         }
     }
-    void InitialiseRoomTargetsNavSets(RoomTargetsNavSets& targetNavSets, int numX, int numY)
+    void InitialiseRoomTargetsQValuesRewardsSets(RoomTargetsQValuesRewardsSets& targetsSets, int numX, int numY)
     {
         for (int x = 0; x < numX; ++x)
         {
-            targetNavSets.Add(TArray<NavigationSet>());
+            targetsSets.Add(TArray<QValuesRewardsSet>());
             for (int y = 0; y < numY; ++y)
             {
-                targetNavSets[x].Add(NavigationSet());
-                InitialiseNavigationSet(targetNavSets[x][y], numX, numY);
+                targetsSets[x].Add(QValuesRewardsSet());
+                InitialiseQValuesRewardsSet(targetsSets[x][y], numX, numY);
                 if (x > 0)
-                    targetNavSets[x][y][x - 1][y].SetActionReward(EDirectionType::North, GridTrainingConstants::GoalReward);
+                    targetsSets[x][y][x - 1][y].SetActionReward(EDirectionType::North, GridTrainingConstants::GoalReward);
                 if (y > 0)
-                    targetNavSets[x][y][x][y - 1].SetActionReward(EDirectionType::East, GridTrainingConstants::GoalReward);
+                    targetsSets[x][y][x][y - 1].SetActionReward(EDirectionType::East, GridTrainingConstants::GoalReward);
                 if (x < numX - 1)
-                    targetNavSets[x][y][x + 1][y].SetActionReward(EDirectionType::South, GridTrainingConstants::GoalReward);
+                    targetsSets[x][y][x + 1][y].SetActionReward(EDirectionType::South, GridTrainingConstants::GoalReward);
                 if (y < numY - 1)
-                    targetNavSets[x][y][x][y + 1].SetActionReward(EDirectionType::West, GridTrainingConstants::GoalReward);
+                    targetsSets[x][y][x][y + 1].SetActionReward(EDirectionType::West, GridTrainingConstants::GoalReward);
                 //targetNavSets[x][y][x][y].SetAsGoal();
             }
         }
     }
 
-    NavigationEnvironment GetNavigationEnvironmentForRoom(TArray<TArray<int>> roomStructure, FIntPoint roomCoords)
+    void GetNavigationEnvironmentForRoom(TArray<TArray<int>> roomStructure, FIntPoint roomCoords, NavigationEnvironment& navEnvironment)
     {
         const int sizeX = roomStructure.Num();
         const int sizeY = roomStructure[0].Num();
-        NavigationEnvironment navEnvironment;
+        navEnvironment.Empty();
         for (int x = 0; x < sizeX; ++x)
         {
-            navEnvironment.Add(TArray<NavPositionState>());
-            TArray<NavPositionState>& row = navEnvironment[x];
+            navEnvironment.Add(TArray<ActionTargets>());
+            TArray<ActionTargets>& row = navEnvironment[x];
             for (int y = 0; y < sizeY; ++y)
             {
-                row.Add(NavPositionState());
-                NavPositionState& state = row[y];
+                row.Add(ActionTargets());
+                ActionTargets& state = row[y];
                 state.SetValid(roomStructure[x][y] == (int)ECellState::Open || roomStructure[x][y] == (int)ECellState::Door);
                 if (state.IsStateValid())
                 {
@@ -512,7 +520,6 @@ namespace
                 }
             }
         }
-        return navEnvironment;
     }
 };
 
@@ -531,7 +538,7 @@ struct RoomState
 
     RoomState(FIntPoint roomDimensions)
     {
-        InitialiseRoomTargetsNavSets(TargetNavSets, roomDimensions.X, roomDimensions.Y);
+        InitialiseRoomTargetsQValuesRewardsSets(QValuesRewardsSets, roomDimensions.X, roomDimensions.Y);
         for (int x = 0; x < roomDimensions.X; ++x)
         {
             TArray<FThreadSafeCounter> states;
@@ -590,9 +597,9 @@ struct RoomState
         TileActorCounters[TilePosition.X][TilePosition.Y].Decrement();
     }
 
-    void SetNavSetForTarget(FIntPoint targetPosition, const NavigationSet& navSet)
+    void SetNavSetForTarget(FIntPoint targetPosition, const QValuesRewardsSet& navSet)
     {
-        TargetNavSets[targetPosition.X][targetPosition.Y] = navSet;
+        QValuesRewardsSets[targetPosition.X][targetPosition.Y] = navSet;
     }
 
     void SetTargetPosition(FIntPoint targetPosition)
@@ -616,7 +623,7 @@ struct RoomState
     TArray<TArray<FThreadSafeCounter>> TileActorCounters;
     /** Action rewards and targets for each of the positions in the room. */
     NavigationEnvironment NavEnvironment;
-    /** Navigation sets for each target position in room */
-    RoomTargetsNavSets TargetNavSets;
+    /** QValues and rewards for each target position in room */
+    RoomTargetsQValuesRewardsSets QValuesRewardsSets;
     FIntPoint PrevTargetPos = FIntPoint(-1, -1);
 };

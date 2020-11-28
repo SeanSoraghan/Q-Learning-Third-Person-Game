@@ -209,7 +209,7 @@ void AEnemyActor::ActorDied()
     if (AccumulateReward)
         PrevActionAccumulatedReward += GridTrainingConstants::DamageCost;
     if (ShouldUpdateQValue())
-        GameState->UpdateQValue(PrevActionStartPos, PrevActionType, PrevActionTarget, PrevActionAccumulatedReward, GridTrainingConstants::ActorLearningRate);
+        GameState->UpdateQValueRealtime(PrevActionStartPos, PrevActionType, PrevActionTarget, PrevActionAccumulatedReward, GridTrainingConstants::ActorLearningRate);
 }
 
 void AEnemyActor::SetTargetPositionAndAction(FTargetPosition newTarget)
@@ -379,7 +379,7 @@ void AEnemyActor::UpdateMovementForActionType(EDirectionType actionType, int num
         if (!simulationSuccessful)
         {
             if (ShouldUpdateQValue())
-                GameState->UpdateQValue(PrevActionStartPos, PrevActionType, PrevActionTarget, PrevActionAccumulatedReward, GridTrainingConstants::ActorLearningRate);
+                GameState->UpdateQValueRealtime(PrevActionStartPos, PrevActionType, PrevActionTarget, PrevActionAccumulatedReward, GridTrainingConstants::ActorLearningRate);
             actionType = (EDirectionType)(((int)actionType + 1) % (int)EDirectionType::NumDirectionTypes);
             PrevActionStartPos = { CurrentRoomCoords, {GridXPosition, GridYPosition} };
             PrevActionType = actionType;
@@ -396,7 +396,7 @@ void AEnemyActor::UpdateMovementForActionType(EDirectionType actionType, int num
 #endif
         if (ShouldUpdateQValue())
         {
-            GameState->UpdateQValue(PrevActionStartPos, PrevActionType, PrevActionTarget, PrevActionAccumulatedReward, GridTrainingConstants::ActorLearningRate);
+            GameState->UpdateQValueRealtime(PrevActionStartPos, PrevActionType, PrevActionTarget, PrevActionAccumulatedReward, GridTrainingConstants::ActorLearningRate);
         }
         PrevActionStartPos = { CurrentRoomCoords, {GridXPosition, GridYPosition} };
         PrevActionType = actionType;

@@ -157,8 +157,9 @@ public:
         bool IsBuildableItemPlaced(FRoomPositionPair roomAndPosition, EDirectionType direction);
 
     // --------------------- room properties -------------------------------------
-    const RoomTargetsNavSets& GetRoomNavSets(FIntPoint roomCoords);
-    const NavigationSet& GetRoomNavigationSetForTargetPosition(FIntPoint roomCoords, FIntPoint targetPosition);
+    const NavigationEnvironment& GetNavEnvironment(FIntPoint roomCoords) const;
+    const RoomTargetsQValuesRewardsSets& GetRoomQValuesRewardsSets(FIntPoint roomCoords);
+    const QValuesRewardsSet& GetRoomQValuesRewardsSetForTargetPosition(FIntPoint roomCoords, FIntPoint targetPosition);
 
     UFUNCTION(BlueprintCallable, Category = "World Rooms States")
         bool DoesRoomExist(FIntPoint roomCoords) const;
@@ -232,18 +233,18 @@ public:
     FDirectionSet GetOptimalActions(FIntPoint roomCoords, FIntPoint targetGridPosition, FIntPoint currentGridPosition)
     {
         FDirectionSet directionSet = GetValidActions({roomCoords, currentGridPosition});
-        GetNavState({ roomCoords, currentGridPosition }, targetGridPosition).GetOptimalQValueAndActions_Valid(directionSet);
+        GetActionQValuesRewards({ roomCoords, currentGridPosition }, targetGridPosition).GetOptimalQValueAndActions_Valid(directionSet);
         return directionSet;
     }
 
     float GetExploreProbability(FIntPoint roomCoords, FIntPoint targetGridPosition, FIntPoint currentGridPosition)
     {
-        return GetNavState({ roomCoords, currentGridPosition }, targetGridPosition).GetExploreProbability();
+        return GetActionQValuesRewards({ roomCoords, currentGridPosition }, targetGridPosition).GetExploreProbability();
     }
 
     void IncrementExploreCount(FIntPoint roomCoords, FIntPoint targetGridPosition, FIntPoint currentGridPosition)
     {
-        GetNavState({ roomCoords, currentGridPosition }, targetGridPosition).IncrementExplorations();
+        GetActionQValuesRewards({ roomCoords, currentGridPosition }, targetGridPosition).IncrementExplorations();
     }
 
     UFUNCTION(BlueprintCallable, Category = "World Room Building")
@@ -342,13 +343,21 @@ public:
 
     /* Return true if the action leads somewhere. */
     bool SimulateAction(FRoomPositionPair& roomAndPosition, EDirectionType actionToTake, FIntPoint targetPosition);
+    /* A realtime version of UpdateQValue. This is to be performed by actors as they navigate the level.*/
+    void UpdateQValueRealtime(FRoomPositionPair& roomAndPosition, EDirectionType actionToTake, FIntPoint targetPosition, float accumulatedReward, float learningRate);
+    /* Update the qvalue for an action from a given position in a given room for a given goal position.*/
+    void UpdateQValue(const FRoomPositionPair& roomAndPosition, FIntPoint goalPosition, EDirectionType actionToTake, float learningRate, float deltaQ);
     /* Update the qvalue for an action from a given position in a given room.*/
-    void UpdateQValue(FRoomPositionPair& roomAndPosition, EDirectionType actionToTake, FIntPoint targetPosition, float accumulatedReward, float learningRate);
+    void UpdateQValueForCurrentNavState(EDirectionType actionType, float learningRate, float deltaQ);
     /* Set the action targets for the room, given the cell state structure */
     void UpdateRoomNavEnvironmentForStructure(FIntPoint roomCoords, TArray<TArray<int>> roomStructure);
     void UpdateRoomNavEnvironment(FIntPoint roomCoords, const NavigationEnvironment& navEnvironment);
-    /* Set the navigation set for a target position in a room. */
-    void SetRoomNavigationSet(FIntPoint RoomCoords, FIntPoint targetPosition, const NavigationSet& navSet);
+    /* Set the qvalues and rewards set for a target position in a room. */
+    void SetRoomQValuesRewardsSet(FIntPoint RoomCoords, FIntPoint targetPosition, const QValuesRewardsSet& navSet);
+    /* Reset the action qvalues and rewards on a given position for a given goal position in a room. */
+    void ClearQValuesAndRewards(FIntPoint RoomCoords, FIntPoint GoalPosition);
+    /* Set whether a position in a room is the goal position. Used by LevelTrainerComponent when training. */
+    void SetPositionIsGoal(FIntPoint RoomCoords, FIntPoint GoalPosition, bool isGoal);
 
     UFUNCTION(BlueprintCallable, Category = "World Rooms States")
         void EnableWallState(FIntPoint roomCoords, EDirectionType wallType);
@@ -442,10 +451,10 @@ private:
 	TArray<TArray<RoomState>> RoomStates;
     TArray<TArray<WallStateCouple>> WallStates;
 
-    NavigationEnvironment& GetNavEnvironment(FIntPoint roomCoords);
-    NavPositionState& GetNavPositionState(FRoomPositionPair roomAndPosition);
-    NavigationSet& GetNavSet(FIntPoint roomCoords, FIntPoint targetPosition);
-    NavigationState& GetNavState(FRoomPositionPair roomAndPosition, FIntPoint targetPosition);
+    NavigationEnvironment& GetmNavEnvironment(FIntPoint roomCoords);
+    ActionTargets& GetActionTargets(FRoomPositionPair roomAndPosition);
+    QValuesRewardsSet& GetNavSet(FIntPoint roomCoords, FIntPoint targetPosition);
+    ActionQValuesAndRewards& GetActionQValuesRewards(const FRoomPositionPair& roomAndPosition, FIntPoint targetPosition);
 
     bool LevelPoliciesDirFound = false;
 

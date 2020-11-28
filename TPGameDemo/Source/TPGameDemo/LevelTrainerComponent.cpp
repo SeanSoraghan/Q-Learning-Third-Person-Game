@@ -177,27 +177,29 @@ void ULevelTrainerComponent::UpdateEnvironmentForLevel(FString levelName)
     const int sizeX = LevelStructure.Num();
     const int sizeY = LevelStructure[0].Num();
     MaxTrainingPosition.Set(sizeX * sizeY - 1.0f);
-    Environment = GetNavigationEnvironmentForRoom(LevelStructure, RoomCoords);
     ATPGameDemoGameState* gameState = (ATPGameDemoGameState*)(GetWorld()->GetGameState());
     if (gameState != nullptr)
     {
-        NavSets = gameState->GetRoomNavSets(RoomCoords);
-        gameState->UpdateRoomNavEnvironment(RoomCoords, Environment);
+        gameState->UpdateRoomNavEnvironmentForStructure(RoomCoords, LevelStructure);
     }
 }
 
 void ULevelTrainerComponent::TrainNextGoalPosition(int numSimulationsPerStartingPosition, int maxNumActionsPerSimulation)
 {
     ClearEnvironment();
-    float maxGoalDistance = sqrt(pow((Environment.Num() - 1), 2.0f) + pow((Environment[0].Num() - 1), 2.0f));
-    if (GetPosState(Environment, CurrentGoalPosition).IsStateValid())
+    float maxGoalDistance = sqrt(pow((GetNavEnvironment().Num() - 1), 2.0f) + pow((GetNavEnvironment()[0].Num() - 1), 2.0f));
+    if (Get_ActionTargets(GetNavEnvironment(), CurrentGoalPosition).IsStateValid())
     {
-        GetPosState(Environment, CurrentGoalPosition).SetIsGoal(true);
-        for(int x = 0; x < Environment.Num(); ++x)
+        ATPGameDemoGameState* gameState = (ATPGameDemoGameState*)(GetWorld()->GetGameState());
+        if (gameState != nullptr)
         {
-            for(int y = 0; y < Environment[0].Num(); ++y)
+            gameState->SetPositionIsGoal(RoomCoords, CurrentGoalPosition, true);
+        }
+        for(int x = 0; x < GetNavEnvironment().Num(); ++x)
+        {
+            for(int y = 0; y < GetNavEnvironment()[0].Num(); ++y)
             {
-                if (GetPosState(Environment, FIntPoint(x, y)).IsStateValid() && FIntPoint(x, y) != CurrentGoalPosition)
+                if (Get_ActionTargets(GetNavEnvironment(), FIntPoint(x, y)).IsStateValid() && FIntPoint(x, y) != CurrentGoalPosition)
                 {
                     bool deltaQConverged = false;
                     int s = 0;
@@ -226,12 +228,15 @@ void ULevelTrainerComponent::TrainNextGoalPosition(int numSimulationsPerStarting
             ATPGameDemoGameState* gameState = (ATPGameDemoGameState*)(world->GetGameState());
             if (gameState != nullptr)
             {
-                gameState->SetRoomNavigationSet(RoomCoords, CurrentGoalPosition, GetRoomNavSet(NavSets, CurrentGoalPosition));
+                gameState->SetRoomQValuesRewardsSet(RoomCoords, CurrentGoalPosition, Get_QValuesRewardsSet_For_GoalPosition(GetNavSets(), CurrentGoalPosition));
             }
         }
 #pragma message("move this to save function in game state.")
         LevelBuilderHelpers::WriteArrayToTextFile(envArray, CurrentPositionFileName);
-        GetPosState(Environment, CurrentGoalPosition).SetIsGoal(false);
+        if (gameState != nullptr)
+        {
+            gameState->SetPositionIsGoal(RoomCoords, CurrentGoalPosition, false);
+        }
     }
     IncrementGoalPosition();
 }
@@ -244,18 +249,18 @@ void ULevelTrainerComponent::ResetGoalPosition()
 BehaviourMap ULevelTrainerComponent::GetBehaviourMap()
 {
     BehaviourMap outArray;
-    outArray.Reserve(Environment.Num());
-    for (int x = 0; x < Environment.Num(); ++x)
+    outArray.Reserve(GetNavEnvironment().Num());
+    for (int x = 0; x < GetNavEnvironment().Num(); ++x)
     {
         outArray.Add(TArray<FDirectionSet>());
-        for (int y = 0; y < Environment[0].Num(); ++y)
+        for (int y = 0; y < GetNavEnvironment()[0].Num(); ++y)
         {
             outArray[x].Add(FDirectionSet());
             FDirectionSet& directionSet = outArray[x][y];
             directionSet.Clear();
-            if (GetPosState(Environment, FIntPoint(x, y)).IsStateValid())
+            if (Get_ActionTargets(GetNavEnvironment(), FIntPoint(x, y)).IsStateValid())
             {
-                GetNavStateForGoalPosition(NavSets, CurrentGoalPosition, FIntPoint(x, y)).GetOptimalQValueAndActions(directionSet);
+                Get_ActionQValuesAndRewards_FromRoom(GetNavSets(), CurrentGoalPosition, FIntPoint(x, y)).GetOptimalQValueAndActions(directionSet);
                 ensure(directionSet.IsValid());
             }
         }
@@ -265,31 +270,23 @@ BehaviourMap ULevelTrainerComponent::GetBehaviourMap()
 
 void ULevelTrainerComponent::ClearEnvironment()
 {
-    for(int x = 0; x < Environment.Num(); ++x)
-    {
-        for(int y = 0; y < Environment[0].Num(); ++y)
-        {
-            NavigationState& navState = GetNavStateForGoalPosition(NavSets, CurrentGoalPosition, FIntPoint(x, y));
-            navState.ResetQValues();
-            // Move in from edges if on an edge.
-            /*if (x == 0)
-            {
-                navState.UpdateQValue(EDirectionType::North, 100.0f);
-            }
-            else if (y == 0)
-            {
-                navState.UpdateQValue(EDirectionType::East, 100.0f);
-            }
-            else if (x == Environment.Num() - 1)
-            {
-                navState.UpdateQValue(EDirectionType::South, 100.0f);
-            }
-            else if (y == Environment[0].Num() - 1)
-            {
-                navState.UpdateQValue(EDirectionType::West, 100.0f);
-            }*/
-        }
-    }
+    ATPGameDemoGameState* gameState = (ATPGameDemoGameState*)(GetWorld()->GetGameState());
+    ensure(gameState != nullptr);
+    return gameState->ClearQValuesAndRewards(RoomCoords, CurrentGoalPosition);
+}
+
+const RoomTargetsQValuesRewardsSets& ULevelTrainerComponent::GetNavSets() const
+{
+    ATPGameDemoGameState* gameState = (ATPGameDemoGameState*)(GetWorld()->GetGameState());
+    ensure(gameState != nullptr);
+    return gameState->GetRoomQValuesRewardsSets(RoomCoords);
+}
+
+const NavigationEnvironment& ULevelTrainerComponent::GetNavEnvironment() const
+{
+    ATPGameDemoGameState* gameState = (ATPGameDemoGameState*)(GetWorld()->GetGameState());
+    ensure(gameState != nullptr);
+    return gameState->GetNavEnvironment(RoomCoords);
 }
 
 void ULevelTrainerComponent::SimulateRun(FIntPoint startingStatePosition, int maxNumActions, float& averageDeltaQ, int& numActionsTaken)
@@ -297,30 +294,34 @@ void ULevelTrainerComponent::SimulateRun(FIntPoint startingStatePosition, int ma
     numActionsTaken = 0;
     averageDeltaQ = 0.0f;
     bool goalReached = false;
-    if (GetPosState(Environment, startingStatePosition).IsGoalState())
+    if (Get_ActionTargets(GetNavEnvironment(), startingStatePosition).IsGoalState())
         goalReached = true;
     FIntPoint currentPosition = startingStatePosition;
     while (numActionsTaken < maxNumActions && !goalReached)
     {
         FDirectionSet optimalActions;
-        NavigationState& currentNavState = GetNavStateForGoalPosition(NavSets, CurrentGoalPosition, currentPosition);
-        NavPositionState& currentPosState = GetPosState(Environment, currentPosition);
-        currentNavState.GetOptimalQValueAndActions(optimalActions);
+        const ActionQValuesAndRewards& qValuesRewards = Get_ActionQValuesAndRewards_FromRoom(GetNavSets(), CurrentGoalPosition, currentPosition);
+        const ActionTargets& targets = Get_ActionTargets(GetNavEnvironment(), currentPosition);
+        qValuesRewards.GetOptimalQValueAndActions(optimalActions);
         ensure(optimalActions.IsValid());
         EDirectionType actionToTake = optimalActions.ChooseDirection();
         FDirectionSet dummyNextActions;
-        FRoomPositionPair actionTarget = currentPosState.GetActionTarget(actionToTake);
-        const float maxNextReward = GetNavStateForGoalPosition(NavSets, CurrentGoalPosition, actionTarget.PositionInRoom).GetOptimalQValueAndActions(dummyNextActions);
-        const float currentQValue = currentNavState.GetQValues()[(int)actionToTake];
+        FRoomPositionPair actionTarget = targets.GetActionTarget(actionToTake);
+        const float maxNextReward = Get_ActionQValuesAndRewards_FromRoom(GetNavSets(), CurrentGoalPosition, actionTarget.PositionInRoom).GetOptimalQValueAndActions(dummyNextActions);
+        const float currentQValue = qValuesRewards.GetQValues()[(int)actionToTake];
         const float discountedNextReward = GridTrainingConstants::SimDiscountFactor * maxNextReward;
-        const float immediateReward = currentNavState.GetRewards()[(int)actionToTake];
+        const float immediateReward = qValuesRewards.GetRewards()[(int)actionToTake];
         const float deltaQ = GridTrainingConstants::SimLearningRate * (immediateReward + discountedNextReward - currentQValue);
         averageDeltaQ += deltaQ;
-        currentNavState.UpdateQValue(actionToTake, GridTrainingConstants::SimLearningRate, deltaQ);
+        ATPGameDemoGameState* gameState = (ATPGameDemoGameState*)(GetWorld()->GetGameState());
+        if (gameState != nullptr)
+        {
+            gameState->UpdateQValue({ RoomCoords, currentPosition }, CurrentGoalPosition, actionToTake, GridTrainingConstants::SimLearningRate, deltaQ);
+        }
 #pragma message("Careful here! This assumes the room never changes, during training. If we come back and train a room again after the doors have been unlocked, the actionTarget's RoomCoords may be different here!")
         currentPosition = actionTarget.PositionInRoom;
         ++numActionsTaken;
-        if (GetPosState(Environment, currentPosition).IsGoalState())
+        if (Get_ActionTargets(GetNavEnvironment(), currentPosition).IsGoalState())
             goalReached = true;
     }
     averageDeltaQ /= (float)numActionsTaken;
@@ -328,9 +329,9 @@ void ULevelTrainerComponent::SimulateRun(FIntPoint startingStatePosition, int ma
 
 void ULevelTrainerComponent::IncrementGoalPosition()
 {
-    if (CurrentGoalPosition.Y == Environment[0].Num() - 1)
+    if (CurrentGoalPosition.Y == GetNavEnvironment()[0].Num() - 1)
     {
-        if (CurrentGoalPosition.X == Environment.Num() - 1)
+        if (CurrentGoalPosition.X == GetNavEnvironment().Num() - 1)
         {
             LevelTrained = true;
             //return;
@@ -345,7 +346,7 @@ void ULevelTrainerComponent::IncrementGoalPosition()
     {
         ++CurrentGoalPosition.Y;
     }
-    TrainingPosition.Set(CurrentGoalPosition.Y + CurrentGoalPosition.X * Environment[0].Num());
+    TrainingPosition.Set(CurrentGoalPosition.Y + CurrentGoalPosition.X * GetNavEnvironment()[0].Num());
 }
 
 float ULevelTrainerComponent::GetTrainingProgress()
