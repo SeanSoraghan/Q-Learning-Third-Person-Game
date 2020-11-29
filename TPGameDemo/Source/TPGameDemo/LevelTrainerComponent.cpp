@@ -200,6 +200,9 @@ void ULevelTrainerComponent::UpdateEnvironmentForLevel()
         MaxTrainingPosition.Set(sizeX * sizeY - 1.0f);
     
         gameState->UpdateRoomNavEnvironmentForStructure(RoomCoords, LevelStructure);
+
+        /*UE_LOG(LogTemp, Warning, TEXT("Loaded Level:"));
+        LevelBuilderHelpers::PrintArray(LevelStructure);*/
     }
 }
 

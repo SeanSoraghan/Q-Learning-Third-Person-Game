@@ -89,6 +89,9 @@ TArray<FWallSegmentDescriptor> ULevelBuilderComponent::GenerateLevelOfSize(int s
         ensure(sideLength == gameState->NumGridUnitsX);
         InnerRoomBitmask innerLevelBitmask = LevelBuilderHelpers::ArrayToBitmask(LevelStructure);
         gameState->SetRoomInnerStructure(roomCoords, innerLevelBitmask);
+
+        /*UE_LOG(LogTemp, Warning, TEXT("Generated Level:"));
+        LevelBuilderHelpers::PrintArray(LevelStructure);*/
     }
 
     return wallSegments;

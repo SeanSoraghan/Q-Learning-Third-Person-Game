@@ -71,8 +71,9 @@ InnerRoomBitmask LevelBuilderHelpers::ArrayToBitmask(TArray<TArray<int>>& arrayR
     {
         for (int y = inset; y < numY - inset; ++y)
         {
-            ensure(arrayRef[x][y] == 0 || arrayRef[x][y] == 1);
-            bitmask |= (arrayRef[x][y] << index);
+            const InnerRoomBitmask cellState = arrayRef[x][y];
+            ensure(cellState == 0 || cellState == 1);
+            bitmask |= (cellState << index);
             --index;
         }
     }
@@ -89,7 +90,8 @@ void LevelBuilderHelpers::BitMaskToArray(InnerRoomBitmask bitmask, TArray<TArray
         ensure(arrayRef[x].Num() == side);
         for (int y = inset; y < side - inset; ++y)
         {
-            arrayRef[x][y] = (bitmask & ((uint64)1 << index)) ? (int)ECellState::Closed : (int)ECellState::Open;
+            const int cellState = (bitmask & ((InnerRoomBitmask)1 << index)) ? (int)ECellState::Closed : (int)ECellState::Open;
+            arrayRef[x][y] = cellState;
             --index;
         }
     }
