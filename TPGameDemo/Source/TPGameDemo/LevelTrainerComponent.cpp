@@ -167,19 +167,38 @@ void ULevelTrainerComponent::RegisterLevelTrainedCallback(const FOnLevelTrained&
     });
 }
 
-void ULevelTrainerComponent::UpdateEnvironmentForLevel(FString levelName)
+void ULevelTrainerComponent::UpdateEnvironmentForLevel()
 {
-    //This is called from the room builder BP in OnBuildRoom, after the walls have been spawned (BuildGeneratedRoom). The game state should hold the qvalues, so that we can build on them if the room structure changes.
-    CurrentLevelName = levelName;
-    FString CurrentLevelPath = LevelBuilderHelpers::LevelsDir() + CurrentLevelName + ".txt";
-    TArray<TArray<int>> LevelStructure;
-    LevelBuilderHelpers::FillArrayFromTextFile (CurrentLevelPath, LevelStructure);
-    const int sizeX = LevelStructure.Num();
-    const int sizeY = LevelStructure[0].Num();
-    MaxTrainingPosition.Set(sizeX * sizeY - 1.0f);
     ATPGameDemoGameState* gameState = (ATPGameDemoGameState*)(GetWorld()->GetGameState());
     if (gameState != nullptr)
     {
+        //This is called from the room builder BP in OnBuildRoom, after the walls have been spawned (BuildGeneratedRoom). The game state should hold the qvalues, so that we can build on them if the room structure changes.
+        TArray<TArray<int>> LevelStructure;
+        int sideLength = gameState->NumGridUnitsX;
+        LevelStructure.SetNumZeroed(sideLength);
+        for (int x = 0; x < sideLength; ++x)
+            LevelStructure[x].SetNumZeroed(sideLength);
+        InnerRoomBitmask roomBitmask = gameState->GetRoomInnerStructure(RoomCoords);
+        LevelBuilderHelpers::BitMaskToArray(roomBitmask, LevelStructure);
+        TArray<int> neswDoorPositions;
+        gameState->GetDoorPositionsNESW(RoomCoords, neswDoorPositions);
+        for (int s = 0; s < sideLength; ++s)
+        {
+            LevelStructure[sideLength - 1][s] = (int)ECellState::Closed;
+            LevelStructure[s][sideLength - 1] = (int)ECellState::Closed;
+            LevelStructure[0][s] = (int)ECellState::Closed;
+            LevelStructure[s][0] = (int)ECellState::Closed;
+        }
+        LevelStructure[sideLength - 1][neswDoorPositions[(int)EDirectionType::North]] = (int)ECellState::Door;
+        LevelStructure[neswDoorPositions[(int)EDirectionType::East]][sideLength - 1] = (int)ECellState::Door;
+        LevelStructure[0][neswDoorPositions[(int)EDirectionType::South]] = (int)ECellState::Door;
+        LevelStructure[neswDoorPositions[(int)EDirectionType::West]][0] = (int)ECellState::Door;
+
+
+        const int sizeX = LevelStructure.Num();
+        const int sizeY = LevelStructure[0].Num();
+        MaxTrainingPosition.Set(sizeX * sizeY - 1.0f);
+    
         gameState->UpdateRoomNavEnvironmentForStructure(RoomCoords, LevelStructure);
     }
 }
@@ -217,11 +236,6 @@ void ULevelTrainerComponent::TrainNextGoalPosition(int numSimulationsPerStarting
                 }
             }
         }
-        FString CurrentPositionString = FString::FromInt(CurrentGoalPosition.X) + FString("_") + FString::FromInt(CurrentGoalPosition.Y);
-        //Create string and save to text file.
-        FString CurrentPositionFileName = LevelBuilderHelpers::LevelsDir() + CurrentLevelName + "/" + CurrentPositionString + ".txt";
-        TArray<TArray<FDirectionSet>> envArray = GetBehaviourMap();
-        //LevelBuilderHelpers::PrintArray(envArray);
         UWorld* world = GetWorld();
         if (IsValid(world))
         {
@@ -231,8 +245,6 @@ void ULevelTrainerComponent::TrainNextGoalPosition(int numSimulationsPerStarting
                 gameState->SetRoomQValuesRewardsSet(RoomCoords, CurrentGoalPosition, Get_QValuesRewardsSet_For_GoalPosition(GetNavSets(), CurrentGoalPosition));
             }
         }
-#pragma message("move this to save function in game state.")
-        LevelBuilderHelpers::WriteArrayToTextFile(envArray, CurrentPositionFileName);
         if (gameState != nullptr)
         {
             gameState->SetPositionIsGoal(RoomCoords, CurrentGoalPosition, false);

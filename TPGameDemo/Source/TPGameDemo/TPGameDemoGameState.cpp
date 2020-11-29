@@ -45,38 +45,24 @@ void ATPGameDemoGameState::InitialiseArrays()
     ATPGameDemoGameMode* gameMode = (ATPGameDemoGameMode*) GetWorld()->GetAuthGameMode();
 
     MazePositionBuildableStates.SetNum(NumGridsXY * NumGridsXY * GridUnitLengthXCM * GridUnitLengthYCM);
-    for (int x = 0; x < NumGridsXY; ++x)
+    // Add one extra row of room states (where the south wall will be the north wall of the final room, and the west wall will be ignored).
+    for (int x = 0; x < NumGridsXY + 1; ++x)
     {
-        TArray<WallStateCouple> wallsRow;
         TArray<RoomState> roomsRow;
         TArray<ARoomBuilder*> roomBuilderRow;
         TArray<AWallBuilder*> wallBuilderRow;
-        for (int y = 0; y < NumGridsXY; ++y)
+        // Add one extra column of room states (where the west wall will be the east wall of the final room, and the south wall will be ignored).
+        for (int y = 0; y < NumGridsXY + 1; ++y)
         {
-            wallsRow.Add(WallStateCouple());
             roomsRow.Add(RoomState(FIntPoint(NumGridUnitsX, NumGridUnitsY)));
 
             roomBuilderRow.Add(nullptr);
             wallBuilderRow.Add(nullptr);
         }
-        // Add one final wall couple (where the west wall will be the east wall of the final room, and the south wall will be ignored).
-        wallsRow.Add(WallStateCouple());
-        wallBuilderRow.Add(nullptr);
         RoomStates.Add(roomsRow);
-        WallStates.Add(wallsRow);
         RoomBuilders.Add(roomBuilderRow);
         WallBuilders.Add(wallBuilderRow);
     }
-    // Add the last row of wall couples (where the south wall will be the north wall of the final room, and the west wall will be ignored).
-    TArray<WallStateCouple> wallsRow;
-    TArray<AWallBuilder*> wallBuilderRow;
-    for (int y = 0; y < NumGridsXY + 1; ++y)
-    {
-        wallsRow.Add(WallStateCouple());
-        wallBuilderRow.Add(nullptr);
-    }
-    WallStates.Add(wallsRow);
-    WallBuilders.Add(wallBuilderRow);
 }
 
 void ATPGameDemoGameState::Tick( float DeltaTime )
@@ -220,6 +206,16 @@ FRoomPositionPair ATPGameDemoGameState::GetDoorPosition(FIntPoint roomCoords, ED
     return roomAndPosition;
 }
 
+void ATPGameDemoGameState::GetDoorPositionsNESW(FIntPoint roomCoords, TArray<int>& doorPositionsNESW)
+{
+    auto wallStates = GetWallStatesForRoom(roomCoords);
+    doorPositionsNESW.SetNum((int)EDirectionType::NumDirectionTypes, true);
+    doorPositionsNESW = { wallStates[(int)EDirectionType::North]->DoorPosition,
+                         wallStates[(int)EDirectionType::East]->DoorPosition ,
+                         wallStates[(int)EDirectionType::South]->DoorPosition ,
+                         wallStates[(int)EDirectionType::West]->DoorPosition };
+}
+
 bool ATPGameDemoGameState::IsDoorUnlocked(FIntPoint roomCoords, EDirectionType wallDirection)
 {
     return GetWallStatesForRoom(roomCoords)[(int)wallDirection]->DoorState != EDoorState::Locked;
@@ -272,10 +268,10 @@ TArray<WallState*> ATPGameDemoGameState::GetWallStatesForRoom(FIntPoint roomCoor
     wallStates.Empty();
     auto northNeighbourIndices = GetNeighbouringRoomIndices(roomCoords, EDirectionType::North);
     auto eastNeighbourIndices = GetNeighbouringRoomIndices(roomCoords, EDirectionType::East);
-    wallStates.Add(&WallStates[northNeighbourIndices.X][northNeighbourIndices.Y].SouthWall);
-    wallStates.Add(&WallStates[eastNeighbourIndices.X][eastNeighbourIndices.Y].WestWall);
-    wallStates.Add(&WallStates[roomIndices.X][roomIndices.Y].SouthWall);
-    wallStates.Add(&WallStates[roomIndices.X][roomIndices.Y].WestWall);
+    wallStates.Add(&RoomStates[northNeighbourIndices.X][northNeighbourIndices.Y].SouthWall);
+    wallStates.Add(&RoomStates[eastNeighbourIndices.X][eastNeighbourIndices.Y].WestWall);
+    wallStates.Add(&RoomStates[roomIndices.X][roomIndices.Y].SouthWall);
+    wallStates.Add(&RoomStates[roomIndices.X][roomIndices.Y].WestWall);
     return wallStates;
 }
 
@@ -467,6 +463,25 @@ void ATPGameDemoGameState::SetSignalPointInRoom(FIntPoint roomCoords, FIntPoint 
     RoomStates[roomIndices.X][roomIndices.Y].SignalPoint = signalPointInRoom;
 }
 
+void ATPGameDemoGameState::SetRoomInnerStructure(FIntPoint roomCoords, InnerRoomBitmask roomStructure)
+{
+    FIntPoint roomIndices = GetRoomXYIndicesChecked(roomCoords);
+    if (DoesRoomExist(roomCoords))
+    {
+        RoomStates[roomIndices.X][roomIndices.Y].InnerStructure = roomStructure;
+    }
+}
+
+InnerRoomBitmask ATPGameDemoGameState::GetRoomInnerStructure(FIntPoint roomCoords)
+{
+    FIntPoint roomIndices = GetRoomXYIndicesChecked(roomCoords);
+    if (DoesRoomExist(roomCoords))
+    {
+        return RoomStates[roomIndices.X][roomIndices.Y].InnerStructure;
+    }
+    return 0;
+}
+
 void ATPGameDemoGameState::EnableRoomState(FIntPoint roomCoords, float complexity, float density)
 {
     // initialize random door positions for walls that haven't yet generated their door positions....
@@ -489,11 +504,7 @@ void ATPGameDemoGameState::EnableRoomState(FIntPoint roomCoords, float complexit
     {
         RoomStates[roomIndices.X][roomIndices.Y].InitializeRoom(MaxRoomHealth, complexity, density);
 
-        RoomBuilders[roomIndices.X][roomIndices.Y]->BuildRoom({wallStates[(int)EDirectionType::North]->DoorPosition,
-                                                               wallStates[(int)EDirectionType::East]->DoorPosition,
-                                                               wallStates[(int)EDirectionType::South]->DoorPosition,
-                                                               wallStates[(int)EDirectionType::West]->DoorPosition},
-                                                               complexity, density);
+        RoomBuilders[roomIndices.X][roomIndices.Y]->BuildRoom(complexity, density);
         FlagWallsForUpdate(roomCoords);
     }
 }
@@ -920,7 +931,7 @@ bool ATPGameDemoGameState::WallXYIndicesValid(FIntPoint wallRoomCoords) const
 {
     const int x = wallRoomCoords.X;
     const int y = wallRoomCoords.Y;
-    return x >= 0 && x < WallStates.Num() && y >= 0 && y < WallStates[0].Num();
+    return x >= 0 && x < RoomStates.Num() && y >= 0 && y < RoomStates[0].Num();
 }
 
 bool ATPGameDemoGameState::InnerRoomPositionValid(FIntPoint positionInRoom) const
@@ -1009,20 +1020,20 @@ WallState& ATPGameDemoGameState::GetWallState(FIntPoint roomCoords, EDirectionTy
         case EDirectionType::North: 
         {
             FIntPoint neighbourRoom = GetNeighbouringRoomIndices(roomCoords, direction);
-            return WallStates[neighbourRoom.X][neighbourRoom.Y].SouthWall;
+            return RoomStates[neighbourRoom.X][neighbourRoom.Y].SouthWall;
         }
         case EDirectionType::East:
         {
             FIntPoint neighbourRoom = GetNeighbouringRoomIndices(roomCoords, direction);
-            return WallStates[neighbourRoom.X][neighbourRoom.Y].WestWall;
+            return RoomStates[neighbourRoom.X][neighbourRoom.Y].WestWall;
         }
         case EDirectionType::South:
         {
-            return WallStates[roomIndices.X][roomIndices.Y].SouthWall;
+            return RoomStates[roomIndices.X][roomIndices.Y].SouthWall;
         }
         case EDirectionType::West: 
-            return WallStates[roomIndices.X][roomIndices.Y].WestWall;
-        default: ensure(false); return WallStates[0][0].SouthWall;
+            return RoomStates[roomIndices.X][roomIndices.Y].WestWall;
+        default: ensure(false); return RoomStates[0][0].SouthWall;
     }
 }
 
@@ -1037,8 +1048,6 @@ bool ATPGameDemoGameState::IsWallInUpdateList(FIntPoint coords, EDirectionType w
 void ATPGameDemoGameState::FlagWallsForUpdate(FIntPoint roomCoords)
 {
     FIntPoint roomIndices = GetRoomXYIndicesChecked(roomCoords);
-    TArray<WallState*> wallStates;
-    wallStates.Empty();
     auto northNeighbourCoords = GetRoomCoords(GetNeighbouringRoomIndices(roomCoords, EDirectionType::North));
     auto eastNeighbourCoords = GetRoomCoords(GetNeighbouringRoomIndices(roomCoords, EDirectionType::East));
 

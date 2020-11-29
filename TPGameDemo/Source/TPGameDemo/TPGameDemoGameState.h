@@ -19,7 +19,7 @@ public:
 	GENERATED_BODY()
 
     UFUNCTION(BlueprintImplementableEvent, BlueprintCallable, Category = "World Room Building")
-        void BuildRoom(const TArray<int>& doorPositionsOnWalls, float complexity = 0.0f, float density = 0.0f);
+        void BuildRoom(float complexity = 0.0f, float density = 0.0f);
 
     UFUNCTION(BlueprintImplementableEvent, BlueprintCallable, Category = "World Room Building")
         void DestroyRoom();
@@ -188,6 +188,10 @@ public:
     UFUNCTION(BlueprintCallable, Category = "World Room States")
         FRoomPositionPair GetDoorPosition(FIntPoint roomCoords, EDirectionType wallType);
 
+    /* Get door index on each wall, north east south west */
+    UFUNCTION(BlueprintCallable, Category = "World Room States")
+        void GetDoorPositionsNESW(FIntPoint roomCoords, TArray<int>& doorPositionsNESW);
+
     UFUNCTION(BlueprintCallable, Category = "World Door States")
         bool IsDoorUnlocked(FIntPoint roomCoords, EDirectionType wallDirection);
 
@@ -322,6 +326,8 @@ public:
         void SetBuildableItemPlaced(FRoomPositionPair roomAndPosition, EDirectionType direction, bool placed);
 
     // --------------------- Room & Wall Initialization / Destruction -------------------------------------
+    void SetRoomInnerStructure(FIntPoint roomCoords, InnerRoomBitmask roomBitmask);
+    InnerRoomBitmask GetRoomInnerStructure(FIntPoint roomCoords);
 
     UFUNCTION(BlueprintCallable, Category = "World Rooms States")
         void EnableRoomState(FIntPoint roomCoords, float complexity = 0.0f, float density = 0.0f);
@@ -449,7 +455,6 @@ private:
     TArray<TArray<ARoomBuilder*>> RoomBuilders;
     TArray<TArray<AWallBuilder*>> WallBuilders;
 	TArray<TArray<RoomState>> RoomStates;
-    TArray<TArray<WallStateCouple>> WallStates;
 
     NavigationEnvironment& GetmNavEnvironment(FIntPoint roomCoords);
     ActionTargets& GetActionTargets(FRoomPositionPair roomAndPosition);

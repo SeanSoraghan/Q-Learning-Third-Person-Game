@@ -59,6 +59,43 @@ bool LevelBuilderHelpers::GridPositionIsValid(FIntPoint position, int sizeX, int
     return !(position.X < 0 || position.Y < 0 || position.X > sizeX - 1 || position.Y > sizeY -1);
 }
 
+InnerRoomBitmask LevelBuilderHelpers::ArrayToBitmask(TArray<TArray<int>>& arrayRef, int inset /*= 1*/, bool invertX /*= false*/)
+{
+    const int numX = arrayRef.Num();
+    const int numY = arrayRef[0].Num();
+    const int maxSide = InnerRoomMaxSide();
+    ensure(numX - (inset*2) <= maxSide && numY - (inset*2) <= maxSide);
+    InnerRoomBitmask bitmask = 0;
+    int index = InnerRoomBitmask_Size;
+    for (int x = (invertX ? numX - 1 - inset : inset); (invertX ? x >= 0 : x < numX - inset); (invertX ? x-- : x++))
+    {
+        for (int y = inset; y < numY - inset; ++y)
+        {
+            ensure(arrayRef[x][y] == 0 || arrayRef[x][y] == 1);
+            bitmask |= (arrayRef[x][y] << index);
+            --index;
+        }
+    }
+    return bitmask;
+}
+
+void LevelBuilderHelpers::BitMaskToArray(InnerRoomBitmask bitmask, TArray<TArray<int>>& arrayRef, int inset /*= 1*/, bool invertX /*= false*/)
+{
+    const int side = arrayRef.Num();
+    ensure(side - (inset * 2) <= InnerRoomMaxSide());
+    int index = InnerRoomBitmask_Size;
+    for (int x = (invertX ? side - inset - 1 : inset); (invertX ? x >= 0 : x < side - inset); (invertX ? x-- : x++))
+    {
+        ensure(arrayRef[x].Num() == side);
+        for (int y = inset; y < side - inset; ++y)
+        {
+            arrayRef[x][y] = (bitmask & ((uint64)1 << index)) ? (int)ECellState::Closed : (int)ECellState::Open;
+            --index;
+        }
+    }
+}
+
+
 /*
 Takes in a text file and fills an array with FDirectionSets.
 File should be a square grid format with FDirectionSets separated by spaces.

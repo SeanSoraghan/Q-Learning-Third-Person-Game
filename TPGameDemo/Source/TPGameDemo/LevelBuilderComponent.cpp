@@ -23,7 +23,7 @@ FIntPoint ULevelBuilderComponent::GetRandomEvenCell()
     return FIntPoint(xPos,yPos);
 }
 
-TArray<FWallSegmentDescriptor> ULevelBuilderComponent::GenerateLevel(float normedDensity, float normedComplexity, FString levelName, TArray<int> ExistingDoorPositions)
+TArray<FWallSegmentDescriptor> ULevelBuilderComponent::GenerateLevel(float normedDensity, float normedComplexity, FIntPoint roomCoords)
 {
     int sideLength = 3;
     ATPGameDemoGameState* gameState = (ATPGameDemoGameState*) GetWorld()->GetGameState();
@@ -32,63 +32,63 @@ TArray<FWallSegmentDescriptor> ULevelBuilderComponent::GenerateLevel(float norme
         sideLength = gameState->NumGridUnitsX; 
     }
 
-    return GenerateLevelOfSize(sideLength, normedDensity, normedComplexity, levelName, ExistingDoorPositions);
+    return GenerateLevelOfSize(sideLength, normedDensity, normedComplexity, roomCoords);
 }
 
-TArray<FWallSegmentDescriptor> ULevelBuilderComponent::GenerateLevelOfSize(int sideLength, float normedDensity, float normedComplexity, FString levelName, TArray<int> ExistingDoorPositions)
+TArray<FWallSegmentDescriptor> ULevelBuilderComponent::GenerateLevelOfSize(int sideLength, float normedDensity, float normedComplexity, FIntPoint roomCoords)
 {
     ensure(normedDensity >= 0.0f && normedDensity <= 1.0f && normedComplexity >= 0.0f && normedComplexity <= 1.0f);
     
-    LevelStructure.Empty();
-    // Generate random doors on perimiter, unless doors already exist.
-    int existingDoorNorth = ExistingDoorPositions[(int)EDirectionType::North];
-    int existingDoorEast  = ExistingDoorPositions[(int)EDirectionType::East];
-    int existingDoorSouth = ExistingDoorPositions[(int)EDirectionType::South];
-    int existingDoorWest  = ExistingDoorPositions[(int)EDirectionType::West];
+    TArray<FWallSegmentDescriptor> wallSegments;
 
-    int doorPositionNorth = (existingDoorNorth > 0 && existingDoorNorth < sideLength - 1) ? existingDoorNorth 
-                                                                                        : FMath::RandRange(1, sideLength - 2);
-    int doorPositionEast = (existingDoorEast > 0 && existingDoorEast < sideLength - 1) ? existingDoorEast 
-                                                                                     : FMath::RandRange(1, sideLength - 2);
-    int doorPositionSouth = (existingDoorSouth > 0 && existingDoorSouth < sideLength - 1) ? existingDoorSouth 
-                                                                                        : FMath::RandRange(1, sideLength - 2);
-    int doorPositionWest = (existingDoorWest > 0 && existingDoorWest < sideLength - 1) ? existingDoorWest 
-                                                                                       : FMath::RandRange(1, sideLength - 2);
-    FIntPoint northDoor = FIntPoint(sideLength - 1, doorPositionNorth);
-    FIntPoint eastDoor  = FIntPoint(doorPositionEast, sideLength - 1);
-    FIntPoint southDoor = FIntPoint(0, doorPositionSouth);
-    FIntPoint westDoor  = FIntPoint(doorPositionWest, 0);
-    for (int x = 0; x < sideLength; ++x)
+    ATPGameDemoGameState* gameState = (ATPGameDemoGameState*)GetWorld()->GetGameState();
+    if (gameState != nullptr)
     {
-        TArray<int> row;
-        for (int y = 0; y < sideLength; ++y)
+        LevelStructure.Empty();
+        TArray<int> ExistingDoorPositions;
+        gameState->GetDoorPositionsNESW(roomCoords, ExistingDoorPositions);
+        // Generate random doors on perimiter, unless doors already exist.
+        int existingDoorNorth = ExistingDoorPositions[(int)EDirectionType::North];
+        int existingDoorEast  = ExistingDoorPositions[(int)EDirectionType::East];
+        int existingDoorSouth = ExistingDoorPositions[(int)EDirectionType::South];
+        int existingDoorWest  = ExistingDoorPositions[(int)EDirectionType::West];
+
+        ensure(existingDoorNorth > 0 && existingDoorNorth < sideLength - 1);
+        ensure(existingDoorEast > 0 && existingDoorEast < sideLength - 1);
+        ensure(existingDoorSouth > 0 && existingDoorSouth < sideLength - 1);
+        ensure(existingDoorWest > 0 && existingDoorWest < sideLength - 1);
+
+        FIntPoint northDoor = FIntPoint(sideLength - 1, existingDoorNorth);
+        FIntPoint eastDoor  = FIntPoint(existingDoorEast, sideLength - 1);
+        FIntPoint southDoor = FIntPoint(0, existingDoorSouth);
+        FIntPoint westDoor  = FIntPoint(existingDoorWest, 0);
+        for (int x = 0; x < sideLength; ++x)
         {
-            // inside
-            int cellState = (int)ECellState::Open;
-            // doors
-            FIntPoint p(x,y);
-            if (p == northDoor || p == eastDoor || p == southDoor || p == westDoor)
+            TArray<int> row;
+            for (int y = 0; y < sideLength; ++y)
             {
-                cellState = (int)ECellState::Door;
-            } // perimiter walls
-            else if (x == 0 || x == sideLength - 1 || y == 0 || y == sideLength - 1)
-            {
-                cellState = (int)ECellState::Closed;
+                // inside
+                int cellState = (int)ECellState::Open;
+                // doors
+                FIntPoint p(x,y);
+                if (p == northDoor || p == eastDoor || p == southDoor || p == westDoor)
+                {
+                    cellState = (int)ECellState::Door;
+                } // perimiter walls
+                else if (x == 0 || x == sideLength - 1 || y == 0 || y == sideLength - 1)
+                {
+                    cellState = (int)ECellState::Closed;
+                }
+                row.Add(cellState);
             }
-            row.Add(cellState);
+            LevelStructure.Add(row);
         }
-        LevelStructure.Add(row);
-    }
 
-    TArray<FWallSegmentDescriptor> wallSegments = GenerateInnerStructure(sideLength, normedDensity, normedComplexity);
+        wallSegments = GenerateInnerStructure(sideLength, normedDensity, normedComplexity);
 
-    UE_LOG(LogTemp, Warning, TEXT("Generated Level:"));
-    //LevelBuilderHelpers::PrintArray(LevelStructure);
-
-    if (LevelsDirFound && !levelName.IsEmpty())
-    {
-        CurrentLevelPath = LevelBuilderHelpers::LevelsDir() + levelName + ".txt";
-        LevelBuilderHelpers::WriteArrayToTextFile(LevelStructure, CurrentLevelPath);
+        ensure(sideLength == gameState->NumGridUnitsX);
+        InnerRoomBitmask innerLevelBitmask = LevelBuilderHelpers::ArrayToBitmask(LevelStructure);
+        gameState->SetRoomInnerStructure(roomCoords, innerLevelBitmask);
     }
 
     return wallSegments;
@@ -163,7 +163,7 @@ TArray<FWallSegmentDescriptor> ULevelBuilderComponent::GenerateInnerStructure(in
     return wallSegments;
 }
 
-TArray<FWallSegmentDescriptor> ULevelBuilderComponent::RegenerateInnerStructure(float normedDensity, float normedComplexity, FString levelName)
+TArray<FWallSegmentDescriptor> ULevelBuilderComponent::RegenerateInnerStructure(float normedDensity, float normedComplexity, FIntPoint roomCoords)
 {
     int sideLength = 3;
     ATPGameDemoGameState* gameState = (ATPGameDemoGameState*) GetWorld()->GetGameState();
@@ -185,13 +185,11 @@ TArray<FWallSegmentDescriptor> ULevelBuilderComponent::RegenerateInnerStructure(
 
     TArray<FWallSegmentDescriptor> wallSegments = GenerateInnerStructure(sideLength, normedDensity, normedComplexity);
 
-    UE_LOG(LogTemp, Warning, TEXT("Regenerated Level:"));
-    //LevelBuilderHelpers::PrintArray(LevelStructure);
-
-    if (LevelsDirFound && !levelName.IsEmpty())
+    if (gameState != nullptr)
     {
-        CurrentLevelPath = LevelBuilderHelpers::LevelsDir() + levelName + ".txt";
-        LevelBuilderHelpers::WriteArrayToTextFile(LevelStructure, CurrentLevelPath);
+        ensure(sideLength == gameState->NumGridUnitsX);
+        InnerRoomBitmask innerLevelBitmask = LevelBuilderHelpers::ArrayToBitmask(LevelStructure);
+        gameState->SetRoomInnerStructure(roomCoords, innerLevelBitmask);
     }
 
     return wallSegments;
@@ -212,26 +210,32 @@ bool ULevelBuilderComponent::IsCellTouchingDoorCell(FIntPoint cellPosition)
     return false;
 }
 
-void ULevelBuilderComponent::LoadLevel (FString levelName)
+void ULevelBuilderComponent::LoadLevel (FIntPoint roomCoords)
 {
-    if (LevelsDirFound)
+    ATPGameDemoGameState* gameState = (ATPGameDemoGameState*)(GetWorld()->GetGameState());
+    if (gameState != nullptr)
     {
-        CurrentLevelPath = LevelBuilderHelpers::LevelsDir() + levelName + ".txt";
-
-      #if ON_SCREEN_DEBUGGING
-        if ( ! FPlatformFileManager::Get().GetPlatformFile().FileExists (*CurrentLevelPath))
-            GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red, FString::Printf (TEXT("Cant Find file: | %s |"), *CurrentLevelPath));
-      #endif
-        LevelStructure.Empty();
-        LevelBuilderHelpers::FillArrayFromTextFile (CurrentLevelPath, LevelStructure);
-        ATPGameDemoGameState* gameState = (ATPGameDemoGameState*) GetWorld()->GetGameState();
-
-        if (gameState != nullptr)
+        //This is called from the room builder BP in OnBuildRoom, after the walls have been spawned (BuildGeneratedRoom). The game state should hold the qvalues, so that we can build on them if the room structure changes.
+        TArray<TArray<int>> LevelStructure;
+        int sideLength = gameState->NumGridUnitsX;
+        LevelStructure.SetNumZeroed(sideLength);
+        for (int x = 0; x < sideLength; ++x)
+            LevelStructure[x].SetNumZeroed(sideLength);
+        InnerRoomBitmask roomBitmask = gameState->GetRoomInnerStructure(roomCoords);
+        LevelBuilderHelpers::BitMaskToArray(roomBitmask, LevelStructure);
+        TArray<int> neswDoorPositions;
+        gameState->GetDoorPositionsNESW(roomCoords, neswDoorPositions);
+        for (int s = 0; s < sideLength; ++s)
         {
-            gameState->NumGridUnitsX = LevelStructure.Num();
-            if (LevelStructure.Num() > 0)
-                gameState->NumGridUnitsY = LevelStructure[0].Num();
+            LevelStructure[sideLength - 1][s] = (int)ECellState::Closed;
+            LevelStructure[s][sideLength - 1] = (int)ECellState::Closed;
+            LevelStructure[0][s] = (int)ECellState::Closed;
+            LevelStructure[s][0] = (int)ECellState::Closed;
         }
+        LevelStructure[sideLength - 1][neswDoorPositions[(int)EDirectionType::North]] = (int)ECellState::Door;
+        LevelStructure[neswDoorPositions[(int)EDirectionType::East]][sideLength - 1] = (int)ECellState::Door;
+        LevelStructure[0][neswDoorPositions[(int)EDirectionType::South]] = (int)ECellState::Door;
+        LevelStructure[neswDoorPositions[(int)EDirectionType::West]][0] = (int)ECellState::Door;
     }
 }
 

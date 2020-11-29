@@ -44,19 +44,19 @@ public:
 	virtual void TickComponent( float DeltaTime, ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction ) override;
 
     UFUNCTION (BlueprintCallable, Category = "Level Building")
-        virtual TArray<FWallSegmentDescriptor> GenerateLevelOfSize(int sideLength, float normedDensity, float normedComplexity, FString levelName, TArray<int> ExistingDoorPositions);
+        virtual TArray<FWallSegmentDescriptor> GenerateLevelOfSize(int sideLength, float normedDensity, float normedComplexity, FIntPoint roomCoords);
 
     UFUNCTION (BlueprintCallable, Category = "Level Building")
-        virtual TArray<FWallSegmentDescriptor> GenerateLevel(float normedDensity, float normedComplexity, FString levelName, TArray<int> ExistingDoorPositions);
+        virtual TArray<FWallSegmentDescriptor> GenerateLevel(float normedDensity, float normedComplexity, FIntPoint roomCoords);
 
     UFUNCTION (BlueprintCallable, Category = "Level Building")
         virtual TArray<FWallSegmentDescriptor> GenerateInnerStructure(int sideLength, float normedDensity, float normedComplexity);
 
     UFUNCTION (BlueprintCallable, Category = "Level Building")
-        virtual TArray<FWallSegmentDescriptor> RegenerateInnerStructure(float normedDensity, float normedComplexity, FString levelName);
+        virtual TArray<FWallSegmentDescriptor> RegenerateInnerStructure(float normedDensity, float normedComplexity, FIntPoint roomCoords);
 
     UFUNCTION (BlueprintCallable, Category = "Level Building")
-        virtual void LoadLevel (FString levelName);
+        virtual void LoadLevel (FIntPoint roomCoords);
 
     UFUNCTION (BlueprintCallable, Category = "Level Building")
         virtual int GetNumGridUnitsX();

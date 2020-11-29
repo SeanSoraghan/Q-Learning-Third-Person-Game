@@ -3,6 +3,7 @@
 #pragma once
 
 #include <set>
+#include <climits>
 #include "Engine.h"
 #include "Runtime/Launch/Resources/Version.h"
 #include "TPGameDemo.generated.h"
@@ -239,15 +240,6 @@ struct WallState
     bool bDoorExists = false;
 };
 
-// The game state manages a 2D array of WallStateCouple structs that is the same size as the 2D rooms array.
-struct WallStateCouple
-{
-    WallState WestWall;
-    WallState SouthWall;
-};
-
-
-
 namespace
 {
     typedef TArray<TArray<FDirectionSet>> BehaviourMap;
@@ -274,6 +266,13 @@ namespace
     }
 };
 
+typedef uint64 InnerRoomBitmask;
+namespace
+{
+    constexpr int InnerRoomBitmask_Size = sizeof(InnerRoomBitmask) * CHAR_BIT;
+    int InnerRoomMaxSide() { return (int)FMath::Sqrt(InnerRoomBitmask_Size); }
+};
+
 namespace LevelBuilderHelpers
 {
     const FString LevelsDir();
@@ -281,6 +280,11 @@ namespace LevelBuilderHelpers
     FIntPoint GetTargetPointForAction(FIntPoint startingPoint, EDirectionType actionType, int numSpaces = 1);
 
     bool GridPositionIsValid(FIntPoint position, int sizeX, int sizeY);
+
+    /* Packs an array of binary-valued ints into a uint64 bitmask. inset = num border units. Expected max side-minus-border of 8.*/
+    InnerRoomBitmask ArrayToBitmask(TArray<TArray<int>>& arrayRef, int inset = 1, bool invertX = false);
+    /* Unpacks a uint64 bitmask into an array of binary-valued ints. inset = num border units. Expected max side-minus-border of 8. Expects pre-sized array. */
+    void BitMaskToArray(InnerRoomBitmask bitmask, TArray<TArray<int>>& arrayRef, int inset = 1, bool invertX = false);
 
     /*
     Takes in a text file and fills an array with FDirectionSets.
@@ -618,6 +622,13 @@ struct RoomState
     float Density = 0.0f;
     Status RoomStatus = Dead;
     float TrainingProgress = 0.0f;
+    /* A bit mask representing the inner 8x8 square structure of the room (unrolled). */
+    InnerRoomBitmask InnerStructure = 0;
+    /* Rooms have only south and west walls. North and east are the south and west walls of neighbouring rooms. */
+    WallState SouthWall;
+    /* Rooms have only south and west walls. North and east are the south and west walls of neighbouring rooms. */
+    WallState WestWall;
+    /* The point that must be reached in order to unlock/connect the room. */
     FIntPoint SignalPoint = FIntPoint(-1, -1);
     /** Count of the number of actors occupying each grid position in the room. */
     TArray<TArray<FThreadSafeCounter>> TileActorCounters;

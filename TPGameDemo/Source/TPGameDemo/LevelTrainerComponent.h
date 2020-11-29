@@ -61,7 +61,7 @@ public:
     void TickComponent( float DeltaTime, ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction ) override;
 
     UFUNCTION(BlueprintCallable, Category = "Level Training")
-    void UpdateEnvironmentForLevel(FString levelName);
+    void UpdateEnvironmentForLevel();
     
     UFUNCTION(BlueprintCallable, Category = "Level Training")
     void RegisterLevelTrainedCallback(const FOnLevelTrained& Callback);
@@ -84,7 +84,6 @@ public:
 
 private:
     FThreadSafeBool LevelTrained = false;
-    FString CurrentLevelName = FString("");
     TSharedPtr<FRunnableThread> TrainerThread;
 
     TSharedPtr<LevelTrainerRunnable> TrainerRunnable = nullptr;
