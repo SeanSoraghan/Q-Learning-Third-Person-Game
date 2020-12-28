@@ -128,7 +128,7 @@ const RoomTargetsQValuesRewardsSets& ATPGameDemoGameState::GetRoomQValuesRewards
 
 const QValuesRewardsSet& ATPGameDemoGameState::GetRoomQValuesRewardsSetForTargetPosition(FIntPoint roomCoords, FIntPoint targetPosition)
 {
-    return GetNavSet(roomCoords, targetPosition);
+    return GetQValuesRewardsSet(roomCoords, targetPosition);
 }
 
 bool ATPGameDemoGameState::DoesRoomExist(FIntPoint roomCoords) const
@@ -886,7 +886,7 @@ ActionTargets& ATPGameDemoGameState::GetActionTargets(FRoomPositionPair roomAndP
     return Get_mActionTargets(GetmNavEnvironment(roomAndPosition.RoomCoords), roomAndPosition.PositionInRoom);
 }
 
-QValuesRewardsSet& ATPGameDemoGameState::GetNavSet(FIntPoint roomCoords, FIntPoint targetPosition)
+QValuesRewardsSet& ATPGameDemoGameState::GetQValuesRewardsSet(FIntPoint roomCoords, FIntPoint targetPosition)
 {
     FIntPoint roomIndices = GetRoomXYIndicesChecked(roomCoords);
     return Get_mQValuesRewardsSet_For_GoalPosition(RoomStates[roomIndices.X][roomIndices.Y].QValuesRewardsSets, targetPosition);
@@ -894,7 +894,7 @@ QValuesRewardsSet& ATPGameDemoGameState::GetNavSet(FIntPoint roomCoords, FIntPoi
 
 ActionQValuesAndRewards& ATPGameDemoGameState::GetActionQValuesRewards(const FRoomPositionPair& roomAndPosition, FIntPoint targetPosition)
 {
-    return ::Get_mActionQValuesAndRewards(GetNavSet(roomAndPosition.RoomCoords, targetPosition), roomAndPosition.PositionInRoom);
+    return ::Get_mActionQValuesAndRewards(GetQValuesRewardsSet(roomAndPosition.RoomCoords, targetPosition), roomAndPosition.PositionInRoom);
 }
 
 FIntPoint ATPGameDemoGameState::GetRoomXYIndicesChecked(FIntPoint roomCoords) const

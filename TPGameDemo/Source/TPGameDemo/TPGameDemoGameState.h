@@ -458,7 +458,7 @@ private:
 
     NavigationEnvironment& GetmNavEnvironment(FIntPoint roomCoords);
     ActionTargets& GetActionTargets(FRoomPositionPair roomAndPosition);
-    QValuesRewardsSet& GetNavSet(FIntPoint roomCoords, FIntPoint targetPosition);
+    QValuesRewardsSet& GetQValuesRewardsSet(FIntPoint roomCoords, FIntPoint targetPosition);
     ActionQValuesAndRewards& GetActionQValuesRewards(const FRoomPositionPair& roomAndPosition, FIntPoint targetPosition);
 
     bool LevelPoliciesDirFound = false;
