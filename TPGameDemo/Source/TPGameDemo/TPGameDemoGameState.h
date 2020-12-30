@@ -91,6 +91,8 @@ DECLARE_DYNAMIC_DELEGATE(FOnPerimeterComplete);
 DECLARE_EVENT(ATPGameDemoGameState, EnemiesPausedChangedEvent);
 DECLARE_DYNAMIC_DELEGATE(FOnEnemiesPausedChanged);
 
+class UScannerComponent;
+
 /**
  * 
  */
@@ -450,6 +452,13 @@ public:
 
     UPROPERTY(BlueprintReadOnly, EditAnywhere, Category = "Enemy Movement")
         bool EnemyMovementPaused = false;
+
+    //============================================================================
+    // Components
+    //============================================================================  
+    // Implements the scan animation for all turrets in the level. Could add more than one for variable scan animations.
+    UPROPERTY(BlueprintReadOnly, VisibleAnywhere)
+    UScannerComponent* TurretScanner = nullptr;
 
 private:
     TArray<TArray<ARoomBuilder*>> RoomBuilders;

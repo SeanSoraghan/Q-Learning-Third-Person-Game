@@ -17,8 +17,9 @@ UTimelineContainerComponent::UTimelineContainerComponent (const FObjectInitializ
         FloatCurve = LinearTime.Object;
     } 
     else
+    {
         CurveLoadedResponse = "Cant find curve!";
-
+    }
     Timeline = ObjectInitializer.CreateDefaultSubobject<UTimelineComponent> (this, TEXT("Timeline"));
 }
 
