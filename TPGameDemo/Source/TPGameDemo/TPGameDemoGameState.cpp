@@ -1,7 +1,6 @@
 // Fill out your copyright notice in the Description page of Project Settings.
 
 #include "TPGameDemo.h"
-#include "ScannerComponent.h"
 #include <functional>
 #include "TPGameDemoGameState.h"
 
@@ -16,8 +15,6 @@ ATPGameDemoGameState::ATPGameDemoGameState(const FObjectInitializer& ObjectIniti
     FString LevelPoliciesDir = FPaths::ProjectDir();
     LevelPoliciesDir += "Content/Levels/GeneratedRooms/";
     LevelPoliciesDirFound = FPlatformFileManager::Get().GetPlatformFile().DirectoryExists (*LevelPoliciesDir);
-
-    TurretScanner = CreateDefaultSubobject<UScannerComponent>(TEXT("Game State Scanner Component"));
 }
 
 ATPGameDemoGameState::~ATPGameDemoGameState()

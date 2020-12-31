@@ -5,7 +5,7 @@ UScannerComponent::UScannerComponent(const FObjectInitializer& ObjectInitializer
 	PrimaryComponentTick.bCanEverTick = true;
 }
 
-void UScannerComponent::StartScanner(EScanSegment segment /*= EScanSegment::Right*/)
+void UScannerComponent::StartScanner(int segment /*= 0*/)
 {
 	SetCurrentSegment(segment);
 	SetScannerState(EScannerState::Scanning); 
@@ -13,9 +13,7 @@ void UScannerComponent::StartScanner(EScanSegment segment /*= EScanSegment::Righ
 
 void UScannerComponent::StopScanner() { SetScannerState(EScannerState::Stopped); }
 
-float UScannerComponent::GetScanLineLength() const { return ScanLineLength; }
 float UScannerComponent::GetScanLineRotation() const { return CurrentRotation; }
-FVector2D UScannerComponent::GetScanLineMidPoint() const { return ScanEndPoint / 2.0f; }
 
 EScannerState UScannerComponent::GetScannerState() const { return ScannerState; }
 
@@ -35,63 +33,29 @@ void UScannerComponent::RegisterScanSegmentEndingCallback(const FOnScanSegmentEn
 	});
 }
 
-void UScannerComponent::SetExtentFromSceneComponent(const USceneComponent* sceneComponent)
-{
-	FTransform transform = sceneComponent->GetComponentTransform();
-	transform.SetRotation(FQuat::Identity);
-	transform.SetLocation(FVector::ZeroVector);
-	ScannerExtent = sceneComponent->CalcBounds(transform).GetBox();
-	float scanRadius = FVector2D(ScannerExtent.GetExtent().X, ScannerExtent.GetExtent().Y).Size();
-	SideSegmentsAngle = FMath::RadiansToDegrees(FMath::Asin(ScannerExtent.GetExtent().X / scanRadius));
-	FrontSegmentAngle = (90.0f - SideSegmentsAngle) * 2.0f;
-}
-
 void UScannerComponent::SetScannerState(EScannerState state)
 {
 	ScannerState = state;
 	if (ScannerState == EScannerState::Paused)
 	{
 		CurrentPauseCounterSeconds = 0.0f;
-		switch (CurrentSegment)
-		{
-		case EScanSegment::Right:
+		if (CurrentSegment < (Segments.Num() - 1))
 			CurrentPauseDurationSeconds = SecondsBetweenSegments;
-			break;
-		case EScanSegment::Forward:
-			CurrentPauseDurationSeconds = SecondsBetweenSegments;
-			break;
-		case EScanSegment::Left:
+		else
 			CurrentPauseDurationSeconds = SecondsBetweenScans;
-			break;
-		default: break;
-		}
 	}
 	OnScannerStateChanged.Broadcast();
 	SegmentEnding = false;
 }
 
-void UScannerComponent::SetCurrentSegment(EScanSegment segment)
+void UScannerComponent::SetCurrentSegment(int segment)
 {
+	ensure(segment < Segments.Num());
 	CurrentSegment = segment;
-	switch (CurrentSegment)
-	{
-	case EScanSegment::Right:
-		CurrentSegmentStartRotation = 0.0f;
-		CurrentSegmentAngle = SideSegmentsAngle;
-		break;
-
-	case EScanSegment::Forward:
-		CurrentSegmentStartRotation = SideSegmentsAngle;
-		CurrentSegmentAngle = FrontSegmentAngle;
-		break;
-
-	case EScanSegment::Left:
-		CurrentSegmentStartRotation = SideSegmentsAngle + FrontSegmentAngle;
-		CurrentSegmentAngle = SideSegmentsAngle;
-		break;
-
-	default: break;
-	}
+	CurrentSegmentStartRotation = 0.0f;
+	for (int i = 0; i < CurrentSegment; ++i)
+		CurrentSegmentStartRotation += Segments[i];
+	CurrentSegmentAngle = Segments[CurrentSegment];
 	CurrentRotation = CurrentSegmentStartRotation;
 	CurrentSegmentDuration = CurrentSegmentAngle / RotationDegreesPerSecond;
 }
@@ -114,31 +78,7 @@ void UScannerComponent::UpdateScanLine(float DeltaTime)
 			BroadcastSegmentEnding();
 	}
 
-	switch (CurrentSegment)
-	{
-	case EScanSegment::Right:
-		ScanEndPoint.X = ScannerExtent.GetExtent().X * currentSegmentProgress;
-		ScanEndPoint.Y = ScannerExtent.GetExtent().Y;
-		break;
-
-	case EScanSegment::Forward:
-		ScanEndPoint.X = ScannerExtent.GetExtent().X;
-		ScanEndPoint.Y = (currentSegmentProgress * 2.0f - 1.0f) * ScannerExtent.GetExtent().Y * -1.0f;
-		break;
-
-	case EScanSegment::Left:
-		ScanEndPoint.X = ScannerExtent.GetExtent().X * (1.0f - currentSegmentProgress);
-		ScanEndPoint.Y = -ScannerExtent.GetExtent().Y;
-		break;
-
-	default: break;
-	}
-
-	ScanLineLength = ScanEndPoint.Size();
-	
 	CurrentRotation += DeltaTime * RotationDegreesPerSecond;
-	
-	
 
 	if (currentSegmentProgress >= 1.0f)
 	{
@@ -149,7 +89,7 @@ void UScannerComponent::UpdateScanLine(float DeltaTime)
 void UScannerComponent::PauseAndIncrementSegment()
 {
 	SetScannerState(EScannerState::Paused);
-	SetCurrentSegment((EScanSegment)(((int)CurrentSegment + 1) % (int)EScanSegment::NumSegments));
+	SetCurrentSegment((CurrentSegment + 1) % Segments.Num());
 }
 
 void UScannerComponent::TickComponent(float DeltaTime, ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction)
