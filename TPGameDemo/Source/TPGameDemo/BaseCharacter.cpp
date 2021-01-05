@@ -145,6 +145,15 @@ FVector ABaseCharacter::GetMovementVector()
 }
 
 //=========================================================================================
+// Shooting
+//=========================================================================================
+void ABaseCharacter::DrawLineToTarget(FVector WorldStartPos, FVector WorldEndPos, FLinearColor lineColor, float lineThickness)
+{
+    GetWorld()->LineBatcher->DrawLine(WorldStartPos, WorldEndPos, lineColor, SDPG_World, lineThickness);
+}
+
+
+//=========================================================================================
 // Input
 //=========================================================================================
 void ABaseCharacter::SetupPlayerInputComponent (class UInputComponent* inputComponent)

@@ -197,7 +197,9 @@ public:
 
     UPROPERTY(BlueprintAssignable, Category = "Base Character Shooting")
         FPlayerControlStateChanged OnControlStateChanged;
-    
+
+    UFUNCTION(BlueprintCallable, Category = "Base Character Shooting")
+        void DrawLineToTarget(FVector WorldStartPos, FVector WorldEndPos, FLinearColor lineColor, float lineThickness);
     //=========================================================================================
     // Building
     //=========================================================================================
