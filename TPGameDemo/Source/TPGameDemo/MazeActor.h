@@ -50,6 +50,8 @@ public:
 	//=========================================================================================
     // Maze Position
     //=========================================================================================
+    UPROPERTY(BlueprintReadWrite, Category = "Actor Grid Positions")
+        bool ShouldUpdatePosition = true;
     UPROPERTY (BlueprintReadOnly, Category = "Actor Grid Positions")
         FIntPoint CurrentRoomCoords = FIntPoint(0,0);
     UPROPERTY (BlueprintReadOnly, Category = "Actor Grid Positions")

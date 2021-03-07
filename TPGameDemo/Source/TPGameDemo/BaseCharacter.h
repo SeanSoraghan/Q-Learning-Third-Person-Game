@@ -186,6 +186,9 @@ public:
     UPROPERTY(BlueprintReadOnly, VisibleAnywhere, Category="Base Character Movement")
         EControlState ControlState = EControlState::Explore;
 
+    UFUNCTION(BlueprintCallable, Category = "Base Character Movement")
+        bool PlayerIsBoosting() const;
+
     //=========================================================================================
     // Shooting
     //=========================================================================================
@@ -270,7 +273,7 @@ private:
     float HorizontalLookRotation = 0.0f;
     FRotator DefaultMeshRotation;
 
-    bool Boosting = false;
+    bool IsBoosting = false;
     float TimeSinceBoost = 0.0f;
     float BoostLerpLinear = 0.0f;
     UPROPERTY(EditAnywhere, Category = "Base Character Boost")

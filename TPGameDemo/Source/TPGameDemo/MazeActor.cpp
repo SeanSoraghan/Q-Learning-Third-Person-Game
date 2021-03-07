@@ -93,48 +93,51 @@ void AMazeActor::UpdateMazeDimensions()
 
 void AMazeActor::UpdatePosition (bool broadcastChange)
 {
-    FVector worldPosition = GetActorLocation();
-    const int totalGridLengthCMX = CurrentLevelGridUnitLengthXCM * CurrentLevelNumGridUnitsX;
-    const int totalGridLengthCMY = CurrentLevelGridUnitLengthYCM * CurrentLevelNumGridUnitsY;
-    const int overlappingGridLengthCMX = totalGridLengthCMX - CurrentLevelGridUnitLengthXCM;
-    const int overlappingGridLengthCMY = totalGridLengthCMY - CurrentLevelGridUnitLengthYCM;
-    // map -gridLength/2 > gridLength/2 to 0 > gridLength.
-    const int mappedX = worldPosition.X + overlappingGridLengthCMX / 2;
-    const int mappedY = worldPosition.Y + overlappingGridLengthCMY / 2;
-    // get current room coords. negative values should start indexed from -1, not 0 (hence the ternary addition).
-    const int roomX = (FMath::Abs(mappedX / overlappingGridLengthCMX) + (mappedX < 0 ? 1 : 0)) * FMath::Sign(mappedX);
-    const int roomY = (FMath::Abs(mappedY / overlappingGridLengthCMY) + (mappedY < 0 ? 1 : 0)) * FMath::Sign(mappedY);
-    CurrentRoomCoords = FIntPoint(roomX, roomY);
-    // divide mappedX and mappedY to get individual cell coordinates within room. If negative, should index backwards.
-    const int numUnitsX = (int) (mappedX /*- CurrentLevelGridUnitLengthXCM * 0.5f*/) / (CurrentLevelGridUnitLengthXCM);
-    const int numUnitsY = (int) (mappedY /*- CurrentLevelGridUnitLengthYCM * 0.5f*/) / (CurrentLevelGridUnitLengthYCM);
-    GridXPosition = numUnitsX % (CurrentLevelNumGridUnitsX - 1);
-    GridYPosition = numUnitsY % (CurrentLevelNumGridUnitsY - 1);
-    if (mappedX < 0)
-        GridXPosition = (CurrentLevelNumGridUnitsX - 2) - FMath::Abs(GridXPosition);
-    if (mappedY < 0)
-        GridYPosition = (CurrentLevelNumGridUnitsY - 2) - FMath::Abs(GridYPosition);
-
-    if (broadcastChange && (GridYPosition != PreviousGridYPosition || GridXPosition != PreviousGridXPosition))
+    if (ShouldUpdatePosition)
     {
-        ATPGameDemoGameState* gameState = (ATPGameDemoGameState*) GetWorld()->GetGameState();
-        if (gameState != nullptr && bOccupyCells)
-        {
-            gameState->ActorExitedTilePosition(PreviousRoomCoords, FIntPoint(PreviousGridXPosition, PreviousGridYPosition));
-            gameState->ActorEnteredTilePosition(CurrentRoomCoords, FIntPoint(GridXPosition, GridYPosition));
-        }
+        FVector worldPosition = GetActorLocation();
+        const int totalGridLengthCMX = CurrentLevelGridUnitLengthXCM * CurrentLevelNumGridUnitsX;
+        const int totalGridLengthCMY = CurrentLevelGridUnitLengthYCM * CurrentLevelNumGridUnitsY;
+        const int overlappingGridLengthCMX = totalGridLengthCMX - CurrentLevelGridUnitLengthXCM;
+        const int overlappingGridLengthCMY = totalGridLengthCMY - CurrentLevelGridUnitLengthYCM;
+        // map -gridLength/2 > gridLength/2 to 0 > gridLength.
+        const int mappedX = worldPosition.X + overlappingGridLengthCMX / 2;
+        const int mappedY = worldPosition.Y + overlappingGridLengthCMY / 2;
+        // get current room coords. negative values should start indexed from -1, not 0 (hence the ternary addition).
+        const int roomX = (FMath::Abs(mappedX / overlappingGridLengthCMX) + (mappedX < 0 ? 1 : 0)) * FMath::Sign(mappedX);
+        const int roomY = (FMath::Abs(mappedY / overlappingGridLengthCMY) + (mappedY < 0 ? 1 : 0)) * FMath::Sign(mappedY);
+        CurrentRoomCoords = FIntPoint(roomX, roomY);
+        // divide mappedX and mappedY to get individual cell coordinates within room. If negative, should index backwards.
+        const int numUnitsX = (int)(mappedX /*- CurrentLevelGridUnitLengthXCM * 0.5f*/) / (CurrentLevelGridUnitLengthXCM);
+        const int numUnitsY = (int)(mappedY /*- CurrentLevelGridUnitLengthYCM * 0.5f*/) / (CurrentLevelGridUnitLengthYCM);
+        GridXPosition = numUnitsX % (CurrentLevelNumGridUnitsX - 1);
+        GridYPosition = numUnitsY % (CurrentLevelNumGridUnitsY - 1);
+        if (mappedX < 0)
+            GridXPosition = (CurrentLevelNumGridUnitsX - 2) - FMath::Abs(GridXPosition);
+        if (mappedY < 0)
+            GridYPosition = (CurrentLevelNumGridUnitsY - 2) - FMath::Abs(GridYPosition);
 
-        const bool roomChanged = PreviousRoomCoords != CurrentRoomCoords;
-        if (roomChanged)
+        if (broadcastChange && (GridYPosition != PreviousGridYPosition || GridXPosition != PreviousGridXPosition))
         {
-            RoomCoordsChanged();
-            RoomCoordsChangedEvent.Broadcast();
-            PreviousRoomCoords = CurrentRoomCoords;
+            ATPGameDemoGameState* gameState = (ATPGameDemoGameState*)GetWorld()->GetGameState();
+            if (gameState != nullptr && bOccupyCells)
+            {
+                gameState->ActorExitedTilePosition(PreviousRoomCoords, FIntPoint(PreviousGridXPosition, PreviousGridYPosition));
+                gameState->ActorEnteredTilePosition(CurrentRoomCoords, FIntPoint(GridXPosition, GridYPosition));
+            }
+
+            const bool roomChanged = PreviousRoomCoords != CurrentRoomCoords;
+            if (roomChanged)
+            {
+                RoomCoordsChanged();
+                RoomCoordsChangedEvent.Broadcast();
+                PreviousRoomCoords = CurrentRoomCoords;
+            }
+            PositionChanged();
+            GridPositionChangedEvent.Broadcast();
+            PreviousGridXPosition = GridXPosition;
+            PreviousGridYPosition = GridYPosition;
         }
-        PositionChanged();
-        GridPositionChangedEvent.Broadcast();
-        PreviousGridXPosition = GridXPosition;
-        PreviousGridYPosition = GridYPosition;
     }
 }
 

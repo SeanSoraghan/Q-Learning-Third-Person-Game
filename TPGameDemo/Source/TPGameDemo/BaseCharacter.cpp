@@ -59,13 +59,9 @@ void ABaseCharacter::UpdateMovement (float deltaTime)
             speed = gameMode->Running_Movement_Force;
     }
 
-    if (Boosting)
-    {
-        
-    }
     FVector movementDirection = GetMovementVector();    
     movementDirection.Normalize();
-    if (Boosting)
+    if (IsBoosting)
     {
         BoostLerpLinear = TimeSinceBoost / BoostLengthSeconds;
         float boostLog = FMath::Loge(9.0f * (BoostLerpLinear) + 1.0f);
@@ -75,14 +71,11 @@ void ABaseCharacter::UpdateMovement (float deltaTime)
         TimeSinceBoost += deltaTime;
         if (TimeSinceBoost >= BoostLengthSeconds || hitResult.bBlockingHit)
         {
-            Boosting = false;
+            IsBoosting = false;
         }
     }
-    //else
-    {
-        movementDirection *= GetInputVelocity();
-        AddMovementInput(movementDirection, speed);
-    }
+    movementDirection *= GetInputVelocity();
+    AddMovementInput(movementDirection, speed);
 }
 
 //=========================================================================================
@@ -419,6 +412,11 @@ void ABaseCharacter::RotateMeshToMousePosition()
     }
 }
 
+bool ABaseCharacter::PlayerIsBoosting() const
+{
+    return IsBoosting;
+}
+
 void ABaseCharacter::CombatDirectionPressed (EMovementDirectionType direction)
 {
     MovementKeysPressedState.DirectionStates[(int) direction] = true;
@@ -452,7 +450,7 @@ void ABaseCharacter::BoostPressed()
     BoostStartPos = GetActorLocation();
     BoostDestPos = GetActorLocation() + GetMovementVector() * BoostDistMultiplier;
     UE_LOG(LogTemp, Warning, TEXT("Boost Start: %s | Boost End: %s"), *BoostStartPos.ToString(), *BoostDestPos.ToString());
-    Boosting = true;
+    IsBoosting = true;
     TimeSinceBoost = 0.0f;
 }
 
