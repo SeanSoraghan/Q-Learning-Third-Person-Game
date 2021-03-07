@@ -83,6 +83,7 @@ public:
     FIntPoint RoomCoords = FIntPoint(0,0);
 
 private:
+    ATPGameDemoGameState* GetGameStateChecked() const;
     FThreadSafeBool LevelTrained = false;
     TSharedPtr<FRunnableThread> TrainerThread;
 

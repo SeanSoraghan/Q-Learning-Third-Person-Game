@@ -169,7 +169,7 @@ void ULevelTrainerComponent::RegisterLevelTrainedCallback(const FOnLevelTrained&
 
 void ULevelTrainerComponent::UpdateEnvironmentForLevel()
 {
-    ATPGameDemoGameState* gameState = (ATPGameDemoGameState*)(GetWorld()->GetGameState());
+    ATPGameDemoGameState* gameState = GetGameStateChecked();
     if (gameState != nullptr)
     {
         //This is called from the room builder BP in OnBuildRoom, after the walls have been spawned (BuildGeneratedRoom). The game state should hold the qvalues, so that we can build on them if the room structure changes.
@@ -212,7 +212,7 @@ void ULevelTrainerComponent::TrainNextGoalPosition(int numSimulationsPerStarting
     float maxGoalDistance = sqrt(pow((GetNavEnvironment().Num() - 1), 2.0f) + pow((GetNavEnvironment()[0].Num() - 1), 2.0f));
     if (Get_ActionTargets(GetNavEnvironment(), CurrentGoalPosition).IsStateValid())
     {
-        ATPGameDemoGameState* gameState = (ATPGameDemoGameState*)(GetWorld()->GetGameState());
+        ATPGameDemoGameState* gameState = GetGameStateChecked();
         if (gameState != nullptr)
         {
             gameState->SetPositionIsGoal(RoomCoords, CurrentGoalPosition, true);
@@ -239,17 +239,9 @@ void ULevelTrainerComponent::TrainNextGoalPosition(int numSimulationsPerStarting
                 }
             }
         }
-        UWorld* world = GetWorld();
-        if (IsValid(world))
-        {
-            ATPGameDemoGameState* gameState = (ATPGameDemoGameState*)(world->GetGameState());
-            if (gameState != nullptr)
-            {
-                gameState->SetRoomQValuesRewardsSet(RoomCoords, CurrentGoalPosition, Get_QValuesRewardsSet_For_GoalPosition(GetNavSets(), CurrentGoalPosition));
-            }
-        }
         if (gameState != nullptr)
         {
+            gameState->SetRoomQValuesRewardsSet(RoomCoords, CurrentGoalPosition, Get_QValuesRewardsSet_For_GoalPosition(GetNavSets(), CurrentGoalPosition));
             gameState->SetPositionIsGoal(RoomCoords, CurrentGoalPosition, false);
         }
     }
@@ -285,21 +277,22 @@ BehaviourMap ULevelTrainerComponent::GetBehaviourMap()
 
 void ULevelTrainerComponent::ClearEnvironment()
 {
-    ATPGameDemoGameState* gameState = (ATPGameDemoGameState*)(GetWorld()->GetGameState());
+    ATPGameDemoGameState* gameState = GetGameStateChecked();
     ensure(gameState != nullptr);
-    return gameState->ClearQValuesAndRewards(RoomCoords, CurrentGoalPosition);
+    if (gameState != nullptr)
+        gameState->ClearQValuesAndRewards(RoomCoords, CurrentGoalPosition);
 }
 
 const RoomTargetsQValuesRewardsSets& ULevelTrainerComponent::GetNavSets() const
 {
-    ATPGameDemoGameState* gameState = (ATPGameDemoGameState*)(GetWorld()->GetGameState());
+    ATPGameDemoGameState* gameState = GetGameStateChecked();
     ensure(gameState != nullptr);
     return gameState->GetRoomQValuesRewardsSets(RoomCoords);
 }
 
 const NavigationEnvironment& ULevelTrainerComponent::GetNavEnvironment() const
 {
-    ATPGameDemoGameState* gameState = (ATPGameDemoGameState*)(GetWorld()->GetGameState());
+    ATPGameDemoGameState* gameState = GetGameStateChecked();
     ensure(gameState != nullptr);
     return gameState->GetNavEnvironment(RoomCoords);
 }
@@ -328,7 +321,7 @@ void ULevelTrainerComponent::SimulateRun(FIntPoint startingStatePosition, int ma
         const float immediateReward = qValuesRewards.GetRewards()[(int)actionToTake];
         const float deltaQ = GridTrainingConstants::SimLearningRate * (immediateReward + discountedNextReward - currentQValue);
         averageDeltaQ += deltaQ;
-        ATPGameDemoGameState* gameState = (ATPGameDemoGameState*)(GetWorld()->GetGameState());
+        ATPGameDemoGameState* gameState = GetGameStateChecked();
         if (gameState != nullptr)
         {
             gameState->UpdateQValue({ RoomCoords, currentPosition }, CurrentGoalPosition, actionToTake, GridTrainingConstants::SimLearningRate, deltaQ);
@@ -370,6 +363,14 @@ float ULevelTrainerComponent::GetTrainingProgress()
     ensure(MaxTrainingPosition.GetValue() != 0);
     //UE_LOG(LogTemp, Warning, TEXT("X: %d | Y: %d || Current: %d || Max: %d"),CurrentGoalPosition.X, CurrentGoalPosition.Y, TrainingPosition.GetValue(), MaxTrainingPosition.GetValue());
     return trainingPosition / MaxTrainingPosition.GetValue();
+}
+
+ATPGameDemoGameState* ULevelTrainerComponent::GetGameStateChecked() const
+{
+    UWorld* world = GetWorld();
+    if (world != nullptr)
+        return (ATPGameDemoGameState*)(world->GetGameState());
+    return nullptr;
 }
 
 
