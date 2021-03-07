@@ -247,6 +247,7 @@ private:
     void ExploreRightReleased();
     void ExploreLeftPressed();
     void ExploreLeftReleased();
+    void BoostPressed();
     void ItemHotkeyPressed(int itemNumber);
     void UpdateMeshRotationForExploreDirection();
 
@@ -269,6 +270,15 @@ private:
     float HorizontalLookRotation = 0.0f;
     FRotator DefaultMeshRotation;
 
+    bool Boosting = false;
+    float TimeSinceBoost = 0.0f;
+    float BoostLerpLinear = 0.0f;
+    UPROPERTY(EditAnywhere, Category = "Base Character Boost")
+    float BoostLengthSeconds = 0.2f;
+    UPROPERTY(EditAnywhere, Category = "Base Character Boost")
+    float BoostDistMultiplier = 200.0f;
+    FVector BoostStartPos = FVector::ZeroVector;
+    FVector BoostDestPos = FVector::ZeroVector;
     //=========================================================================================
     // Shooting
     //=========================================================================================

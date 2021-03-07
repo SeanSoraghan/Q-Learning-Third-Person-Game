@@ -59,11 +59,30 @@ void ABaseCharacter::UpdateMovement (float deltaTime)
             speed = gameMode->Running_Movement_Force;
     }
 
-    FVector movementDirection = GetMovementVector();
-    
+    if (Boosting)
+    {
+        
+    }
+    FVector movementDirection = GetMovementVector();    
     movementDirection.Normalize();
-    movementDirection *= speed * GetInputVelocity();
-    AddMovementInput (movementDirection);  
+    if (Boosting)
+    {
+        BoostLerpLinear = TimeSinceBoost / BoostLengthSeconds;
+        float boostLog = FMath::Loge(9.0f * (BoostLerpLinear) + 1.0f);
+        FVector newLocation = FMath::Lerp(BoostStartPos, BoostDestPos, boostLog);
+        FHitResult hitResult;
+        SetActorLocation(newLocation, true, &hitResult, ETeleportType::TeleportPhysics);
+        TimeSinceBoost += deltaTime;
+        if (TimeSinceBoost >= BoostLengthSeconds || hitResult.bBlockingHit)
+        {
+            Boosting = false;
+        }
+    }
+    //else
+    {
+        movementDirection *= GetInputVelocity();
+        AddMovementInput(movementDirection, speed);
+    }
 }
 
 //=========================================================================================
@@ -305,6 +324,7 @@ void ABaseCharacter::SetupExploreMovementControls()
         InputComponent->BindAction ("move-left",      IE_Released, this, &ABaseCharacter::ExploreLeftReleased);
         InputComponent->BindAction ("map-view",       IE_Pressed,  this, &ABaseCharacter::MapViewPressed);
         InputComponent->BindAction ("map-view",       IE_Released, this, &ABaseCharacter::MapViewReleased);
+        InputComponent->BindAction ("boost",          IE_Pressed,  this, &ABaseCharacter::BoostPressed);
 
         if (GetCameraControlType() != ECameraControlType::TwinStick)
         {
@@ -425,6 +445,15 @@ void ABaseCharacter::ExploreDirectionPressed (EMovementDirectionType direction)
     MovementKeysPressedState.DirectionStates[(int) direction] = true;
     UpdateMovementForcesForDirectionKey (direction, true);
     UpdateMeshRotationForExploreDirection();
+}
+
+void ABaseCharacter::BoostPressed()
+{
+    BoostStartPos = GetActorLocation();
+    BoostDestPos = GetActorLocation() + GetMovementVector() * BoostDistMultiplier;
+    UE_LOG(LogTemp, Warning, TEXT("Boost Start: %s | Boost End: %s"), *BoostStartPos.ToString(), *BoostDestPos.ToString());
+    Boosting = true;
+    TimeSinceBoost = 0.0f;
 }
 
 void ABaseCharacter::ExploreDirectionReleased (EMovementDirectionType direction)
