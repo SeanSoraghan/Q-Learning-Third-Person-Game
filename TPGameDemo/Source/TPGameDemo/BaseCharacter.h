@@ -71,6 +71,8 @@ struct SMovementKeysPressedState
 DECLARE_DYNAMIC_MULTICAST_DELEGATE (FPlayerFired);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE (FPlayerReleasedFire);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE (FPlayerControlStateChanged);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE (FPlayerBoostStarted);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE (FPlayerBoostEnded);
 DECLARE_DELEGATE_OneParam          (FHotkeyDelegate, int);
 
 /*
@@ -189,6 +191,11 @@ public:
     UFUNCTION(BlueprintCallable, Category = "Base Character Movement")
         bool PlayerIsBoosting() const;
 
+    UPROPERTY(BlueprintAssignable, Category = "Base Character Movement")
+        FPlayerBoostStarted OnBoostStarted;
+
+    UPROPERTY(BlueprintAssignable, Category = "Base Character Movement")
+        FPlayerBoostEnded OnBoostEnded;
     //=========================================================================================
     // Shooting
     //=========================================================================================
@@ -210,6 +217,8 @@ public:
         EBuildableActorType BuildableItem;
     UFUNCTION (BlueprintImplementableEvent, Category = "Base Character Building")
         void OnPlayerBuildItemChanged();
+    UPROPERTY (BlueprintReadOnly, Category = "Base Character Building")
+        bool PlacementModeActive;
     
 private:
     //=========================================================================================
@@ -237,6 +246,8 @@ private:
     void CombatRightReleased();
     void CombatLeftPressed();
     void CombatLeftReleased();
+    void PlacementModePressed();
+    void PlacementModeReleased();
 
     void ExploreDirectionPressed  (EMovementDirectionType direction);
     void ExploreDirectionReleased (EMovementDirectionType direction);

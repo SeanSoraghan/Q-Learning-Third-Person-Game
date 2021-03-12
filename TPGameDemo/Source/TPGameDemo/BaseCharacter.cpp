@@ -72,6 +72,7 @@ void ABaseCharacter::UpdateMovement (float deltaTime)
         if (TimeSinceBoost >= BoostLengthSeconds || hitResult.bBlockingHit)
         {
             IsBoosting = false;
+            OnBoostEnded.Broadcast();
         }
     }
     movementDirection *= GetInputVelocity();
@@ -185,6 +186,8 @@ void ABaseCharacter::BindInput()
         
         InputComponent->BindAction ("aim", IE_Pressed,  this, &ABaseCharacter::EnterCombatControlMode);
         InputComponent->BindAction ("aim", IE_Released, this, &ABaseCharacter::EnterExploreControlMode);
+        InputComponent->BindAction("aim-buildable-placement", IE_Pressed, this, &ABaseCharacter::PlacementModePressed);
+        InputComponent->BindAction("aim-buildable-placement", IE_Released, this, &ABaseCharacter::PlacementModeReleased);
         if (GetCameraControlType() == ECameraControlType::TwinStick)
         {
             InputComponent->BindAxis("move-cursor-up", this, &ABaseCharacter::MoveCursorUp);
@@ -204,6 +207,7 @@ void ABaseCharacter::BindInput()
 
 void ABaseCharacter::EnterCombatControlMode()
 {
+    UE_LOG(LogTemp, Warning, TEXT("Combat"));
     ControlState = EControlState::Combat;
     
     switch (GetCameraControlType())
@@ -236,6 +240,7 @@ void ABaseCharacter::EnterCombatControlMode()
 
 void ABaseCharacter::EnterExploreControlMode()
 {
+    UE_LOG(LogTemp, Warning, TEXT("Explore"));
     ControlState = EControlState::Explore;
 
     switch (GetCameraControlType())
@@ -258,7 +263,18 @@ void ABaseCharacter::EnterExploreControlMode()
         default: break;
     }
     BindInput();
+    UpdateMeshRotationForExploreDirection();
     ControlStateChanged();
+}
+
+void ABaseCharacter::PlacementModePressed()
+{
+    PlacementModeActive = true;
+}
+
+void ABaseCharacter::PlacementModeReleased()
+{
+    PlacementModeActive = false;
 }
 
 void ABaseCharacter::UpdateMovementControls()
@@ -452,6 +468,7 @@ void ABaseCharacter::BoostPressed()
     UE_LOG(LogTemp, Warning, TEXT("Boost Start: %s | Boost End: %s"), *BoostStartPos.ToString(), *BoostDestPos.ToString());
     IsBoosting = true;
     TimeSinceBoost = 0.0f;
+    OnBoostStarted.Broadcast();
 }
 
 void ABaseCharacter::ExploreDirectionReleased (EMovementDirectionType direction)
