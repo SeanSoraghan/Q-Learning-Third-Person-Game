@@ -275,6 +275,13 @@ private:
     void MoveCursorRight (float delta);
     
     //=========================================================================================
+    // Movement
+    //=========================================================================================
+    UPROPERTY(EditAnywhere, Category = "Base Character Movement")
+        float LookRotationSpeed = 2.0f;
+    FRotator TargetLookRotation;
+
+    //=========================================================================================
     // Movement Forces
     //=========================================================================================
     float FrontBackMovementForce = 0.0f;

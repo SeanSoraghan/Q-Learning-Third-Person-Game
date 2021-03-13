@@ -42,7 +42,28 @@ void ABaseCharacter::Tick (float deltaTime)
 {
 	Super::Tick (deltaTime);
     if (GetCameraControlType() == ECameraControlType::TwinStick && ControlState == EControlState::Combat)
+    {
         RotateMeshToMousePosition();
+    }
+    if (USkeletalMeshComponent* mesh = GetMesh())
+    {
+        FRotator meshRotation = mesh->GetRelativeRotation();
+        if (!meshRotation.Equals(TargetLookRotation, 0.1f))
+        {
+            if (ControlState == EControlState::Explore)
+            {
+                mesh->SetRelativeRotation(UKismetMathLibrary::RInterpTo(meshRotation, TargetLookRotation, deltaTime, LookRotationSpeed));
+            }
+            else if (ControlState == EControlState::Combat)
+            {
+                if (FMath::FindDeltaAngleDegrees(meshRotation.Euler().Z, TargetLookRotation.Euler().Z) > 20.0f)
+                    mesh->SetRelativeRotation(UKismetMathLibrary::RInterpTo(meshRotation, TargetLookRotation, deltaTime, LookRotationSpeed));
+                else
+                    mesh->SetRelativeRotation(TargetLookRotation);
+            }
+        }
+    }
+    
     UpdateMovement (deltaTime);
 }
 
@@ -423,7 +444,8 @@ void ABaseCharacter::RotateMeshToMousePosition()
             FVector ActorLocation = GetActorLocation();
             MouseWorldLocation.Z = ActorLocation.Z;
             FRotator Rotator = UKismetMathLibrary::FindLookAtRotation(ActorLocation, MouseWorldLocation);
-            GetMesh()->SetRelativeRotation((Rotator + DefaultMeshRotation).Quaternion());
+            TargetLookRotation = (Rotator + DefaultMeshRotation);
+            //GetMesh()->SetRelativeRotation((Rotator + DefaultMeshRotation).Quaternion());
         }
     }
 }
@@ -490,7 +512,7 @@ void ABaseCharacter::UpdateMeshRotationForExploreDirection()
 {
     FRotator newNormalizedMeshRotation = GetNormalizedMovementRotation() + DefaultMeshRotation;
     newNormalizedMeshRotation.Normalize();
-    GetMesh()->SetRelativeRotation (newNormalizedMeshRotation);
+    TargetLookRotation = newNormalizedMeshRotation;
 }
 
 void ABaseCharacter::UpdateMovementForcesForDirectionKey (EMovementDirectionType direction, bool pressed)
