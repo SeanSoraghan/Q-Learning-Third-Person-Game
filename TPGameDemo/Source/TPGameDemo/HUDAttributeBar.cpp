@@ -31,12 +31,16 @@ void UHUDAttributeBar::Initialize(UImage* inBar, UImage* inStartCap, UImage* inE
 	if (slot != nullptr)
 	{
 		FVector2D barFull = slot->GetSize();
-		barScreenRatioXY = barFull / FVector2D(1920.0f, 1080.0f);
+		barScreenRatioXY = barFull / FVector2D(DefaultScreenWidth, DefaultScreenHeight);
 		FAnchors anchors = slot->GetAnchors();
-		// get ratios from game instance
-		// 
 	}
 	UpdateCapDimensions();
+	UpdateBar();
+}
+
+void UHUDAttributeBar::SetBarPercent(float percentage)
+{
+	barPercentage = percentage;
 	UpdateBar();
 }
 

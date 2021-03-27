@@ -19,6 +19,8 @@ public:
 	UFUNCTION(BlueprintCallable)
 	void Initialize(UImage* inBar, UImage* inStartCap, UImage* inEndCap);
 	UFUNCTION(BlueprintCallable)
+	void SetBarPercent(float percentage);
+	UFUNCTION(BlueprintCallable)
 	void UpdateBar();
 	UFUNCTION(BlueprintCallable)
 	void UpdateCapDimensions();
@@ -33,6 +35,10 @@ public:
 private:
 	float barPercentage = 0.0f;
 
+	UPROPERTY(EditAnywhere)
+		float DefaultScreenWidth = 1920.0f;
+	UPROPERTY(EditAnywhere)
+		float DefaultScreenHeight = 1080.0f;
 	UPROPERTY(EditAnywhere)
 		FVector2D barScreenRatioXY = 1.0f;
 
