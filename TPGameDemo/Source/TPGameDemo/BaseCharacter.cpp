@@ -485,12 +485,15 @@ void ABaseCharacter::ExploreDirectionPressed (EMovementDirectionType direction)
 
 void ABaseCharacter::BoostPressed()
 {
-    BoostStartPos = GetActorLocation();
-    BoostDestPos = GetActorLocation() + GetMovementVector() * BoostDistMultiplier;
-    UE_LOG(LogTemp, Warning, TEXT("Boost Start: %s | Boost End: %s"), *BoostStartPos.ToString(), *BoostDestPos.ToString());
-    IsBoosting = true;
-    TimeSinceBoost = 0.0f;
-    OnBoostStarted.Broadcast();
+    if (PlayerCanBoost())
+    {
+        BoostStartPos = GetActorLocation();
+        BoostDestPos = GetActorLocation() + GetMovementVector() * BoostDistMultiplier;
+        UE_LOG(LogTemp, Warning, TEXT("Boost Start: %s | Boost End: %s"), *BoostStartPos.ToString(), *BoostDestPos.ToString());
+        IsBoosting = true;
+        TimeSinceBoost = 0.0f;
+        OnBoostStarted.Broadcast();
+    }
 }
 
 void ABaseCharacter::ExploreDirectionReleased (EMovementDirectionType direction)

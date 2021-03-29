@@ -13,5 +13,11 @@
 				"UMG"
 			]
 		}
+	],
+	"Plugins": [
+		{
+			"Name": "TimeSynth",
+			"Enabled": true
+		}
 	]
 }

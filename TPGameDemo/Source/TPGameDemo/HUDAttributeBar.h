@@ -17,33 +17,22 @@ class TPGAMEDEMO_API UHUDAttributeBar : public UUserWidget
 
 public:
 	UFUNCTION(BlueprintCallable)
-	void Initialize(UImage* inBar, UImage* inStartCap, UImage* inEndCap);
+		void Initialize(UImage* inBar, UImage* inTrack, UImage* inStartCap, UImage* inEndCap);
 	UFUNCTION(BlueprintCallable)
-	void SetBarPercent(float percentage);
+		void SetBarPercent(float percentage);
 	UFUNCTION(BlueprintCallable)
-	void UpdateBar();
+		void UpdateBar();
 	UFUNCTION(BlueprintCallable)
-	void UpdateCapDimensions();
-	UFUNCTION(BlueprintCallable)
-	void Test();
-
-	UFUNCTION(BlueprintCallable)
-	FVector2D BarDimensionsForCurrentViewSize() const;
-	UFUNCTION(BlueprintCallable)
-	FVector2D CapDimensionsForCurrentViewSize() const;
-
+		void Test();
+	UPROPERTY(EditAnywhere)
+		int FullBarWidth_NoScaling;
 private:
 	float barPercentage = 0.0f;
-
-	UPROPERTY(EditAnywhere)
-		float DefaultScreenWidth = 1920.0f;
-	UPROPERTY(EditAnywhere)
-		float DefaultScreenHeight = 1080.0f;
-	UPROPERTY(EditAnywhere)
-		FVector2D barScreenRatioXY = 1.0f;
-
+	FVector2D barFull = FVector2D::ZeroVector;
 	UPROPERTY(EditAnywhere)
 		UImage* bar;
+	UPROPERTY(EditAnywhere)
+		UImage* track;
 	UPROPERTY(EditAnywhere)
 		UImage* startCap;
 	UPROPERTY(EditAnywhere)

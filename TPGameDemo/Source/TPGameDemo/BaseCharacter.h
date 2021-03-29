@@ -188,6 +188,9 @@ public:
     UPROPERTY(BlueprintReadOnly, VisibleAnywhere, Category="Base Character Movement")
         EControlState ControlState = EControlState::Explore;
 
+    UFUNCTION(BlueprintImplementableEvent, Category = "Base Character Movement")
+        bool PlayerCanBoost();
+
     UFUNCTION(BlueprintCallable, Category = "Base Character Movement")
         bool PlayerIsBoosting() const;
 
