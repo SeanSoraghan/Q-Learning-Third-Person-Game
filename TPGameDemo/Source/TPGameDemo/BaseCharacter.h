@@ -188,6 +188,12 @@ public:
     UPROPERTY(BlueprintReadOnly, VisibleAnywhere, Category="Base Character Movement")
         EControlState ControlState = EControlState::Explore;
 
+    UFUNCTION(BlueprintCallable, Category = "Base Character Movement")
+        void BeginPulse();
+
+    UFUNCTION(BlueprintCallable, Category = "Base Character Movement")
+        void SetPulseLengthSeconds(float pulseLength);
+
     UFUNCTION(BlueprintImplementableEvent, Category = "Base Character Movement")
         bool PlayerCanBoost();
 
@@ -303,6 +309,16 @@ private:
     float BoostDistMultiplier = 200.0f;
     FVector BoostStartPos = FVector::ZeroVector;
     FVector BoostDestPos = FVector::ZeroVector;
+
+    bool IsPulsing = false;
+    float TimeSincePulse = 0.0f;
+    float PulseLerpLinear = 0.0f;
+    UPROPERTY(EditAnywhere, Category = "Base Character Boost")
+        float PulseLengthSeconds = 0.2f;
+    UPROPERTY(EditAnywhere, Category = "Base Character Boost")
+        float PulseDistMultiplier = 100.0f;
+    FVector PulseStartPos = FVector::ZeroVector;
+    FVector PulseDestPos = FVector::ZeroVector;
     //=========================================================================================
     // Shooting
     //=========================================================================================
