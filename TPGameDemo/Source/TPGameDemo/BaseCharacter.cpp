@@ -41,6 +41,7 @@ void ABaseCharacter::BeginPlay()
 void ABaseCharacter::Tick (float deltaTime)
 {
 	Super::Tick (deltaTime);
+
     if (GetCameraControlType() == ECameraControlType::TwinStick && ControlState == EControlState::Combat)
     {
         RotateMeshToMousePosition();
@@ -94,19 +95,6 @@ void ABaseCharacter::UpdateMovement (float deltaTime)
         {
             IsBoosting = false;
             OnBoostEnded.Broadcast();
-        }
-    }
-    else if (IsPulsing)
-    {
-        PulseLerpLinear = TimeSincePulse / PulseLengthSeconds;
-        float PulseLog = FMath::Loge(9.0f * (PulseLerpLinear)+1.0f);
-        FVector newLocation = FMath::Lerp(PulseStartPos, PulseDestPos, PulseLog);
-        FHitResult hitResult;
-        SetActorLocation(newLocation, true, &hitResult, ETeleportType::TeleportPhysics);
-        TimeSincePulse += deltaTime;
-        if (TimeSincePulse >= PulseLengthSeconds || hitResult.bBlockingHit)
-        {
-            IsPulsing = false;
         }
     }
     movementDirection *= GetInputVelocity();
@@ -463,11 +451,6 @@ void ABaseCharacter::RotateMeshToMousePosition()
     }
 }
 
-void ABaseCharacter::SetPulseLengthSeconds(float pulseLength)
-{
-    PulseLengthSeconds = pulseLength;
-}
-
 bool ABaseCharacter::PlayerIsBoosting() const
 {
     return IsBoosting;
@@ -477,12 +460,14 @@ void ABaseCharacter::CombatDirectionPressed (EMovementDirectionType direction)
 {
     MovementKeysPressedState.DirectionStates[(int) direction] = true;
     UpdateMovementForcesForDirectionKey (direction, true);
+    MovementInputVelocityChanged();
 }
 
 void ABaseCharacter::CombatDirectionReleased (EMovementDirectionType direction)
 {
     MovementKeysPressedState.DirectionStates[(int) direction] = false;
     UpdateMovementForcesForDirectionKey (direction, false);
+    MovementInputVelocityChanged();
 }
 
 void ABaseCharacter::CombatForwardPressed()     { CombatDirectionPressed  (EMovementDirectionType::Forward); }
@@ -499,15 +484,7 @@ void ABaseCharacter::ExploreDirectionPressed (EMovementDirectionType direction)
     MovementKeysPressedState.DirectionStates[(int) direction] = true;
     UpdateMovementForcesForDirectionKey (direction, true);
     UpdateMeshRotationForExploreDirection();
-}
-
-void ABaseCharacter::BeginPulse()
-{
-    PulseStartPos = GetActorLocation();
-    PulseDestPos = GetActorLocation() + GetMovementVector() * GetInputVelocity() * PulseDistMultiplier;
-    UE_LOG(LogTemp, Warning, TEXT("Pulse Start: %s | Pulse End: %s"), *PulseStartPos.ToString(), *PulseDestPos.ToString());
-    IsPulsing = true;
-    TimeSincePulse = 0.0f;
+    MovementInputVelocityChanged();
 }
 
 void ABaseCharacter::BoostPressed()
@@ -530,6 +507,8 @@ void ABaseCharacter::ExploreDirectionReleased (EMovementDirectionType direction)
 
     if (MovementKeysPressedState.AreAnyKeysPressed())
         UpdateMeshRotationForExploreDirection();
+
+    MovementInputVelocityChanged();
 }
 
 void ABaseCharacter::ItemHotkeyPressed(int itemNumber)

@@ -126,6 +126,9 @@ public:
     UPROPERTY(BlueprintReadWrite, EditAnywhere, Category = "Enemy Movement")
         float RotationSpeed = 0.1f;
 
+    UFUNCTION(BlueprintCallable, Category = "Enemy Movement")
+        FVector GetNormalizedMovementVector();
+
 private:
     ATPGameDemoGameState* GameState;
 

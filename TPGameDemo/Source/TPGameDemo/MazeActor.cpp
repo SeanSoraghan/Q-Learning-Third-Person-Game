@@ -1,6 +1,7 @@
 // Fill out your copyright notice in the Description page of Project Settings.
 #include "TPGameDemo.h"
 #include "TPGameDemoGameState.h"
+#include "MetronomeComponent.h"
 #include "MazeActor.h"
 
 
@@ -9,7 +10,7 @@ AMazeActor::AMazeActor (const FObjectInitializer& ObjectInitializer) : Super (Ob
 {
  	// Set this actor to call Tick() every frame.  You can turn this off to improve performance if you don't need it.
 	PrimaryActorTick.bCanEverTick = true;
-
+    MetronomeTickCallback.BindUFunction(this, "OnMetronomeTick");
 }
 
 // Called when the game starts or when spawned
@@ -37,6 +38,12 @@ void AMazeActor::BeginPlay()
     Health = MaxHealth;
 
     UpdatePosition (false);
+}
+
+void AMazeActor::BeginDestroy()
+{
+    Super::BeginDestroy();
+    MetronomeTickCallback.Unbind();
 }
 
 void AMazeActor::SetOccupyCells(bool bShouldOccupy)
@@ -151,6 +158,21 @@ void AMazeActor::Tick( float DeltaTime )
 {
 	Super::Tick( DeltaTime );
     UpdatePosition();
+
+    if (IsPulsing)
+    {
+        PulseLerpLinear = TimeSincePulse / PulseLengthSeconds;
+        float PulseLog = FMath::Loge(9.0f * (PulseLerpLinear)+1.0f);
+        FVector newLocation = FMath::Lerp(PulseStartPos, PulseDestPos, PulseLog);
+        FHitResult hitResult;
+        SetActorLocation(newLocation, true, &hitResult, ETeleportType::TeleportPhysics);
+        TimeSincePulse += DeltaTime;
+        if (TimeSincePulse >= PulseLengthSeconds || hitResult.bBlockingHit)
+        {
+            IsPulsing = false;
+        }
+    }
+
     if (UndergoingImpulse())
     {
         UpdateImpulseStrength(DeltaTime);
@@ -172,6 +194,40 @@ bool AMazeActor::WasOnGridEdge() const
         return gameState->IsOnGridEdge(FIntPoint(PreviousGridXPosition, PreviousGridYPosition));
     
     return false;
+}
+
+void AMazeActor::SetupMetronomicMovement(UMetronomeComponent* metronome, UMetronomeResponderComponent* metronomeResponder)
+{
+    if (metronomeResponder == nullptr)
+        metronomeResponder = Cast<UMetronomeResponderComponent>(GetComponentByClass(UMetronomeResponderComponent::StaticClass()));
+    if (metronomeResponder != nullptr)
+    {
+        metronomeResponder->SecondsPerQuantization = metronome->GetSecondsPerMetronomeQuantization(metronomeResponder->Quantization);
+        SetPulseLengthSeconds(metronomeResponder->SecondsPerQuantization);
+        metronome->AddMetronomeResponder(metronomeResponder);
+        metronomeResponder->RegisterMetronomeTickCallback(MetronomeTickCallback);
+    }
+}
+
+bool AMazeActor::ActorAboutToPulse() const
+{
+    UMetronomeResponderComponent* metronomeResponder = Cast<UMetronomeResponderComponent>(GetComponentByClass(UMetronomeResponderComponent::StaticClass()));
+    if (metronomeResponder == nullptr)
+        return false;
+    return TimeSincePulse >= metronomeResponder->SecondsPerQuantization * 0.75f;
+}
+
+void AMazeActor::SetPulseLengthSeconds(float pulseLength)
+{
+    PulseLengthSeconds = pulseLength;
+}
+
+void AMazeActor::BeginPulse(FVector direction)
+{
+    PulseStartPos = GetActorLocation();
+    PulseDestPos = GetActorLocation() + direction * PulseDistMultiplier;
+    IsPulsing = true;
+    TimeSincePulse = 0.0f;
 }
 
 void AMazeActor::AddImpulseForce(FVector direction, float duration, float normedForce)

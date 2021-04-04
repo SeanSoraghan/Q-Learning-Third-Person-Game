@@ -123,6 +123,13 @@ bool AEnemyActor::IsPositionValid()
     return false;
 }
 
+FVector AEnemyActor::GetNormalizedMovementVector()
+{
+    FVector MovementVector = MovementTarget - GetActorLocation();
+    MovementVector.Normalize();
+    return MovementVector;
+}
+
 void AEnemyActor::PositionChanged()
 {
     /*std::set<RoomPosition>::iterator it = VisitedPositions.find({ GameState->NumGridUnitsX, { GridXPosition, GridYPosition } });

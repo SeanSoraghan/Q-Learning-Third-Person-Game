@@ -3,15 +3,13 @@
 #pragma once
 #include "GameFramework/Character.h"
 #include "TPGameDemo.h"
-//#include "TextParserComponent.h"
+#include "MetronomeResponderComponent.h"
 #include "MazeActor.generated.h"
 
 
 DECLARE_DYNAMIC_MULTICAST_DELEGATE (FGridPositionChanged);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE (FRoomCoordsChanged);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE (FActorDied);
-
-
 
 /*
 The base class for an actor that can exist and navigate within a maze level. Maze actors maintain grid x and grid y position values.
@@ -37,7 +35,7 @@ public:
 
 	// Called when the game starts or when spawned
 	virtual void BeginPlay() override;
-	
+    virtual void BeginDestroy() override;
 	// Called every frame
 	virtual void Tick( float DeltaSeconds ) override;
 
@@ -99,13 +97,31 @@ public:
     UFUNCTION(BlueprintCallable, Category = "Maze Actor Position")
         bool WasOnGridEdge() const;
 
+    FIntPoint GetPreviousRoomCoords() const { return PreviousRoomCoords; }
+
+    //=========================================================================================
+    // Movement
+    //=========================================================================================
+    UFUNCTION(BlueprintPure)
+        bool ActorAboutToPulse() const;
+
+    UFUNCTION(BlueprintCallable, Category = "Maze Actor Movement")
+        void BeginPulse(FVector direction);
+
+    UFUNCTION(BlueprintCallable, Category = "Maze Actor Movement")
+        void SetPulseLengthSeconds(float pulseLength);
+
+    UFUNCTION(BlueprintImplementableEvent, Category = "Maze Actor Metronome")
+        void OnMetronomeTick();
+
+    UFUNCTION(BlueprintCallable, Category = "Maze Actor Movement")
+        void SetupMetronomicMovement(class UMetronomeComponent* metronomeComp, UMetronomeResponderComponent* metronomeResponder);
+
     UFUNCTION(BlueprintCallable, Category = "Maze Actor Impulse")
         void AddImpulseForce(FVector direction, float duration, float normedForce = 1.0f);
 
     UFUNCTION(BlueprintCallable, Category = "Maze Actor Impulse")
         bool UndergoingImpulse() const;
-
-    FIntPoint GetPreviousRoomCoords() const { return PreviousRoomCoords; }
 
 private:
     void UpdatePosition (bool broadcastChange = true);
@@ -122,6 +138,17 @@ private:
     FIntPoint PreviousRoomCoords      = FIntPoint(0,0);
     bool bOccupyCells = true;
 
+    /** Pulsing movement */
+    bool IsPulsing = false;
+    float TimeSincePulse = 0.0f;
+    float PulseLerpLinear = 0.0f;
+    UPROPERTY(EditAnywhere, Category = "Base Character Boost")
+        float PulseLengthSeconds = 0.2f;
+    UPROPERTY(EditAnywhere, Category = "Base Character Boost")
+        float PulseDistMultiplier = 100.0f;
+    FVector PulseStartPos = FVector::ZeroVector;
+    FVector PulseDestPos = FVector::ZeroVector;
+    FOnMetronomeTick MetronomeTickCallback;
     /** An impulse direction that is used to add impulse force every frame when the actor takes impulses */
     FVector ImpulseDirection = FVector::ZeroVector;
     float CurrentImpulseStrength = 0.0f;

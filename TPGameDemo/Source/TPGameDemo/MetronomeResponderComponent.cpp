@@ -1,6 +1,6 @@
 // Fill out your copyright notice in the Description page of Project Settings.
 
-
+#include "MetronomeComponent.h"
 #include "MetronomeResponderComponent.h"
 
 // Sets default values for this component's properties
@@ -23,6 +23,14 @@ void UMetronomeResponderComponent::BeginPlay()
 	
 }
 
+void UMetronomeResponderComponent::OnComponentDestroyed(bool bDestroyingHierarchy)
+{
+	Super::OnComponentDestroyed(bDestroyingHierarchy);
+	RemoveFromRoot(); crash on exit
+	OnMetronomeTick.Clear();
+	if (Metronome != nullptr)
+		Metronome->RemoveMetronomeResponder(this);
+}
 
 // Called every frame
 void UMetronomeResponderComponent::TickComponent(float DeltaTime, ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction)
@@ -32,6 +40,11 @@ void UMetronomeResponderComponent::TickComponent(float DeltaTime, ELevelTick Tic
 	// ...
 }
 
+void UMetronomeResponderComponent::SetMetronome(UMetronomeComponent* metronome)
+{
+	Metronome = metronome;
+}
+
 void UMetronomeResponderComponent::MetronomeTick()
 {
 	OnMetronomeTick.Broadcast();
@@ -39,9 +52,26 @@ void UMetronomeResponderComponent::MetronomeTick()
 
 void UMetronomeResponderComponent::RegisterMetronomeTickCallback(const FOnMetronomeTick& Callback)
 {
-	OnMetronomeTick.AddLambda([Callback]()
-		{
-			Callback.ExecuteIfBound();
-		});
+	if (QuantizationCount == 0)
+	{
+		OnMetronomeTick.AddLambda([Callback]()
+			{
+				Callback.ExecuteIfBound();
+			});
+	}
+	QuantizationCount = (QuantizationCount + 1) % QuantizationLoopLength;
 }
+
+void UMetronomeResponderComponent::SetShouldTriggerAudio(bool shouldTriggerAudio)
+{
+	if (ShouldTriggerAudio != shouldTriggerAudio)
+	{
+		ShouldTriggerAudio = shouldTriggerAudio;
+		if (IsValid(Metronome))
+		{
+			Metronome->ResponderAudioStateChanged(this);
+		}
+	}
+}
+
 

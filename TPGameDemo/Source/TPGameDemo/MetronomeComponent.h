@@ -19,15 +19,27 @@ class TPGAMEDEMO_API UMetronomeComponent : public UActorComponent
 public:
 	UMetronomeComponent(const FObjectInitializer& ObjectInitializer);
 	~UMetronomeComponent();
+	
+	virtual void OnComponentDestroyed(bool bDestroyingHierarchy) override;
 
 	UFUNCTION(BlueprintCallable)
-		void AddMetronomeResponder(ETimeSynthEventQuantization quantizationType, UMetronomeResponderComponent* responder);
+		void AddMetronomeResponder(UMetronomeResponderComponent* responder);
+	UFUNCTION(BlueprintCallable)
+		void RemoveMetronomeResponder(UMetronomeResponderComponent* responder);
 	UFUNCTION(BlueprintCallable)
 		void SetTimeSynthComponent(UTimeSynthComponent* timeSynthComp);
 	UFUNCTION()
-	void OnQuantizationEvent(ETimeSynthEventQuantization QuantizationType, int32 NumBars, float Beat);
+		void OnQuantizationEvent(ETimeSynthEventQuantization quantizationType, int32 numBars, float beat);
+	UFUNCTION(BlueprintPure)
+		float GetSecondsPerMetronomeQuantization(ETimeSynthEventQuantization quantizationType) const;
+
+	void ResponderAudioStateChanged(UMetronomeResponderComponent* responder);
+
 private:
 	TMap<ETimeSynthEventQuantization, TArray<UMetronomeResponderComponent*>> MetronomeResponders;
+	UPROPERTY()
 	TMap<ETimeSynthEventQuantization, FOnQuantizationEventBP> QuantizationEvents;
 	UTimeSynthComponent* TimeSynthComponent;
+
+	FCriticalSection RespondersMutex;
 };
