@@ -203,6 +203,7 @@ void AMazeActor::SetupMetronomicMovement(UMetronomeComponent* metronome, UMetron
     if (metronomeResponder != nullptr)
     {
         metronomeResponder->SecondsPerQuantization = metronome->GetSecondsPerMetronomeQuantization(metronomeResponder->Quantization);
+        metronomeResponder->SecondsPerQuantization *= metronomeResponder->QuantizationLoopLength;
         SetPulseLengthSeconds(metronomeResponder->SecondsPerQuantization);
         metronome->AddMetronomeResponder(metronomeResponder);
         metronomeResponder->RegisterMetronomeTickCallback(MetronomeTickCallback);
