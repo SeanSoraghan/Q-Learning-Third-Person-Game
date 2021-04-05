@@ -10,6 +10,7 @@ UMetronomeComponent::UMetronomeComponent(const FObjectInitializer& ObjectInitial
 		subdivision < ETimeSynthEventQuantization::Count;
 		subdivision = (ETimeSynthEventQuantization)((int)subdivision + 1))
 	{
+		QuantizationCounts.Add(subdivision, 0);
 		MetronomeResponders.Add(subdivision, TArray<UMetronomeResponderComponent*>());
 		FOnQuantizationEventBP& delegate = QuantizationEvents.Add(subdivision);
 		delegate.BindUFunction(this, FName(FString("OnQuantizationEvent")));
@@ -23,7 +24,6 @@ UMetronomeComponent::~UMetronomeComponent()
 
 void UMetronomeComponent::OnComponentDestroyed(bool bDestroyingHierarchy)
 {
-	FScopeLock lock(&RespondersMutex);
 	for (ETimeSynthEventQuantization subdivision = ETimeSynthEventQuantization::Bars8;
 		subdivision < ETimeSynthEventQuantization::Count;
 		subdivision = (ETimeSynthEventQuantization)((int)subdivision + 1))
@@ -31,13 +31,7 @@ void UMetronomeComponent::OnComponentDestroyed(bool bDestroyingHierarchy)
 		TArray<UMetronomeResponderComponent*>* responders = MetronomeResponders.Find(subdivision);
 		if (responders != nullptr)
 		{
-			for (UMetronomeResponderComponent*& responder : *responders)
-			{
-				if (IsValid(responder))
-				{
-					responder->RemoveFromRoot();
-				}
-			}
+			responders->Empty();
 		}
 	}
 }
@@ -60,23 +54,26 @@ void UMetronomeComponent::SetTimeSynthComponent(UTimeSynthComponent* timeSynthCo
 
 void UMetronomeComponent::AddMetronomeResponder(UMetronomeResponderComponent* responder)
 {
-	FScopeLock lock(&RespondersMutex);
 	TArray<UMetronomeResponderComponent*>& responders = MetronomeResponders.FindOrAdd(responder->Quantization);
 	responders.Add(responder);
 	responder->SetMetronome(this);
-	responder->AddToRoot();
 }
 
 void UMetronomeComponent::RemoveMetronomeResponder(UMetronomeResponderComponent* responder)
 {
-	FScopeLock lock(&RespondersMutex);
 	TArray<UMetronomeResponderComponent*>& responders = MetronomeResponders.FindOrAdd(responder->Quantization);
 	responders.Remove(responder);
 }
 
 void UMetronomeComponent::OnQuantizationEvent(ETimeSynthEventQuantization quantizationType, int32 numBars, float beat)
 {
-	FScopeLock lock(&RespondersMutex);
+	QuantizationCounts[quantizationType] = (*QuantizationCounts.Find(quantizationType) + 1) % GetNumSubdivisionsPer8Bar(quantizationType);
+	const int nextQuantixationIndex = QuantizationCounts[quantizationType];
+	int currentQuantizationIndex = nextQuantixationIndex - 1;
+	if (currentQuantizationIndex < 0)
+	{
+		currentQuantizationIndex += UMetronomeComponent::GetNumSubdivisionsPer8Bar(quantizationType);
+	}
 	TArray<UMetronomeResponderComponent*>* responders = MetronomeResponders.Find(quantizationType);
 	if (responders != nullptr)
 	{
@@ -85,8 +82,10 @@ void UMetronomeComponent::OnQuantizationEvent(ETimeSynthEventQuantization quanti
 			if (IsValid(responder))
 			{
 				if (responder->GetShouldTriggerAudio() && responder->TimeSynthClip != nullptr)
-					responder->LastClipTriggerHandle = TimeSynthComponent->PlayClip(responder->TimeSynthClip);
-				responder->MetronomeTick();
+					if (responder->ShouldRespondToQuantizationIndex(nextQuantixationIndex))
+						responder->LastClipTriggerHandle = TimeSynthComponent->PlayClip(responder->TimeSynthClip, responder->VolumeGroup);
+				if (responder->ShouldRespondToQuantizationIndex(currentQuantizationIndex))
+					responder->MetronomeTick();
 			}
 		}
 	}
@@ -94,12 +93,13 @@ void UMetronomeComponent::OnQuantizationEvent(ETimeSynthEventQuantization quanti
 
 void UMetronomeComponent::ResponderAudioStateChanged(UMetronomeResponderComponent* responder)
 {
-	FScopeLock lock(&RespondersMutex);
 	TArray<UMetronomeResponderComponent*>* responders = MetronomeResponders.Find(responder->Quantization);
+	const int nextQuantixationIndex = QuantizationCounts[responder->Quantization];
 	if (responders != nullptr && responders->Contains(responder))
 	{
 		if (responder->GetShouldTriggerAudio() && responder->TimeSynthClip != nullptr)
-			responder->LastClipTriggerHandle = TimeSynthComponent->PlayClip(responder->TimeSynthClip);
+			if (responder->ShouldRespondToQuantizationIndex(nextQuantixationIndex))
+				responder->LastClipTriggerHandle = TimeSynthComponent->PlayClip(responder->TimeSynthClip, responder->VolumeGroup);
 		if (!responder->GetShouldTriggerAudio())
 			TimeSynthComponent->StopClip(responder->LastClipTriggerHandle, (ETimeSynthEventClipQuantization)((int)responder->Quantization + 1));
 	}
@@ -152,6 +152,29 @@ float UMetronomeComponent::GetSecondsPerMetronomeQuantization(ETimeSynthEventQua
 		return (secondsPerBeat / 4.0f) / (1.0f + 2.0f * ((float)quantizationType - (float)ETimeSynthEventQuantization::SixteenthNote));
 
 	return secondsPerBeat / 8;
+}
+
+int UMetronomeComponent::GetNumSubdivisionsPer8Bar(ETimeSynthEventQuantization quantizationType)
+{
+	switch (quantizationType)
+	{
+	case ETimeSynthEventQuantization::None: return 0;
+	case ETimeSynthEventQuantization::Bars8: return 1;
+	case ETimeSynthEventQuantization::Bars4: return 2;
+	case ETimeSynthEventQuantization::Bars2: return 4;
+	case ETimeSynthEventQuantization::Bar: return 8;
+	case ETimeSynthEventQuantization::HalfNote: return 16;
+	case ETimeSynthEventQuantization::HalfNoteTriplet: return 24;
+	case ETimeSynthEventQuantization::QuarterNote: return 32;
+	case ETimeSynthEventQuantization::QuarterNoteTriplet: return 48;
+	case ETimeSynthEventQuantization::EighthNote: return 64;
+	case ETimeSynthEventQuantization::EighthNoteTriplet: return 96;
+	case ETimeSynthEventQuantization::SixteenthNote: return 128;
+	case ETimeSynthEventQuantization::SixteenthNoteTriplet: return 192;
+	case ETimeSynthEventQuantization::ThirtySecondNote: return 256;
+	case ETimeSynthEventQuantization::Count: return 0;
+	default: return 0;
+	}
 }
 
 

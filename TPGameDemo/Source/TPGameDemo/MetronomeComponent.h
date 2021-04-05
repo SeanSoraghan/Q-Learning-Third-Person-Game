@@ -32,6 +32,8 @@ public:
 		void OnQuantizationEvent(ETimeSynthEventQuantization quantizationType, int32 numBars, float beat);
 	UFUNCTION(BlueprintPure)
 		float GetSecondsPerMetronomeQuantization(ETimeSynthEventQuantization quantizationType) const;
+	UFUNCTION(BlueprintPure)
+		static int GetNumSubdivisionsPer8Bar(ETimeSynthEventQuantization quantizationType);
 
 	void ResponderAudioStateChanged(UMetronomeResponderComponent* responder);
 
@@ -39,7 +41,6 @@ private:
 	TMap<ETimeSynthEventQuantization, TArray<UMetronomeResponderComponent*>> MetronomeResponders;
 	UPROPERTY()
 	TMap<ETimeSynthEventQuantization, FOnQuantizationEventBP> QuantizationEvents;
+	TMap<ETimeSynthEventQuantization, int> QuantizationCounts;
 	UTimeSynthComponent* TimeSynthComponent;
-
-	FCriticalSection RespondersMutex;
 };

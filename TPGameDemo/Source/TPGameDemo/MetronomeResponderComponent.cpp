@@ -26,7 +26,6 @@ void UMetronomeResponderComponent::BeginPlay()
 void UMetronomeResponderComponent::OnComponentDestroyed(bool bDestroyingHierarchy)
 {
 	Super::OnComponentDestroyed(bDestroyingHierarchy);
-	RemoveFromRoot(); crash on exit
 	OnMetronomeTick.Clear();
 	if (Metronome != nullptr)
 		Metronome->RemoveMetronomeResponder(this);
@@ -45,6 +44,11 @@ void UMetronomeResponderComponent::SetMetronome(UMetronomeComponent* metronome)
 	Metronome = metronome;
 }
 
+bool UMetronomeResponderComponent::ShouldRespondToQuantizationIndex(int quantizationIndex) const
+{
+	return (quantizationIndex % QuantizationLoopLength) == QuantizationLoopOffset;
+}
+
 void UMetronomeResponderComponent::MetronomeTick()
 {
 	OnMetronomeTick.Broadcast();
@@ -52,14 +56,10 @@ void UMetronomeResponderComponent::MetronomeTick()
 
 void UMetronomeResponderComponent::RegisterMetronomeTickCallback(const FOnMetronomeTick& Callback)
 {
-	if (QuantizationCount == 0)
-	{
-		OnMetronomeTick.AddLambda([Callback]()
-			{
-				Callback.ExecuteIfBound();
-			});
-	}
-	QuantizationCount = (QuantizationCount + 1) % QuantizationLoopLength;
+	OnMetronomeTick.AddLambda([this, Callback]()
+		{
+			Callback.ExecuteIfBound();
+		});
 }
 
 void UMetronomeResponderComponent::SetShouldTriggerAudio(bool shouldTriggerAudio)

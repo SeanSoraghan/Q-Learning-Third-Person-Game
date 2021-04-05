@@ -40,8 +40,14 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "Metronome Responder")
 	void SetMetronome(UMetronomeComponent* metronome);
 
+	UFUNCTION(BlueprintCallable, Category = "Metronome Responder")
+	bool ShouldRespondToQuantizationIndex(int quantizationIndex) const;
+
 	UPROPERTY(BlueprintReadWrite, EditAnywhere)
 	UTimeSynthClip* TimeSynthClip;
+
+	UPROPERTY(BlueprintReadWrite, EditAnywhere)
+	UTimeSynthVolumeGroup* VolumeGroup = nullptr;
 
 	void MetronomeTick();
 
@@ -51,8 +57,16 @@ public:
 	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category = "Metronome Responder")
 	ETimeSynthEventQuantization Quantization;
 
+	/* The number of subdivisions to count between metronome tick callbacks */
 	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category = "Metronome Responder")
 	int QuantizationLoopLength = 1;
+
+	/* The subdivision index within QuantizationLoopLength that should trigger the callback. 
+		For example, if Quantization = 16th, QuantizationLoopLength = 4, and QuantizationLoopOffset = 1, 
+		this will trigger a callback on every 2nd 16th note of a beat.
+		Note: if QuantizationLoopOffset > QuantizationLoopLength - 1, the callback will never be triggered.*/
+	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category = "Metronome Responder")
+	int QuantizationLoopOffset = 0;
 
 	UPROPERTY(BlueprintReadWrite, VisibleAnywhere, Category = "Metronome Responder")
 	float SecondsPerQuantization;
@@ -62,8 +76,6 @@ public:
 
 private:
 	MetronomeTickEvent OnMetronomeTick;
-
-	int QuantizationCount = 0;
 
 	UMetronomeComponent* Metronome = nullptr;
 
